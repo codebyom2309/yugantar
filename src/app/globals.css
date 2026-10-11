@@ -1,0 +1,312 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Instrument+Serif:ital@1&display=swap');
+@import "tailwindcss";
+
+:root {
+  --font-display: 'Sora', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Space Grotesk', monospace, sans-serif;
+  --font-editorial: 'Playfair Display', Georgia, serif;
+
+  /* Official YUGANTAR 2026 Reference Palette */
+  --color-main-bg: #F5F6FA;
+  --color-warm-champagne: #FFF0E3;
+  --color-sunset-peach: #FFD1B5;
+  --color-sky-blue: #B8D9F5;
+  --color-soft-periwinkle: #C8D0F5;
+  --color-restrained-lavender: #A99AE8;
+  --color-deep-ink: #15294A;
+  --color-midnight-glass: #102344;
+  --color-sunset-accent: #FF874D;
+  --color-cool-secondary: #536781;
+  
+  --color-text-main: #15294A;
+  --color-text-muted: #536781;
+  --color-text-subtle: #7E93AC;
+  
+  --color-border-subtle: #E2E8F0;
+  --color-border-sky: #D2E4F7;
+  --color-border-champagne: #FFE0CE;
+}
+
+.font-editorial {
+  font-family: var(--font-editorial);
+  font-style: italic;
+}
+
+.text-sunset-glow {
+  background: linear-gradient(135deg, #FF874D 0%, #E07A43 50%, #F5A16F 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 16px rgba(255, 135, 77, 0.42));
+}
+
+@layer base {
+  * {
+    border-color: #E2E8F0;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-text-main);
+    background-color: var(--color-main-bg);
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.025em;
+    color: var(--color-text-main);
+  }
+
+  p {
+    color: var(--color-text-muted);
+  }
+
+  ::selection {
+    background-color: #FF874D;
+    color: #FFFFFF;
+  }
+}
+
+/* =========================================================================
+   LIGHT FUTURISTIC COMPONENT & SURFACE SYSTEM
+   ========================================================================= */
+
+/* 1. Luminous Floating Header Surface */
+.nexus-nav {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 
+    0 10px 30px -4px rgba(21, 41, 74, 0.08),
+    0 2px 6px 0 rgba(21, 41, 74, 0.03);
+}
+
+/* 1b. Translucent Frosted Glass Pill */
+.nexus-glass-pill {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 
+    0 8px 24px -2px rgba(21, 41, 74, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* 2. Primary Action Button: Reference Sapphire / Midnight Ink Pill */
+.nexus-btn-sapphire {
+  background: linear-gradient(135deg, #102344 0%, #152E58 50%, #102344 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 9999px;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  box-shadow: 
+    0 10px 25px -3px rgba(16, 35, 68, 0.4),
+    0 4px 10px -2px rgba(16, 35, 68, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+}
+
+.nexus-btn-sapphire:hover {
+  border-color: rgba(255, 158, 102, 0.5);
+  transform: translateY(-1.5px) scale(1.01);
+  box-shadow: 
+    0 14px 30px -4px rgba(16, 35, 68, 0.5),
+    0 6px 14px -2px rgba(16, 35, 68, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.nexus-btn-sapphire:active {
+  transform: translateY(1px);
+}
+
+/* 2b. Secondary Frosted Glass Button */
+.nexus-btn-frosted {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #15294A;
+  font-weight: 700;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  box-shadow: 
+    0 6px 20px -2px rgba(21, 41, 74, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+}
+
+.nexus-btn-frosted:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1.5px);
+  box-shadow: 
+    0 10px 24px -2px rgba(21, 41, 74, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+/* 2c. Primary Action Button: Refined Deep Midnight Ink */
+.nexus-btn-primary,
+.nexus-btn-ink {
+  background: #15294A;
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 
+    0 4px 14px -1px rgba(21, 41, 74, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nexus-btn-primary:hover,
+.nexus-btn-ink:hover {
+  background: #1F385C;
+  border-color: rgba(245, 161, 111, 0.45);
+  transform: translateY(-1.5px);
+  box-shadow: 
+    0 8px 24px -2px rgba(23, 43, 73, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.nexus-btn-primary:active,
+.nexus-btn-ink:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px 0 rgba(23, 43, 73, 0.2);
+}
+
+/* 2b. Warm Sunset Accent Button */
+.nexus-btn-sunset,
+.nexus-btn-warm {
+  background: linear-gradient(135deg, #E07A43 0%, #D46932 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 
+    0 4px 14px 0 rgba(224, 122, 67, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nexus-btn-sunset:hover,
+.nexus-btn-warm:hover {
+  background: linear-gradient(135deg, #CE6833 0%, #C25B26 100%);
+  transform: translateY(-1.5px);
+  box-shadow: 
+    0 8px 22px 0 rgba(224, 122, 67, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* 3. Secondary Action Button: Clean Surface with Subtle Architectural Border */
+.nexus-btn-secondary {
+  background: #FFFFFF;
+  color: #172B49;
+  font-weight: 700;
+  border: 1.5px solid #DCE5F2;
+  border-radius: 0.875rem;
+  box-shadow: 
+    0 2px 8px rgba(23, 43, 73, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nexus-btn-secondary:hover {
+  background: #FAF6F0;
+  border-color: #E07A43;
+  color: #172B49;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 14px rgba(224, 122, 67, 0.12);
+}
+
+.nexus-btn-secondary:active {
+  transform: translateY(1px);
+}
+
+/* 4. Translucent Light Glass Surface */
+.nexus-glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 1.25rem;
+  box-shadow: 
+    0 12px 32px -6px rgba(23, 43, 73, 0.06),
+    0 2px 6px -1px rgba(23, 43, 73, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+/* 4b. Selective Deep Midnight Glass: High Contrast Architectural Panel */
+.nexus-midnight-glass {
+  background: rgba(19, 34, 56, 0.9);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1.25rem;
+  color: #FFFFFF;
+  box-shadow: 
+    0 24px 50px -12px rgba(10, 20, 36, 0.45),
+    0 4px 14px 0 rgba(10, 20, 36, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+/* 4c. Warm Sunset Champagne Card */
+.nexus-warm-card {
+  background: #FFF8F2;
+  border: 1.5px solid #F2DECD;
+  border-radius: 1.25rem;
+  color: #172B49;
+  box-shadow: 
+    0 4px 16px -2px rgba(154, 75, 26, 0.05),
+    0 1px 3px 0 rgba(154, 75, 26, 0.02);
+}
+
+/* 5. Editorial Card Surface */
+.nexus-card {
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 1.25rem;
+  box-shadow: 
+    0 4px 16px -2px rgba(23, 43, 73, 0.03),
+    0 1px 3px 0 rgba(23, 43, 73, 0.02);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nexus-card:hover {
+  transform: translateY(-3px);
+  border-color: #B8D5F8;
+  box-shadow: 
+    0 16px 36px -8px rgba(75, 145, 232, 0.1),
+    0 4px 12px -2px rgba(23, 43, 73, 0.04);
+}
+
+/* 6. Subtle Atmospheric Mesh / Gradient */
+.nexus-sky-gradient {
+  background: linear-gradient(180deg, #EDF5FC 0%, #F8FAFD 100%);
+}
+
+.nexus-peach-gradient {
+  background: linear-gradient(180deg, #FFF4EA 0%, #F8FAFD 100%);
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
