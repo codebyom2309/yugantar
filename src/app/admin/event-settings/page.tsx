@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Upload,
   ExternalLink,
+  Globe,
 } from 'lucide-react';
 import AdminDatePicker from '@/components/admin/AdminDatePicker';
 
@@ -30,7 +31,7 @@ export default function EventSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState<'identity' | 'venue' | 'assets' | 'registration'>('identity');
+  const [activeTab, setActiveTab] = useState<'identity' | 'venue' | 'assets' | 'registration' | 'footer'>('identity');
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -206,6 +207,18 @@ export default function EventSettingsPage() {
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
           <span>Registration Gateway</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('footer')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
+            activeTab === 'footer'
+              ? 'bg-blue-600 text-white shadow-sm dark:bg-blue-500/20 dark:text-blue-300 dark:border dark:border-blue-500/40'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white font-medium hover:bg-black/5 dark:hover:bg-white/5'
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5" />
+          <span>Footer & Social Links</span>
         </button>
       </div>
 
@@ -464,6 +477,140 @@ export default function EventSettingsPage() {
               includeTime={true}
               placeholder="Set registration closure deadline..."
             />
+          </div>
+        </div>
+      )}
+
+      {/* Tab 5: Footer & Social Links */}
+      {activeTab === 'footer' && (
+        <div className="admin-glass-panel rounded-2xl p-4 sm:p-6 space-y-5 shadow-sm">
+          <div>
+            <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+              Footer Brand Description
+            </label>
+            <textarea
+              rows={3}
+              value={editedValues['footer_description'] ?? ''}
+              onChange={(e) =>
+                setEditedValues({ ...editedValues, footer_description: e.target.value })
+              }
+              placeholder="YUGANTAR 2026 is the premier intercollegiate technical symposium..."
+              className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs leading-relaxed"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+                Public Contact Email
+              </label>
+              <input
+                type="email"
+                value={editedValues['footer_email'] ?? ''}
+                onChange={(e) =>
+                  setEditedValues({ ...editedValues, footer_email: e.target.value })
+                }
+                placeholder="teleera.etc@pcenagpur.edu.in"
+                className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+                Public Contact Phone / Helpdesk
+              </label>
+              <input
+                type="text"
+                value={editedValues['footer_phone'] ?? ''}
+                onChange={(e) =>
+                  setEditedValues({ ...editedValues, footer_phone: e.target.value })
+                }
+                placeholder="+91 7104 236381 / 236382"
+                className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+                Official Instagram URL
+              </label>
+              <input
+                type="url"
+                value={editedValues['footer_instagram'] ?? ''}
+                onChange={(e) =>
+                  setEditedValues({ ...editedValues, footer_instagram: e.target.value })
+                }
+                placeholder="https://instagram.com/teleera_pce"
+                className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+                Official LinkedIn URL
+              </label>
+              <input
+                type="url"
+                value={editedValues['footer_linkedin'] ?? ''}
+                onChange={(e) =>
+                  setEditedValues({ ...editedValues, footer_linkedin: e.target.value })
+                }
+                placeholder="https://linkedin.com/company/pce-nagpur-etc"
+                className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+                Official GitHub / Codebase URL
+              </label>
+              <input
+                type="url"
+                value={editedValues['footer_github'] ?? ''}
+                onChange={(e) =>
+                  setEditedValues({ ...editedValues, footer_github: e.target.value })
+                }
+                placeholder="https://github.com/codebyom2309/yugantar"
+                className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+                Official College Website URL
+              </label>
+              <input
+                type="url"
+                value={editedValues['footer_college_url'] ?? ''}
+                onChange={(e) =>
+                  setEditedValues({ ...editedValues, footer_college_url: e.target.value })
+                }
+                placeholder="https://www.pcenagpur.edu.in"
+                className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+              Footer Custom Helpful Links (JSON format)
+            </label>
+            <textarea
+              rows={3}
+              value={editedValues['footer_custom_links'] ?? ''}
+              onChange={(e) =>
+                setEditedValues({ ...editedValues, footer_custom_links: e.target.value })
+              }
+              placeholder='[{"label":"Campus Guidelines","url":"/about#campus"}]'
+              className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs font-mono leading-relaxed"
+            />
+            <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">
+              Array of objects with <code>label</code> and <code>url</code> keys.
+            </p>
           </div>
         </div>
       )}

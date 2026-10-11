@@ -66,9 +66,12 @@ export async function POST(request: NextRequest) {
     }
 
     const id = randomUUID();
+    const githubUrl = (body.githubUrl || body.github_url || '').trim() || null;
+    const linkedinUrl = (body.linkedinUrl || body.linkedin_url || '').trim() || null;
+
     await db.execute(
-      `INSERT INTO organizer_members (id, name, role, category, organization_id, department, bio, avatar_url, display_order, is_published)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO organizer_members (id, name, role, category, organization_id, department, bio, avatar_url, github_url, linkedin_url, display_order, is_published)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         body.name,
@@ -78,6 +81,8 @@ export async function POST(request: NextRequest) {
         body.department || null,
         body.bio || null,
         body.avatarUrl || null,
+        githubUrl,
+        linkedinUrl,
         body.displayOrder !== undefined ? Number(body.displayOrder) : 0,
         body.isPublished !== undefined ? (body.isPublished ? 1 : 0) : 1,
       ]
@@ -108,6 +113,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Missing member ID' }, { status: 400 });
     }
 
+    const githubUrl = body.githubUrl !== undefined
+      ? ((body.githubUrl || '').trim() || null)
+      : (body.github_url !== undefined ? ((body.github_url || '').trim() || null) : undefined);
+
+    const linkedinUrl = body.linkedinUrl !== undefined
+      ? ((body.linkedinUrl || '').trim() || null)
+      : (body.linkedin_url !== undefined ? ((body.linkedin_url || '').trim() || null) : undefined);
+
     await db.execute(
       `UPDATE organizer_members SET
         name = COALESCE(?, name),
@@ -117,6 +130,8 @@ export async function PUT(request: NextRequest) {
         department = COALESCE(?, department),
         bio = COALESCE(?, bio),
         avatar_url = ?,
+        github_url = COALESCE(?, github_url),
+        linkedin_url = COALESCE(?, linkedin_url),
         display_order = COALESCE(?, display_order),
         is_published = COALESCE(?, is_published)
        WHERE id = ?`,
@@ -128,6 +143,8 @@ export async function PUT(request: NextRequest) {
         body.department ?? null,
         body.bio ?? null,
         body.avatarUrl ?? null,
+        githubUrl !== undefined ? githubUrl : null,
+        linkedinUrl !== undefined ? linkedinUrl : null,
         body.displayOrder !== undefined ? Number(body.displayOrder) : null,
         body.isPublished !== undefined ? (body.isPublished ? 1 : 0) : null,
         body.id,

@@ -26,6 +26,10 @@ export interface PublicMember {
   department?: string | null;
   bio?: string | null;
   avatar_url?: string | null;
+  github_url?: string | null;
+  linkedin_url?: string | null;
+  githubUrl?: string | null;
+  linkedinUrl?: string | null;
   display_order: number;
   is_published: number | boolean;
 }

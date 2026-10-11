@@ -68,6 +68,8 @@ export default function OrganizersPage() {
     department: 'Department of Electronics & Telecommunication Engineering',
     bio: '',
     avatarUrl: '',
+    githubUrl: '',
+    linkedinUrl: '',
     displayOrder: 0,
     isPublished: 1,
   });
@@ -191,6 +193,8 @@ export default function OrganizersPage() {
       department: 'Department of Electronics & Telecommunication Engineering',
       bio: '',
       avatarUrl: '',
+      githubUrl: '',
+      linkedinUrl: '',
       displayOrder: members.filter((m) => m.category === defaultCategory).length,
       isPublished: 1,
     });
@@ -208,6 +212,8 @@ export default function OrganizersPage() {
       department: member.department || 'Department of Electronics & Telecommunication Engineering',
       bio: member.bio || '',
       avatarUrl: member.avatar_url || '',
+      githubUrl: member.github_url || member.githubUrl || '',
+      linkedinUrl: member.linkedin_url || member.linkedinUrl || '',
       displayOrder: member.display_order,
       isPublished: Number(member.is_published) ? 1 : 0,
     });
@@ -1056,6 +1062,37 @@ export default function OrganizersPage() {
                   placeholder="Core student lead overseeing platform engineering and technical tracks..."
                   className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 leading-relaxed"
                 />
+              </div>
+
+              {/* Social Profiles: GitHub & LinkedIn */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-800 dark:text-zinc-200 block text-xs flex items-center gap-1.5">
+                    <Link2 className="w-3.5 h-3.5 text-blue-500" />
+                    <span>GitHub Profile URL (Optional)</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={memberForm.githubUrl}
+                    onChange={(e) => setMemberForm({ ...memberForm, githubUrl: e.target.value })}
+                    placeholder="https://github.com/username"
+                    className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-800 dark:text-zinc-200 block text-xs flex items-center gap-1.5">
+                    <Link2 className="w-3.5 h-3.5 text-blue-500" />
+                    <span>LinkedIn Profile URL (Optional)</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={memberForm.linkedinUrl}
+                    onChange={(e) => setMemberForm({ ...memberForm, linkedinUrl: e.target.value })}
+                    placeholder="https://linkedin.com/in/username"
+                    className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
               </div>
 
               {/* Portrait Image Upload */}

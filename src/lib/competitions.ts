@@ -56,6 +56,14 @@ export interface FestivalSettings {
   heroArtworkMobile?: string;
   logoEmblem?: string;
   districtsMap?: string;
+  footerDescription?: string;
+  footerEmail?: string;
+  footerPhone?: string;
+  footerInstagram?: string;
+  footerLinkedin?: string;
+  footerGithub?: string;
+  footerCollegeUrl?: string;
+  footerCustomLinks?: Array<{ label: string; url: string }>;
 }
 
 export interface DbOrganizerMember {
@@ -67,6 +75,8 @@ export interface DbOrganizerMember {
   department?: string | null;
   bio?: string | null;
   avatar_url?: string | null;
+  github_url?: string | null;
+  linkedin_url?: string | null;
   display_order: number;
   is_published: number;
 }
@@ -192,6 +202,21 @@ export async function getFestivalSettings(): Promise<FestivalSettings> {
         heroArtworkMobile: map.hero_artwork_mobile || FESTIVAL_ASSETS.heroArtworkMobile,
         logoEmblem: map.logo_emblem || FESTIVAL_ASSETS.logoEmblem,
         districtsMap: map.districts_map || FESTIVAL_ASSETS.districtsMap,
+        footerDescription: map.footer_description,
+        footerEmail: map.footer_email,
+        footerPhone: map.footer_phone,
+        footerInstagram: map.footer_instagram,
+        footerLinkedin: map.footer_linkedin,
+        footerGithub: map.footer_github,
+        footerCollegeUrl: map.footer_college_url,
+        footerCustomLinks: (() => {
+          if (!map.footer_custom_links) return undefined;
+          try {
+            return JSON.parse(map.footer_custom_links);
+          } catch {
+            return undefined;
+          }
+        })(),
       };
     }
   } catch (err) {
@@ -205,6 +230,13 @@ export async function getFestivalSettings(): Promise<FestivalSettings> {
     heroArtworkMobile: FESTIVAL_ASSETS.heroArtworkMobile,
     logoEmblem: FESTIVAL_ASSETS.logoEmblem,
     districtsMap: FESTIVAL_ASSETS.districtsMap,
+    footerDescription: 'YUGANTAR 2026 is the premier intercollegiate technical symposium organized by the Department of Electronics & Telecommunication Engineering and TELE-ERA at Priyadarshini College of Engineering, Nagpur.',
+    footerEmail: 'teleera.etc@pcenagpur.edu.in',
+    footerPhone: '+91 7104 236381 / 236382',
+    footerInstagram: 'https://instagram.com',
+    footerLinkedin: 'https://linkedin.com',
+    footerGithub: 'https://github.com/codebyom2309/yugantar',
+    footerCollegeUrl: 'https://www.pcenagpur.edu.in',
   };
 }
 
