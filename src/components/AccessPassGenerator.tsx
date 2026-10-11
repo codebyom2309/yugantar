@@ -5,7 +5,7 @@ import confetti from 'canvas-confetti';
 import { Download, Sparkles, CheckCircle2, Ticket } from 'lucide-react';
 import { COMPETITIONS } from '@/data/events';
 
-export default function AccessPassGenerator() {
+export default function AccessPassGenerator({ eventDate }: { eventDate?: string } = {}) {
   const [name, setName] = useState('YOUR NAME HERE');
   const [college, setCollege] = useState('Priyadarshini College of Engineering, Nagpur');
   const [selectedTrack, setSelectedTrack] = useState(COMPETITIONS[0].name);
@@ -96,7 +96,7 @@ export default function AccessPassGenerator() {
     // 6. Footer Info Row
     ctx.fillStyle = '#5F6F89';
     ctx.font = 'bold 15px "Space Grotesk", monospace';
-    ctx.fillText('DATE: 22 OCTOBER 2026', 60, 490);
+    ctx.fillText(`DATE: ${(eventDate || '19 October 2026').toUpperCase()}`, 60, 490);
     ctx.fillText('VENUE: PCE CAMPUS, NAGPUR', 380, 490);
     ctx.fillText('DEPT: ELECTRONICS & TELECOM', 730, 490);
 
@@ -321,7 +321,7 @@ export default function AccessPassGenerator() {
                   <div className="grid grid-cols-2 gap-2 pt-3 border-t border-[#DCE7F5] text-[10px] font-mono text-[#5F6F89]">
                     <div>
                       <span className="block text-[#5F6F89]/70">CONFIRMED DATE</span>
-                      <span className="font-bold text-[#17243D]">22 OCT 2026</span>
+                      <span className="font-bold text-[#17243D]">{(eventDate || '19 OCT 2026').toUpperCase()}</span>
                     </div>
                     <div>
                       <span className="block text-[#5F6F89]/70">CAMPUS VENUE</span>

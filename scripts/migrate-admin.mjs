@@ -147,6 +147,29 @@ async function main() {
   console.log('  ✓ organizers table');
 
   // =========================================================================
+  // 4b. Organizer People & Members (Faculty & Turbo Bits Student Team)
+  // =========================================================================
+  await connection.execute(`
+    CREATE TABLE IF NOT EXISTS organizer_members (
+      id VARCHAR(36) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      role VARCHAR(255) NOT NULL,
+      category ENUM('turbo_bits', 'faculty', 'core_committee') NOT NULL DEFAULT 'turbo_bits',
+      organization_id VARCHAR(36),
+      department VARCHAR(255),
+      bio TEXT,
+      avatar_url TEXT,
+      display_order INT DEFAULT 0,
+      is_published TINYINT(1) DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_member_category (category),
+      INDEX idx_member_org (organization_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `);
+  console.log('  ✓ organizer_members table');
+
+  // =========================================================================
   // 5. FAQs
   // =========================================================================
   await connection.execute(`
@@ -222,6 +245,17 @@ async function main() {
     console.log('  ✓ registrations.pass_issued_at added');
   } catch { console.log('  → registrations.pass_issued_at already exists'); }
 
+  // 9. Extend competitions table with section_visibility and custom_sections
+  try {
+    await connection.execute(`ALTER TABLE competitions ADD COLUMN section_visibility JSON`);
+    console.log('  ✓ competitions.section_visibility added');
+  } catch { console.log('  → competitions.section_visibility already exists'); }
+
+  try {
+    await connection.execute(`ALTER TABLE competitions ADD COLUMN custom_sections JSON`);
+    console.log('  ✓ competitions.custom_sections added');
+  } catch { console.log('  → competitions.custom_sections already exists'); }
+
   // =========================================================================
   // SEED: Site Settings from FESTIVAL_INFO
   // =========================================================================
@@ -266,12 +300,43 @@ async function main() {
 
   for (let i = 0; i < organizers.length; i++) {
     const o = organizers[i];
-    await connection.execute(
-      `INSERT IGNORE INTO organizers (id, name, role, department, description, badge, leadership_note, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [randomUUID(), o.name, o.role, o.department, o.description, o.badge, o.leadershipNote, i]
-    );
+    const [existing] = await connection.execute('SELECT id FROM organizers WHERE name = ?', [o.name]);
+    if (existing.length === 0) {
+      await connection.execute(
+        `INSERT INTO organizers (id, name, role, department, description, badge, leadership_note, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [randomUUID(), o.name, o.role, o.department, o.description, o.badge, o.leadershipNote, i]
+      );
+    }
   }
   console.log('  ✓ organizers seeded');
+
+  // =========================================================================
+  // SEED: Organizer Members (Turbo Bits Student Team & Faculty Representatives)
+  // =========================================================================
+  const [existingMembers] = await connection.execute('SELECT COUNT(*) as count FROM organizer_members');
+  if (existingMembers[0].count === 0) {
+    const initialMembers = [
+      // 6 Turbo Bits Team Members
+      { name: 'Student Lead 01', role: 'Technical Lead & Architecture', category: 'turbo_bits', department: 'ETC Dept', bio: 'Core student lead overseeing platform engineering, technical challenges, and infrastructure.', display_order: 0 },
+      { name: 'Student Lead 02', role: 'Full Stack & Cloud Systems', category: 'turbo_bits', department: 'ETC Dept', bio: 'Managing database integrations, Google Form sync, and live portals.', display_order: 1 },
+      { name: 'Student Lead 03', role: 'Embedded Systems & Hardware', category: 'turbo_bits', department: 'ETC Dept', bio: 'Hardware lab workbench arrangements and circuit arena logistics.', display_order: 2 },
+      { name: 'Student Lead 04', role: 'UI/UX & Design Systems', category: 'turbo_bits', department: 'ETC Dept', bio: 'Visual styling, mobile responsiveness, and participant design experience.', display_order: 3 },
+      { name: 'Student Lead 05', role: 'Event Operations & Jury Liaison', category: 'turbo_bits', department: 'ETC Dept', bio: 'Coordination between tracks, evaluation rubrics, and jury scoring.', display_order: 4 },
+      { name: 'Student Lead 06', role: 'Student Relations & Registration', category: 'turbo_bits', department: 'ETC Dept', bio: 'Participant helpdesk, verification, and accreditation passes.', display_order: 5 },
+      // Faculty Representatives
+      { name: 'Faculty Head (ETC)', role: 'Head of Department', category: 'faculty', department: 'Department of Electronics & Telecommunication Engineering', bio: 'Patron and institutional advisor for YUGANTAR 2026.', display_order: 0 },
+      { name: 'Faculty Coordinator', role: 'Staff In-Charge (TELE-ERA)', category: 'faculty', department: 'Department of Electronics & Telecommunication Engineering', bio: 'Academic coordinator guiding student forums and festival operations.', display_order: 1 },
+    ];
+
+    for (const m of initialMembers) {
+      await connection.execute(
+        `INSERT INTO organizer_members (id, name, role, category, department, bio, display_order, is_published) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+        [randomUUID(), m.name, m.role, m.category, m.department, m.bio, m.display_order]
+      );
+    }
+    console.log('  ✓ organizer_members seeded (6 Turbo Bits + 2 Faculty)');
+  }
+
 
   // =========================================================================
   // SEED: FAQs
@@ -286,10 +351,13 @@ async function main() {
 
   for (let i = 0; i < faqs.length; i++) {
     const f = faqs[i];
-    await connection.execute(
-      `INSERT IGNORE INTO faqs (id, category, question, answer, display_order) VALUES (?, ?, ?, ?, ?)`,
-      [randomUUID(), f.category, f.question, f.answer, i]
-    );
+    const [existing] = await connection.execute('SELECT id FROM faqs WHERE question = ?', [f.question]);
+    if (existing.length === 0) {
+      await connection.execute(
+        `INSERT INTO faqs (id, category, question, answer, display_order) VALUES (?, ?, ?, ?, ?)`,
+        [randomUUID(), f.category, f.question, f.answer, i]
+      );
+    }
   }
   console.log('  ✓ faqs seeded');
 

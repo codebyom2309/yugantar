@@ -1,0 +1,385 @@
+import { db } from '@/lib/db';
+import { COMPETITIONS, Competition, FESTIVAL_INFO, FESTIVAL_ASSETS, getCompetitionBySlug } from '@/data/events';
+
+/**
+ * Public Competition Loader — Database-first with robust static fallback.
+ * Guarantees that admin updates propagate to public website immediately,
+ * while preventing site crashes if the database connection ever hiccups.
+ */
+
+export interface DbCompetition extends Competition {
+  isPublished?: boolean;
+  registrationOpen?: boolean;
+  eventDate?: string;
+  venueDirections?: string;
+  registrationDeadline?: string;
+  registrationInstructions?: string;
+  minTeamMembers?: number;
+  sectionVisibility?: Record<string, boolean>;
+  customSections?: Array<{
+    id: string;
+    title: string;
+    type: 'text' | 'bullets' | 'notice' | 'download';
+    content?: string;
+    items?: string[];
+    fileUrl?: string;
+    isVisible?: boolean;
+    displayOrder?: number;
+  }>;
+  coordinators?: {
+    id: string;
+    name: string;
+    role: string;
+    email: string | null;
+    phone: string | null;
+    avatar_url: string | null;
+  }[];
+}
+
+export interface FestivalSettings {
+  name: string;
+  edition: string;
+  concept: string;
+  tagline: string;
+  subheading: string;
+  date: string;
+  isoDate: string;
+  venue: string;
+  locationShort: string;
+  address: string;
+  department: string;
+  organizers: string;
+  college: string;
+  registrationGlobalOpen: boolean;
+  registrationStatusMessage?: string;
+  heroArtwork?: string;
+  heroArtworkMobile?: string;
+  logoEmblem?: string;
+  districtsMap?: string;
+}
+
+export interface DbOrganizerMember {
+  id: string;
+  name: string;
+  role: string;
+  category: 'turbo_bits' | 'faculty' | 'core_committee';
+  organization_id?: string | null;
+  department?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+  display_order: number;
+  is_published: number;
+}
+
+export async function getPublicCompetitions(): Promise<DbCompetition[]> {
+  try {
+    const rows = await db.query<Record<string, unknown>>(
+      `SELECT * FROM competitions
+       WHERE is_published = 1
+       ORDER BY display_order ASC, created_at ASC`
+    );
+
+    if (rows && rows.length > 0) {
+      return rows.map((r) => mapDbRowToCompetition(r));
+    }
+  } catch (err) {
+    console.error('Database query for public competitions failed, using static fallback:', err);
+  }
+
+  // Fallback to static constants
+  return COMPETITIONS as DbCompetition[];
+}
+
+export async function getPublicCompetitionBySlug(slug: string): Promise<DbCompetition | null> {
+  try {
+    const rows = await db.query<Record<string, unknown>>(
+      `SELECT * FROM competitions
+       WHERE (slug = ? OR id = ? OR (slug = 'mock-placement-drive' AND ? = 'mock-placement'))
+       LIMIT 1`,
+      [slug, slug, slug]
+    );
+
+    if (rows && rows.length > 0) {
+      const comp = mapDbRowToCompetition(rows[0]);
+
+      // Fetch public coordinators
+      const coords = await db.query<{
+        id: string;
+        name: string;
+        role: string;
+        email: string | null;
+        phone: string | null;
+        avatar_url: string | null;
+      }>(
+        `SELECT id, name, role, email, phone, avatar_url
+         FROM competition_coordinators
+         WHERE competition_slug = ? AND is_active = 1 AND is_public = 1
+         ORDER BY display_order ASC`,
+        [comp.slug]
+      );
+
+      comp.coordinators = coords;
+      return comp;
+    }
+  } catch (err) {
+    console.error(`Database query for competition "${slug}" failed, using static fallback:`, err);
+  }
+
+  // Fallback to static
+  const staticComp = getCompetitionBySlug(slug);
+  return (staticComp as DbCompetition) || null;
+}
+
+function deriveIsoDate(displayDate?: string, storedIso?: string): string {
+  if (displayDate) {
+    const months: Record<string, string> = {
+      january: '01', february: '02', march: '03', april: '04',
+      may: '05', june: '06', july: '07', august: '08',
+      september: '09', october: '10', november: '11', december: '12',
+      jan: '01', feb: '02', mar: '03', apr: '04', jun: '06',
+      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+    };
+    const parts = displayDate.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      const day = parts[0].padStart(2, '0');
+      const monthStr = parts[1].toLowerCase();
+      const year = parts[2];
+      const mm = months[monthStr];
+      if (mm && /^\d{4}$/.test(year) && /^\d{2}$/.test(day)) {
+        return `${year}-${mm}-${day}T09:00:00+05:30`;
+      }
+    }
+  }
+  if (storedIso && storedIso.includes('T')) return storedIso;
+  if (storedIso && /^\d{4}-\d{2}-\d{2}$/.test(storedIso)) {
+    return `${storedIso}T09:00:00+05:30`;
+  }
+  return FESTIVAL_INFO.isoDate;
+}
+
+export async function getFestivalSettings(): Promise<FestivalSettings> {
+  try {
+    const rows = await db.query<{ setting_key: string; setting_value: string }>(
+      'SELECT setting_key, setting_value FROM site_settings'
+    );
+
+    if (rows && rows.length > 0) {
+      const map: Record<string, string> = {};
+      rows.forEach((r) => {
+        map[r.setting_key] = r.setting_value;
+      });
+
+      const date = map.event_date || FESTIVAL_INFO.date;
+      const isoDate = deriveIsoDate(date, map.event_iso_date);
+
+      return {
+        name: map.event_name || FESTIVAL_INFO.name,
+        edition: map.event_edition || FESTIVAL_INFO.edition,
+        concept: map.event_concept || FESTIVAL_INFO.concept,
+        tagline: map.event_tagline || FESTIVAL_INFO.tagline,
+        subheading: map.event_subheading || FESTIVAL_INFO.subheading,
+        date,
+        isoDate,
+        venue: map.event_venue || FESTIVAL_INFO.venue,
+        locationShort: map.event_location_short || FESTIVAL_INFO.locationShort,
+        address: map.event_address || FESTIVAL_INFO.address,
+        department: map.event_department || FESTIVAL_INFO.department,
+        organizers: map.event_organizers_text || FESTIVAL_INFO.organizers,
+        college: map.event_college || FESTIVAL_INFO.college,
+        registrationGlobalOpen: map.registration_global_open !== '0',
+        registrationStatusMessage: map.registration_status_message || undefined,
+        heroArtwork: map.hero_artwork || FESTIVAL_ASSETS.heroArtwork,
+        heroArtworkMobile: map.hero_artwork_mobile || FESTIVAL_ASSETS.heroArtworkMobile,
+        logoEmblem: map.logo_emblem || FESTIVAL_ASSETS.logoEmblem,
+        districtsMap: map.districts_map || FESTIVAL_ASSETS.districtsMap,
+      };
+    }
+  } catch (err) {
+    console.error('Database query for site settings failed, using static fallback:', err);
+  }
+
+  return {
+    ...FESTIVAL_INFO,
+    registrationGlobalOpen: true,
+    heroArtwork: FESTIVAL_ASSETS.heroArtwork,
+    heroArtworkMobile: FESTIVAL_ASSETS.heroArtworkMobile,
+    logoEmblem: FESTIVAL_ASSETS.logoEmblem,
+    districtsMap: FESTIVAL_ASSETS.districtsMap,
+  };
+}
+
+export async function getPublicOrganizers() {
+  try {
+    const rows = await db.query<{
+      id: string;
+      name: string;
+      role: string;
+      department: string;
+      description: string;
+      badge: string;
+      leadership_note: string;
+      logo_url: string | null;
+    }>(
+      'SELECT * FROM organizers WHERE is_published = 1 ORDER BY display_order ASC, created_at ASC'
+    );
+    if (rows && rows.length > 0) {
+      const seen = new Set<string>();
+      const uniqueRows = rows.filter((r) => {
+        if (!r.name || seen.has(r.name)) return false;
+        seen.add(r.name);
+        return true;
+      });
+      return uniqueRows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        role: r.role,
+        department: r.department,
+        description: r.description,
+        badge: r.badge,
+        leadershipNote: r.leadership_note,
+        logoUrl: r.logo_url,
+      }));
+    }
+  } catch (err) {
+    console.warn('Failed to load DB organizers, using fallback:', err);
+  }
+
+  const { ORGANIZERS } = await import('@/data/events');
+  return ORGANIZERS.map((o) => ({ ...o, id: o.name, logoUrl: null }));
+}
+
+export async function getPublicOrganizerMembers(category?: 'turbo_bits' | 'faculty' | 'core_committee'): Promise<DbOrganizerMember[]> {
+  try {
+    let sql = 'SELECT * FROM organizer_members WHERE is_published = 1';
+    const params: string[] = [];
+    if (category) {
+      sql += ' AND category = ?';
+      params.push(category);
+    }
+    sql += ' ORDER BY display_order ASC, created_at ASC';
+    const rows = await db.query<DbOrganizerMember>(sql, params);
+    if (rows && rows.length > 0) {
+      const seen = new Set<string>();
+      return rows.filter((r) => {
+        if (!r.id || seen.has(r.id)) return false;
+        seen.add(r.id);
+        return true;
+      });
+    }
+  } catch (err) {
+    console.warn('Failed to load DB organizer members:', err);
+  }
+  return [];
+}
+
+export async function getPublicFaqs(competitionSlug?: string) {
+  try {
+    let where = 'WHERE is_published = 1';
+    const params: string[] = [];
+    if (competitionSlug) {
+      where += ' AND (competition_slug = ? OR competition_slug IS NULL)';
+      params.push(competitionSlug);
+    }
+    const rows = await db.query<{
+      id: string;
+      category: string;
+      question: string;
+      answer: string;
+      competition_slug: string | null;
+    }>(
+      `SELECT * FROM faqs ${where} ORDER BY display_order ASC, created_at ASC`,
+      params
+    );
+    if (rows && rows.length > 0) {
+      const seen = new Set<string>();
+      return rows.filter((r) => {
+        if (!r.question || seen.has(r.question)) return false;
+        seen.add(r.question);
+        return true;
+      });
+    }
+  } catch (err) {
+    console.warn('Failed to load DB faqs:', err);
+  }
+
+  return [];
+}
+
+function mapDbRowToCompetition(r: Record<string, unknown>): DbCompetition {
+  const parseJson = (val: unknown, fallback: unknown) => {
+    if (!val) return fallback;
+    if (typeof val === 'object') return val;
+    try {
+      return JSON.parse(val as string);
+    } catch {
+      return fallback;
+    }
+  };
+
+  return {
+    id: String(r.id || r.slug),
+    slug: String(r.slug),
+    name: String(r.name),
+    district: String(r.district || 'Nexus Arena'),
+    districtIndex: Number(r.district_index || 0),
+    districtTagline: String(r.district_tagline || ''),
+    category: (r.category as DbCompetition['category']) || 'Hardware & Circuits',
+    tag: String(r.tag || ''),
+    shortDescription: String(r.short_description || ''),
+    fullDescription: String(r.full_description || ''),
+    about: String(r.about || ''),
+    venue: String(r.venue || ''),
+    eligibility: String(r.eligibility || ''),
+    teamSizeLimit: String(r.team_size_limit || ''),
+    maxTeamMembers: Number(r.max_team_members || 1),
+    isIndividualOnly: Boolean(r.is_individual_only),
+    isFixedSquad: Boolean(r.is_fixed_squad),
+    theme: r.theme ? String(r.theme) : undefined,
+    approvedDomains: parseJson(r.approved_domains, []),
+    scheduleFlow: parseJson(r.schedule_flow, []),
+    evaluationMatrix: parseJson(r.evaluation_matrix, undefined),
+    roundsDescription: parseJson(r.rounds_description, []),
+    rules: parseJson(r.rules, []),
+    expectations: parseJson(r.expectations, []),
+    formatNote: String(r.format_note || ''),
+    highlights: parseJson(r.highlights, []),
+    iconName: String(r.icon_name || 'Trophy'),
+    bannerImage: String(r.banner_image || '/images/nexus-city/hero-futuristic-city-clouds.webp'),
+    cardImage: String(r.card_image || '/images/nexus-city/hero-futuristic-city-clouds.webp'),
+    mapCoords: parseJson(r.map_coords, { x: 50, y: 50 }),
+    accentColor: String(r.accent_color || '#3B82F6'),
+    accentSecondary: String(r.accent_secondary || '#6366F1'),
+    accentBg: String(r.accent_bg || 'rgba(59, 130, 246, 0.1)'),
+    themeVibe: (r.theme_vibe as DbCompetition['themeVibe']) || 'circuit',
+    faqs: parseJson(r.faqs, []),
+    sectionVisibility: parseJson(r.section_visibility, {
+      hero: true,
+      registration: true,
+      about: true,
+      schedule: true,
+      rubric: true,
+      rules: true,
+      expectations: true,
+      faqs: true,
+      dossier: true,
+      coordinators: true,
+      custom: true,
+    }),
+    customSections: parseJson(r.custom_sections, []),
+    eligibilityPlaceholder: String(r.eligibility || ''),
+    teamRequirementsPlaceholder: String(r.team_size_limit || ''),
+    rulesPlaceholder: parseJson(r.rules, []),
+    isPublished: Boolean(r.is_published),
+    eventDate:
+      r.event_date &&
+      String(r.event_date).trim() !== '' &&
+      String(r.event_date).trim() !== 'null' &&
+      String(r.event_date).trim() !== 'undefined'
+        ? String(r.event_date).trim()
+        : undefined,
+    venueDirections: r.venue_directions ? String(r.venue_directions) : undefined,
+    registrationDeadline: r.registration_deadline ? String(r.registration_deadline) : undefined,
+    registrationInstructions: r.registration_instructions ? String(r.registration_instructions) : undefined,
+    minTeamMembers: Number(r.min_team_members || 1),
+  };
+}

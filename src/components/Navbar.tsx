@@ -8,6 +8,7 @@ import { Menu, X, ArrowUpRight, LayoutGrid, Sparkles } from 'lucide-react';
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [eventDateLabel, setEventDateLabel] = useState('19 OCTOBER 2026 · PCE NAGPUR');
   const pathname = usePathname();
 
   useEffect(() => {
@@ -16,6 +17,23 @@ export default function Navbar() {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/competitions')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.festival?.event_date) {
+          setEventDateLabel(
+            `${d.festival.event_date.toUpperCase()} · ${
+              d.festival.event_location_short
+                ? d.festival.event_location_short.toUpperCase()
+                : 'PCE NAGPUR'
+            }`
+          );
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const navLinks = [
@@ -61,13 +79,17 @@ export default function Navbar() {
               </svg>
             </div>
 
-            {/* Wordmark and Year Badge */}
+            {/* Wordmark, Year Badge and TELE-ERA Identity */}
             <div className="flex items-center gap-1 sm:gap-2">
               <span className="font-display font-extrabold text-xs sm:text-base lg:text-lg tracking-tight text-[#15294A] group-hover:text-[#FF874D] transition-colors whitespace-nowrap">
                 YUGANTAR
               </span>
               <span className="text-[9px] sm:text-[10px] font-mono font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-[#FFF0E3] text-[#FF874D] border border-[#FFD1B5] shrink-0">
                 2026
+              </span>
+              <span className="hidden md:inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold text-[#536781] border-l border-[#DCE5F2] pl-2.5 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#3978F6]" />
+                TELE-ERA FORUM
               </span>
             </div>
           </Link>
@@ -134,11 +156,11 @@ export default function Navbar() {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#FF874D]" />
                 <span className="text-[11px] font-mono uppercase tracking-wider text-[#536781] font-bold">
-                  22 OCTOBER 2026 · PCE NAGPUR
+                  {eventDateLabel}
                 </span>
               </div>
-              <span className="text-xs font-mono font-bold text-[#FF874D]">
-                DEPT OF ETC
+              <span className="text-xs font-mono font-bold text-[#FF783E]">
+                TELE-ERA FORUM
               </span>
             </div>
 

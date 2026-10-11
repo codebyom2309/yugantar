@@ -26,14 +26,17 @@ export async function GET(request: NextRequest) {
   const [countRow] = await db.query<{ total: number }>(`SELECT COUNT(*) as total FROM audit_log ${where}`, params);
   const total = countRow?.total || 0;
 
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 100));
+  const safeOffset = Math.max(0, Number(offset) || 0);
+
   const logs = await db.query<{
     id: string; admin_id: string; admin_email: string; action: string;
     entity_type: string; entity_id: string; details: string | null;
     ip_address: string | null; created_at: string;
   }>(
-    `SELECT * FROM audit_log ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
+    `SELECT * FROM audit_log ${where} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+    params
   );
 
-  return NextResponse.json({ logs, total, page, limit, totalPages: Math.ceil(total / limit) });
+  return NextResponse.json({ logs, total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) });
 }

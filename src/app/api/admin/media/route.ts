@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
+import { uploadMediaFile, formatDriveUrl } from '@/lib/storage';
 
 async function requireAdmin() {
   const session = await auth();
@@ -9,36 +10,167 @@ async function requireAdmin() {
   return { error: null, status: 200, session };
 }
 
-// GET /api/admin/media — list media assets
-export async function GET() {
+async function logAudit(adminId: string, adminEmail: string, action: string, entityType: string, entityId: string, details?: Record<string, unknown>) {
+  try {
+    await db.execute(
+      'INSERT INTO audit_log (id, admin_id, admin_email, action, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [randomUUID(), adminId, adminEmail, action, entityType, entityId, details ? JSON.stringify(details) : null]
+    );
+  } catch {}
+}
+
+// GET /api/admin/media — list media assets with search & role filter
+export async function GET(request: NextRequest) {
   const { error, status } = await requireAdmin();
   if (error) return NextResponse.json({ error }, { status });
 
-  const assets = await db.query<Record<string, unknown>>(
-    'SELECT * FROM media_assets ORDER BY created_at DESC'
-  );
-  return NextResponse.json({ assets });
+  const { searchParams } = new URL(request.url);
+  const search = searchParams.get('search') || '';
+  const role = searchParams.get('role') || '';
+
+  try {
+    let where = 'WHERE 1=1';
+    const params: string[] = [];
+
+    if (search) {
+      where += ' AND (filename LIKE ? OR alt_text LIKE ? OR role LIKE ?)';
+      const s = `%${search}%`;
+      params.push(s, s, s);
+    }
+    if (role) {
+      where += ' AND role = ?';
+      params.push(role);
+    }
+
+    const assets = await db.query<Record<string, unknown>>(
+      `SELECT * FROM media_assets ${where} ORDER BY created_at DESC`,
+      params
+    );
+
+    return NextResponse.json({ assets: assets || [] });
+  } catch (err) {
+    console.error('Media fetch error:', err);
+    return NextResponse.json({ error: 'Failed to load media assets' }, { status: 500 });
+  }
 }
 
-// POST /api/admin/media — track a new media asset
+// POST /api/admin/media — upload or register a new media asset
 export async function POST(request: NextRequest) {
   const { error, status, session } = await requireAdmin();
   if (error) return NextResponse.json({ error }, { status });
 
-  const body = await request.json();
-  const id = randomUUID();
+  const contentType = request.headers.get('content-type') || '';
 
-  await db.execute(
-    `INSERT INTO media_assets (id, filename, url, public_id, cloudinary_account, mime_type, size_bytes, alt_text, role, entity_type, entity_id, uploaded_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id, body.filename, body.url, body.publicId || null, body.cloudinaryAccount || null,
-      body.mimeType || null, body.sizeBytes || null, body.altText || null,
-      body.role || null, body.entityType || null, body.entityId || null, session!.user.id,
-    ]
-  );
+  try {
+    const id = randomUUID();
 
-  return NextResponse.json({ success: true, id });
+    // 1. Multipart form file upload
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const file = formData.get('file') as File | null;
+      const role = (formData.get('role') as string) || 'artwork';
+      const entityType = (formData.get('entityType') as string) || 'competition';
+      const entityId = (formData.get('entityId') as string) || null;
+      const altText = (formData.get('altText') as string) || '';
+
+      if (!file) {
+        return NextResponse.json({ error: 'No file supplied' }, { status: 400 });
+      }
+
+      // Upload via storage provider
+      const uploadResult = await uploadMediaFile(file, {
+        competitionSlug: entityId || 'general',
+        role,
+        altText,
+      });
+
+      await db.execute(
+        `INSERT INTO media_assets (
+          id, filename, url, public_id, storage_provider, storage_path,
+          mime_type, size_bytes, alt_text, role, entity_type, entity_id, uploaded_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          file.name,
+          uploadResult.url,
+          uploadResult.publicId || null,
+          uploadResult.storageProvider,
+          uploadResult.storagePath || null,
+          uploadResult.mimeType,
+          uploadResult.sizeBytes,
+          altText || file.name,
+          role,
+          entityType,
+          entityId,
+          session!.user.id,
+        ]
+      );
+
+      await logAudit(session!.user.id, session!.user.email, 'upload_media_asset', 'media', id, {
+        filename: file.name,
+        url: uploadResult.url,
+        provider: uploadResult.storageProvider,
+      });
+
+      return NextResponse.json({
+        success: true,
+        asset: {
+          id,
+          filename: file.name,
+          url: uploadResult.url,
+          storage_provider: uploadResult.storageProvider,
+          mime_type: uploadResult.mimeType,
+          size_bytes: uploadResult.sizeBytes,
+        },
+      });
+    }
+
+    // 2. Direct JSON asset metadata registration
+    const body = await request.json();
+    if (!body.url || !body.filename) {
+      return NextResponse.json({ error: 'url and filename are required' }, { status: 400 });
+    }
+
+    const finalUrl = formatDriveUrl(body.url);
+    const isDrive = finalUrl.includes('googleusercontent.com') || body.url.includes('drive.google.com');
+    const provider = body.storageProvider || (isDrive ? 'drive' : 'external');
+
+    await db.execute(
+      `INSERT INTO media_assets (
+        id, filename, url, public_id, storage_provider, storage_path,
+        mime_type, size_bytes, alt_text, role, entity_type, entity_id, uploaded_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        body.filename,
+        finalUrl,
+        body.publicId || null,
+        provider,
+        body.storagePath || null,
+        body.mimeType || 'image/webp',
+        body.sizeBytes || null,
+        body.altText || null,
+        body.role || 'artwork',
+        body.entityType || null,
+        body.entityId || null,
+        session!.user.id,
+      ]
+    );
+
+    await logAudit(session!.user.id, session!.user.email, 'register_media_asset', 'media', id, {
+      filename: body.filename,
+      url: finalUrl,
+      provider,
+    });
+
+    return NextResponse.json({ success: true, id });
+  } catch (err: unknown) {
+    console.error('Media upload error:', err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Media upload failed' },
+      { status: 500 }
+    );
+  }
 }
 
 // DELETE /api/admin/media — delete media asset record
@@ -46,8 +178,15 @@ export async function DELETE(request: NextRequest) {
   const { error, status, session } = await requireAdmin();
   if (error) return NextResponse.json({ error }, { status });
 
-  const { id } = await request.json();
-  await db.execute('DELETE FROM media_assets WHERE id = ?', [id]);
+  try {
+    const { id } = await request.json();
+    if (!id) return NextResponse.json({ error: 'Asset ID required' }, { status: 400 });
 
-  return NextResponse.json({ success: true });
+    await db.execute('DELETE FROM media_assets WHERE id = ?', [id]);
+    await logAudit(session!.user.id, session!.user.email, 'delete_media_asset', 'media', id);
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return NextResponse.json({ error: 'Failed to delete media asset' }, { status: 500 });
+  }
 }

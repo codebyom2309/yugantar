@@ -4,8 +4,9 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowUp, MapPin, Calendar, Sparkles } from 'lucide-react';
 import { FESTIVAL_INFO, ORGANIZERS } from '@/data/events';
+import type { FestivalSettings } from '@/lib/competitions';
 
-export default function Footer() {
+export default function Footer({ festival }: { festival?: FestivalSettings }) {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -31,26 +32,26 @@ export default function Footer() {
               </div>
               <div className="flex flex-col">
                 <span className="font-display font-extrabold tracking-tight text-xl text-[#15294A]">
-                  YUGANTAR 2026
+                  {festival?.name || 'YUGANTAR'} {festival?.edition || '2026'}
                 </span>
                 <span className="text-[11px] font-mono font-bold text-[#FF874D] uppercase tracking-wider">
-                  NEXUS CITY · ENGINEERING FESTIVAL
+                  {festival?.concept || 'NEXUS CITY'} · ENGINEERING FESTIVAL
                 </span>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm text-[#536781] leading-relaxed mb-6 max-w-sm font-normal">
-              The premier intercollegiate technical festival organized by the Department of Electronics and Telecommunication Engineering at Priyadarshini College of Engineering, Nagpur.
+              The premier intercollegiate technical festival organized by {festival?.department || 'the Department of Electronics and Telecommunication Engineering'} at {festival?.college || 'Priyadarshini College of Engineering, Nagpur'}.
             </p>
 
             <div className="space-y-2 text-xs text-[#536781]">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-[#3B82F6] shrink-0 mt-0.5" />
-                <span>{FESTIVAL_INFO.address}</span>
+                <span>{festival?.address || FESTIVAL_INFO.address}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#FF874D] shrink-0" />
-                <span className="font-mono font-semibold">22 October 2026 · PCE Concourse</span>
+                <span className="font-mono font-semibold">{festival?.date || FESTIVAL_INFO.date} · {festival?.locationShort || FESTIVAL_INFO.locationShort}</span>
               </div>
             </div>
           </div>

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
+import { formatDriveUrl } from '@/lib/storage';
+import { revalidatePath } from 'next/cache';
 
 async function requireAdmin(allowedRoles?: string[]) {
   const session = await auth();
@@ -27,7 +29,14 @@ export async function GET() {
     badge: string; leadership_note: string; logo_url: string | null; display_order: number; is_published: number;
   }>('SELECT * FROM organizers ORDER BY display_order ASC');
 
-  return NextResponse.json({ organizers });
+  const seen = new Set<string>();
+  const uniqueOrganizers = (organizers || []).filter((o) => {
+    if (!o.name || seen.has(o.name)) return false;
+    seen.add(o.name);
+    return true;
+  });
+
+  return NextResponse.json({ organizers: uniqueOrganizers });
 }
 
 // POST — create organizer
@@ -37,13 +46,20 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const id = randomUUID();
+  const logoUrl = body.logoUrl ? formatDriveUrl(body.logoUrl) : null;
 
   await db.execute(
     'INSERT INTO organizers (id, name, role, department, description, badge, leadership_note, logo_url, display_order, is_published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
-    [id, body.name, body.role || '', body.department || '', body.description || '', body.badge || '', body.leadershipNote || '', body.logoUrl || null, body.displayOrder || 0]
+    [id, body.name, body.role || '', body.department || '', body.description || '', body.badge || '', body.leadershipNote || '', logoUrl, body.displayOrder || 0]
   );
 
   await logAudit(session!.user.id, session!.user.email, 'create_organizer', 'organizer', id);
+
+  try {
+    revalidatePath('/about');
+    revalidatePath('/');
+  } catch {}
+
   return NextResponse.json({ success: true, id });
 }
 
@@ -54,13 +70,18 @@ export async function PUT(request: NextRequest) {
 
   const body = await request.json();
   if (!body.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  const logoUrl = body.logoUrl !== undefined ? (body.logoUrl ? formatDriveUrl(body.logoUrl) : null) : undefined;
 
   await db.execute(
-    'UPDATE organizers SET name = ?, role = ?, department = ?, description = ?, badge = ?, leadership_note = ?, logo_url = ?, display_order = ?, is_published = ? WHERE id = ?',
-    [body.name, body.role, body.department, body.description, body.badge, body.leadershipNote || '', body.logoUrl || null, body.displayOrder || 0, body.isPublished ?? 1, body.id]
+    'UPDATE organizers SET name = ?, role = ?, department = ?, description = ?, badge = ?, leadership_note = ?, logo_url = COALESCE(?, logo_url), display_order = ?, is_published = ? WHERE id = ?',
+    [body.name, body.role, body.department, body.description, body.badge, body.leadershipNote || '', logoUrl ?? null, body.displayOrder || 0, body.isPublished ?? 1, body.id]
   );
 
   await logAudit(session!.user.id, session!.user.email, 'update_organizer', 'organizer', body.id);
+  try {
+    revalidatePath('/about');
+    revalidatePath('/');
+  } catch {}
   return NextResponse.json({ success: true });
 }
 
@@ -72,5 +93,11 @@ export async function DELETE(request: NextRequest) {
   const { id } = await request.json();
   await db.execute('DELETE FROM organizers WHERE id = ?', [id]);
   await logAudit(session!.user.id, session!.user.email, 'delete_organizer', 'organizer', id);
+
+  try {
+    revalidatePath('/about');
+    revalidatePath('/');
+  } catch {}
+
   return NextResponse.json({ success: true });
 }

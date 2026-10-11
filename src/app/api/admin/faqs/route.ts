@@ -61,6 +61,11 @@ export async function PUT(request: NextRequest) {
   );
 
   await logAudit(session!.user.id, session!.user.email, 'update_faq', 'faq', id);
+  try {
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/faq');
+    revalidatePath('/');
+  } catch {}
   return NextResponse.json({ success: true });
 }
 

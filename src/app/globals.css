@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Instrument+Serif:ital@1&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-admin-theme="dark"], [data-admin-theme="dark"] *):not(:where([data-theme="public-light"], [data-theme="public-light"] *)));
+
 :root {
   --font-display: 'Sora', system-ui, -apple-system, sans-serif;
   --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
@@ -299,6 +301,626 @@
 
 .nexus-peach-gradient {
   background: linear-gradient(180deg, #FFF4EA 0%, #F8FAFD 100%);
+}
+
+/* =========================================================================
+   PARTICIPANT SITE: ELECTRONICS CUES & SKEUOMORPHIC ACCENTS
+   Scoped specifically to participant interface, does NOT affect admin panel
+   ========================================================================= */
+
+/* 7. Subtle Electronics Circuit Trace Hairline */
+.circuit-trace {
+  position: relative;
+}
+.circuit-trace::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(57, 120, 246, 0.25) 0%, rgba(255, 120, 62, 0.3) 50%, rgba(57, 120, 246, 0.1) 100%);
+  pointer-events: none;
+}
+
+/* 8. Node Indicator */
+.circuit-node-dot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.circuit-node-dot::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 9999px;
+  border: 1px solid currentColor;
+  opacity: 0.35;
+}
+
+/* 9. Restrained Tactile Card with Skeuomorphic Inset */
+.nexus-skeuo-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 1.25rem;
+  box-shadow: 
+    0 1px 2px 0 rgba(16, 38, 74, 0.04),
+    0 8px 24px -4px rgba(16, 38, 74, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 0 rgba(21, 41, 74, 0.03);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
+}
+
+.nexus-skeuo-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(57, 120, 246, 0.35);
+  box-shadow: 
+    0 2px 4px 0 rgba(16, 38, 74, 0.05),
+    0 16px 32px -6px rgba(16, 38, 74, 0.1),
+    inset 0 1px 0 0 rgba(255, 255, 255, 1);
+}
+
+.nexus-skeuo-card:active {
+  transform: translateY(0px) scale(0.99);
+  box-shadow: 
+    0 1px 2px 0 rgba(16, 38, 74, 0.06),
+    inset 0 2px 4px 0 rgba(16, 38, 74, 0.04);
+}
+
+/* 10. Technical Crosshair Pin */
+.tech-crosshair {
+  position: relative;
+}
+.tech-crosshair::before,
+.tech-crosshair::after {
+  content: '';
+  position: absolute;
+  background-color: rgba(57, 120, 246, 0.35);
+  pointer-events: none;
+}
+.tech-crosshair::before {
+  width: 5px;
+  height: 1px;
+  top: 6px;
+  left: 6px;
+}
+.tech-crosshair::after {
+  width: 1px;
+  height: 5px;
+  top: 6px;
+  left: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexus-skeuo-card,
+  .nexus-btn-sapphire,
+  .nexus-btn-frosted,
+  .nexus-card {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* =========================================================================
+   ADMIN PANEL EXCLUSIVE GLASSMORPHISM & DUAL THEME ENGINE
+   Strictly scoped to [data-admin-theme] so public website is not affected
+   ========================================================================= */
+
+[data-admin-theme="dark"] {
+  --admin-bg: #090B0F;
+  --admin-surface: rgba(14, 17, 24, 0.72);
+  --admin-surface-hover: rgba(22, 27, 37, 0.85);
+  --admin-surface-active: rgba(29, 36, 49, 0.95);
+  --admin-card: rgba(17, 21, 29, 0.65);
+  --admin-border: rgba(255, 255, 255, 0.08);
+  --admin-border-subtle: rgba(255, 255, 255, 0.04);
+  --admin-border-hover: rgba(255, 255, 255, 0.18);
+  --admin-text-primary: #F3F4F6;
+  --admin-text-secondary: #9CA3AF;
+  --admin-text-muted: #9CA3AF;
+  --admin-input-bg: rgba(11, 13, 19, 0.75);
+  --admin-glow: rgba(59, 130, 246, 0.15);
+  --admin-sidebar-bg: rgba(10, 12, 17, 0.82);
+  --admin-sidebar-border: rgba(255, 255, 255, 0.07);
+}
+
+[data-admin-theme="light"] {
+  --admin-bg: #F4F6FA;
+  --admin-surface: rgba(255, 255, 255, 0.85);
+  --admin-surface-hover: rgba(255, 255, 255, 0.95);
+  --admin-surface-active: rgba(240, 244, 252, 0.95);
+  --admin-card: rgba(255, 255, 255, 0.78);
+  --admin-border: rgba(0, 0, 0, 0.08);
+  --admin-border-subtle: rgba(0, 0, 0, 0.04);
+  --admin-border-hover: rgba(0, 0, 0, 0.18);
+  --admin-text-primary: #0F172A;
+  --admin-text-secondary: #475569;
+  --admin-text-muted: #64748B;
+  --admin-input-bg: rgba(255, 255, 255, 0.92);
+  --admin-glow: rgba(59, 130, 246, 0.08);
+  --admin-sidebar-bg: rgba(255, 255, 255, 0.86);
+  --admin-sidebar-border: rgba(0, 0, 0, 0.08);
+}
+
+/* Admin Glassmorphism Utility Classes */
+.admin-glass-shell {
+  background-color: var(--admin-bg);
+  color: var(--admin-text-primary);
+  position: relative;
+  min-height: 100vh;
+}
+
+.admin-ambient-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+[data-admin-theme="dark"] .admin-ambient-glow {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 85% 25%, rgba(139, 92, 246, 0.09) 0%, transparent 40%),
+    radial-gradient(circle at 50% 85%, rgba(234, 88, 12, 0.06) 0%, transparent 45%);
+}
+
+[data-admin-theme="light"] .admin-ambient-glow {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(186, 218, 255, 0.45) 0%, transparent 45%),
+    radial-gradient(circle at 85% 25%, rgba(220, 208, 255, 0.35) 0%, transparent 40%),
+    radial-gradient(circle at 50% 85%, rgba(255, 224, 206, 0.3) 0%, transparent 45%);
+}
+
+.admin-glass-panel {
+  background: var(--admin-surface);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid var(--admin-border);
+  box-shadow: 
+    0 16px 40px -8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.admin-glass-card {
+  background: var(--admin-card);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--admin-border);
+  box-shadow: 
+    0 8px 28px -4px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-glass-card:hover {
+  border-color: var(--admin-border-hover);
+  transform: translateY(-1.5px);
+}
+
+.admin-glass-input {
+  background: var(--admin-input-bg) !important;
+  color: var(--admin-text-primary) !important;
+  border: 1px solid var(--admin-border) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+
+.admin-glass-input:focus {
+  border-color: #3B82F6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18) !important;
+  outline: none !important;
+}
+
+.admin-glass-sidebar {
+  background: var(--admin-sidebar-bg);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border-right: 1px solid var(--admin-sidebar-border);
+  box-shadow: 4px 0 30px rgba(0, 0, 0, 0.1);
+}
+
+.admin-glass-topbar {
+  background: var(--admin-topbar-bg, rgba(244, 246, 250, 0.94));
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border-bottom: 1px solid var(--admin-border);
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.04);
+}
+
+[data-admin-theme="dark"] .admin-glass-topbar {
+  background: rgba(9, 11, 15, 0.94) !important;
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-admin-theme="light"] .admin-glass-topbar {
+  background: rgba(244, 246, 250, 0.95) !important;
+  box-shadow: 0 4px 24px -2px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* =========================================================================
+   SLEEK MODERN SCROLLBAR ENGINE (REMOVES UGLY GREY WINDOWS SCROLLBARS)
+   ========================================================================= */
+
+/* WebKit & Chromium (Chrome, Edge, Brave, Opera) */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.28);
+  border-radius: 9999px;
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.52);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Firefox standard scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+/* Admin Scoped Scrollbars: Dual Theme Glow */
+[data-admin-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+}
+
+[data-admin-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+[data-admin-theme="dark"] * {
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+[data-admin-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.18);
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+}
+
+[data-admin-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.38);
+}
+
+[data-admin-theme="light"] * {
+  scrollbar-color: rgba(15, 23, 42, 0.22) transparent;
+}
+
+/* Admin Scoped Selection Styling */
+[data-admin-theme="dark"] ::selection {
+  background-color: rgba(59, 130, 246, 0.45);
+  color: #FFFFFF;
+}
+
+[data-admin-theme="light"] ::selection {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #0F172A;
+}
+
+/* Placeholder Card Pattern */
+.admin-placeholder-card {
+  border: 2px dashed var(--admin-border);
+  background: transparent;
+  transition: all 0.22s ease;
+}
+
+.admin-placeholder-card:hover {
+  border-color: #3B82F6;
+  background: var(--admin-surface);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--admin-glow);
+}
+
+/* =========================================================================
+   UNIVERSAL THEME SYNCHRONIZATION FOR ALL ADMIN PANELS & COMPONENTS
+   Ensures complete legibility, no pitch-black boxes in light mode,
+   and no white text on light backgrounds!
+   ========================================================================= */
+
+/* Ensure Next dev overlay indicator never overlaps admin sidebar user card */
+[data-nextjs-dev-indicator],
+[data-nextjs-toast],
+nextjs-portal {
+  bottom: 24px !important;
+  right: 24px !important;
+  left: auto !important;
+}
+
+/* Headings in Admin Panel */
+[data-admin-theme] h1,
+[data-admin-theme] h2,
+[data-admin-theme] h3,
+[data-admin-theme] h4,
+[data-admin-theme] h5,
+[data-admin-theme] h6 {
+  color: var(--admin-text-primary) !important;
+}
+
+/* -------------------------------------------------------------
+   LIGHT MODE: Crisp frosted crystal glass & high-contrast slate
+   ------------------------------------------------------------- */
+[data-admin-theme="light"] {
+  color-scheme: light;
+}
+
+/* Headings & High Contrast Text */
+[data-admin-theme="light"] h1,
+[data-admin-theme="light"] h2,
+[data-admin-theme="light"] h3,
+[data-admin-theme="light"] h4,
+[data-admin-theme="light"] h5,
+[data-admin-theme="light"] h6,
+[data-admin-theme="light"] [class*="text-[#f5f5f" i],
+[data-admin-theme="light"] [class*="text-[#ffffff" i],
+[data-admin-theme="light"] [class*="text-zinc-100" i],
+[data-admin-theme="light"] [class*="text-zinc-200" i],
+[data-admin-theme="light"] [class*="text-zinc-300" i],
+[data-admin-theme="light"] [class*="text-slate-100" i],
+[data-admin-theme="light"] [class*="text-slate-200" i],
+[data-admin-theme="light"] [class*="text-slate-300" i],
+[data-admin-theme="light"] [class*="text-neutral-100" i],
+[data-admin-theme="light"] [class*="text-neutral-200" i],
+[data-admin-theme="light"] [class*="text-neutral-300" i] {
+  color: #0F172A !important;
+}
+
+/* Secondary & Subtitle Text */
+[data-admin-theme="light"] [class*="text-[#a1a6a" i],
+[data-admin-theme="light"] [class*="text-zinc-400" i],
+[data-admin-theme="light"] [class*="text-zinc-500" i],
+[data-admin-theme="light"] [class*="text-slate-400" i],
+[data-admin-theme="light"] [class*="text-slate-500" i],
+[data-admin-theme="light"] [class*="text-neutral-400" i],
+[data-admin-theme="light"] [class*="text-neutral-500" i],
+[data-admin-theme="light"] [class*="text-gray-400" i],
+[data-admin-theme="light"] [class*="text-gray-500" i] {
+  color: #475569 !important;
+}
+
+/* White text guard: Ensure no element gets white text on light background unless it's a solid colored button/badge */
+[data-admin-theme="light"] .text-white:not(button[class*="bg-"]):not(a[class*="bg-"]):not(span[class*="bg-"]):not(div[class*="bg-gradient"]) {
+  color: #0F172A !important;
+}
+
+/* Status & Accent text contrast enhancements for light surfaces */
+[data-admin-theme="light"] [class*="text-emerald-400" i] {
+  color: #047857 !important;
+}
+[data-admin-theme="light"] [class*="text-blue-400" i] {
+  color: #1D4ED8 !important;
+}
+[data-admin-theme="light"] [class*="text-amber-300" i],
+[data-admin-theme="light"] [class*="text-amber-400" i] {
+  color: #B45309 !important;
+}
+[data-admin-theme="light"] [class*="text-red-400" i],
+[data-admin-theme="light"] [class*="text-rose-400" i] {
+  color: #BE123C !important;
+}
+[data-admin-theme="light"] [class*="text-purple-400" i] {
+  color: #7E22CE !important;
+}
+
+/* Prevent washed-out opacity in light mode */
+[data-admin-theme="light"] .opacity-50 {
+  opacity: 0.8 !important;
+}
+[data-admin-theme="light"] .opacity-60 {
+  opacity: 0.85 !important;
+}
+[data-admin-theme="light"] .opacity-70,
+[data-admin-theme="light"] .opacity-75 {
+  opacity: 0.9 !important;
+}
+
+/* Any white text on buttons/badges preserved if it's a solid colored button */
+[data-admin-theme="light"] button[class*="bg-blue" i],
+[data-admin-theme="light"] a[class*="bg-blue" i],
+[data-admin-theme="light"] button[class*="bg-emerald" i],
+[data-admin-theme="light"] a[class*="bg-emerald" i],
+[data-admin-theme="light"] button[class*="bg-red" i],
+[data-admin-theme="light"] a[class*="bg-red" i],
+[data-admin-theme="light"] button[class*="bg-rose" i],
+[data-admin-theme="light"] a[class*="bg-rose" i],
+[data-admin-theme="light"] span[class*="bg-blue" i],
+[data-admin-theme="light"] span[class*="bg-emerald" i],
+[data-admin-theme="light"] span[class*="bg-rose" i] {
+  color: #FFFFFF !important;
+}
+
+/* Backgrounds: Turn all dark boxes into frosted crystal white glass */
+[data-admin-theme="light"] [class*="bg-[#14171" i],
+[data-admin-theme="light"] [class*="bg-[#0d0f1" i],
+[data-admin-theme="light"] [class*="bg-[#090a0" i],
+[data-admin-theme="light"] [class*="bg-[#0b0d1" i],
+[data-admin-theme="light"] [class*="bg-[#0d101" i],
+[data-admin-theme="light"] [class*="bg-zinc-900" i],
+[data-admin-theme="light"] [class*="bg-slate-900" i],
+[data-admin-theme="light"] [class*="bg-slate-950" i] {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #0F172A !important;
+  box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Inner Containers, Input backgrounds, Sub-bars */
+[data-admin-theme="light"] [class*="bg-[#1a1d2" i],
+[data-admin-theme="light"] [class*="bg-[#20252" i],
+[data-admin-theme="light"] [class*="bg-zinc-800" i],
+[data-admin-theme="light"] [class*="bg-slate-800" i] {
+  background-color: rgba(243, 246, 252, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #0F172A !important;
+}
+
+/* Borders */
+[data-admin-theme="light"] [class*="border-[#2a2e3" i],
+[data-admin-theme="light"] [class*="border-zinc-800" i],
+[data-admin-theme="light"] [class*="border-slate-800" i],
+[data-admin-theme="light"] [class*="border-slate-700" i] {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Form Inputs, Selects, Textareas - Sharp, High-Contrast Borders */
+[data-admin-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
+[data-admin-theme="light"] textarea,
+[data-admin-theme="light"] select {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-admin-theme="light"] input:not([type="checkbox"]):not([type="radio"]):focus,
+[data-admin-theme="light"] textarea:focus,
+[data-admin-theme="light"] select:focus {
+  border-color: #3B82F6 !important;
+  outline: 2px solid rgba(59, 130, 246, 0.25) !important;
+}
+
+[data-admin-theme="light"] input::placeholder,
+[data-admin-theme="light"] textarea::placeholder {
+  color: #64748B !important;
+}
+
+[data-admin-theme="light"] label {
+  color: #1E293B !important;
+}
+
+/* Table headers and rows in light mode */
+[data-admin-theme="light"] table thead tr {
+  background-color: rgba(241, 245, 249, 0.9) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.15) !important;
+}
+
+[data-admin-theme="light"] table thead th {
+  color: #334155 !important;
+}
+
+[data-admin-theme="light"] table tbody tr {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-admin-theme="light"] table tbody tr:hover {
+  background-color: rgba(241, 245, 249, 0.6) !important;
+}
+
+/* -------------------------------------------------------------
+   DARK MODE: Deep obsidian cyber-glass & luminous silver
+   ------------------------------------------------------------- */
+[data-admin-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Protect public light preview from dark heading override */
+[data-admin-theme="dark"] :is(h1, h2, h3, h4, h5, h6):not([data-theme="public-light"] *):not([data-theme="public-light"]) {
+  color: #F8FAFC !important;
+}
+
+[data-admin-theme="dark"] [class*="bg-[#14171" i]:not([data-theme="public-light"] *),
+[data-admin-theme="dark"] [class*="bg-[#0d0f1" i]:not([data-theme="public-light"] *),
+[data-admin-theme="dark"] [class*="bg-[#090a0" i]:not([data-theme="public-light"] *),
+[data-admin-theme="dark"] [class*="bg-[#0b0d1" i]:not([data-theme="public-light"] *),
+[data-admin-theme="dark"] [class*="bg-zinc-900" i]:not([data-theme="public-light"] *),
+[data-admin-theme="dark"] [class*="bg-slate-900" i]:not([data-theme="public-light"] *) {
+  background-color: rgba(14, 18, 26, 0.75) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #F8FAFC !important;
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-admin-theme="dark"] [class*="bg-[#1a1d2" i]:not([data-theme="public-light"] *),
+[data-admin-theme="dark"] [class*="bg-zinc-800" i]:not([data-theme="public-light"] *),
+[data-admin-theme="dark"] [class*="bg-slate-800" i]:not([data-theme="public-light"] *) {
+  background-color: rgba(22, 28, 39, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #F8FAFC !important;
+}
+
+[data-admin-theme="dark"] [class*="text-[#f5f5f" i]:not([data-theme="public-light"] *) {
+  color: #F8FAFC !important;
+}
+
+[data-admin-theme="dark"] [class*="text-[#a1a6a" i]:not([data-theme="public-light"] *) {
+  color: #94A3B8 !important;
+}
+
+[data-admin-theme="dark"] [class*="border-[#2a2e3" i]:not([data-theme="public-light"] *) {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-admin-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([data-theme="public-light"] *),
+[data-admin-theme="dark"] textarea:not([data-theme="public-light"] *),
+[data-admin-theme="dark"] select:not([data-theme="public-light"] *) {
+  background-color: rgba(11, 14, 21, 0.8) !important;
+  color: #F8FAFC !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-admin-theme="dark"] input::placeholder,
+[data-admin-theme="dark"] textarea::placeholder {
+  color: #64748B !important;
+}
+
+[data-admin-theme="dark"] label:not([data-theme="public-light"] *) {
+  color: #CBD5E1 !important;
+}
+
+/* =========================================================================
+   PUBLIC LIGHT PREVIEW ISOLATION SYSTEM
+   Guarantees mobile preview retains crisp light participant styling
+   even when surrounded by dark admin mode.
+   ========================================================================= */
+[data-theme="public-light"],
+[data-theme="public-light"] * {
+  color-scheme: light !important;
+}
+
+[data-theme="public-light"] :is(h1, h2, h3, h4, h5, h6) {
+  color: #172B49 !important;
+  font-family: var(--font-display) !important;
+}
+
+[data-theme="public-light"] p {
+  color: #60728A !important;
+}
+
+[data-theme="public-light"] div[class*="bg-[#F8FAFD]"],
+[data-theme="public-light"] div[class*="bg-white"] {
+  color: #172B49 !important;
 }
 
 /* Reduced motion preference */

@@ -60,6 +60,10 @@ export async function GET(request: NextRequest) {
     );
 
     const [adminCount] = await db.query<{ count: number }>('SELECT COUNT(*) as count FROM admin_users WHERE is_enabled = 1');
+    const settings = await db.query<{ setting_key: string; setting_value: string }>(
+      'SELECT setting_key, setting_value FROM site_settings WHERE setting_key = ?',
+      ['event_date']
+    );
 
     return NextResponse.json({
       stats: {
@@ -69,6 +73,7 @@ export async function GET(request: NextRequest) {
         failed: regStats?.failed || 0,
         adminUsers: adminCount?.count || 0,
       },
+      festivalDate: settings?.[0]?.setting_value || '19 October 2026',
       registrationsByCompetition: compBySlug,
       collegeBreakdown: collegeStats,
       recentRegistrations: recentRegs,

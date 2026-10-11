@@ -3,7 +3,7 @@
 import React from 'react';
 import { Cpu, Users, Building, ArrowRight, Sparkles, Award, ShieldCheck, Zap } from 'lucide-react';
 
-export default function AboutSection() {
+export default function AboutSection({ date }: { date?: string } = {}) {
   return (
     <section id="about" className="py-24 sm:py-32 bg-gradient-to-b from-[#FFF4E5] via-[#F7EEE2] to-[#FFF4E5] relative overflow-hidden border-b border-[#E8D4B8]/60">
       
@@ -105,7 +105,7 @@ export default function AboutSection() {
               <div className="space-y-3 pt-2 text-xs font-mono">
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/90 border border-[#E8D4B8] shadow-2xs">
                   <span className="text-[#163665] font-semibold">EVENT DATE</span>
-                  <span className="font-bold text-[#082750]">22 OCTOBER 2026</span>
+                  <span className="font-bold text-[#082750]">{(date || '19 October 2026').toUpperCase()}</span>
                 </div>
 
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/90 border border-[#E8D4B8] shadow-2xs">

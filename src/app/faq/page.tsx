@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { FAQS, FESTIVAL_INFO } from '@/data/events';
+import { FAQS as STATIC_FAQS, FESTIVAL_INFO } from '@/data/events';
 import {
   HelpCircle,
   ChevronRight,
@@ -15,8 +15,30 @@ import {
 } from 'lucide-react';
 
 export default function FaqPage() {
+  const [faqsList, setFaqsList] = useState(STATIC_FAQS);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [festivalDate, setFestivalDate] = useState<string>(FESTIVAL_INFO.date);
+
+  useEffect(() => {
+    fetch('/api/faqs')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.faqs && data.faqs.length > 0) {
+          setFaqsList(data.faqs);
+        }
+      })
+      .catch((err) => console.warn('Failed to load live FAQs, using static fallback:', err));
+
+    fetch('/api/competitions')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.festival?.event_date) {
+          setFestivalDate(d.festival.event_date);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const categories = [
     'All',
@@ -28,7 +50,7 @@ export default function FaqPage() {
     'Certification & Prizes',
   ];
 
-  const filteredFaqs = FAQS.filter((faq) => {
+  const filteredFaqs = faqsList.filter((faq) => {
     const matchesCategory =
       activeCategory === 'All' || faq.category === activeCategory;
     const matchesSearch =
@@ -126,7 +148,7 @@ export default function FaqPage() {
                 Official Rulebooks & Timetables Notice
               </span>
               <p className="leading-relaxed text-[#60728A]">
-                Specific round timings, room assignments, and Google Form links will be officially published prior to the event date (22 October 2026). Unknown or unfinalized criteria are deliberately labeled as pending.
+                Specific round timings, room assignments, and Google Form links will be officially published prior to the event date ({festivalDate}). Unknown or unfinalized criteria are deliberately labeled as pending.
               </p>
             </div>
           </div>

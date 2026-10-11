@@ -1,0 +1,263 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { revalidatePath } from 'next/cache';
+import { randomUUID } from 'crypto';
+
+async function requireAdmin(allowedRoles?: string[]) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: 'Unauthorized', status: 401, session: null };
+  if (allowedRoles && !allowedRoles.includes(session.user.role)) {
+    return { error: 'Forbidden', status: 403, session: null };
+  }
+  return { error: null, status: 200, session };
+}
+
+async function logAudit(
+  adminId: string,
+  adminEmail: string,
+  action: string,
+  entityType: string,
+  entityId: string,
+  details?: Record<string, unknown>
+) {
+  try {
+    await db.execute(
+      'INSERT INTO audit_log (id, admin_id, admin_email, action, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [randomUUID(), adminId, adminEmail, action, entityType, entityId, details ? JSON.stringify(details) : null]
+    );
+  } catch (err) {
+    console.error('Audit log error:', err);
+  }
+}
+
+interface ContextProps {
+  params: Promise<{ slug: string }>;
+}
+
+// GET /api/admin/competitions/[slug] — Get full competition details + coordinators
+export async function GET(request: NextRequest, context: ContextProps) {
+  const { error, status } = await requireAdmin();
+  if (error) return NextResponse.json({ error }, { status });
+
+  const { slug } = await context.params;
+
+  try {
+    const rows = await db.query<Record<string, unknown>>(
+      'SELECT * FROM competitions WHERE slug = ? OR id = ? LIMIT 1',
+      [slug, slug]
+    );
+
+    if (rows.length === 0) {
+      return NextResponse.json({ error: 'Competition not found.' }, { status: 404 });
+    }
+
+    const competition = rows[0];
+
+    // Fetch coordinators
+    const coordinators = await db.query(
+      'SELECT * FROM competition_coordinators WHERE competition_slug = ? AND is_active = 1 ORDER BY display_order ASC, created_at ASC',
+      [competition.slug as string]
+    );
+
+    // Fetch registration count
+    const [regCount] = await db.query<{ count: number }>(
+      'SELECT COUNT(*) as count FROM registrations WHERE competition_slug = ?',
+      [competition.slug as string]
+    );
+
+    return NextResponse.json({
+      competition,
+      coordinators,
+      registrationCount: regCount?.count || 0,
+    });
+  } catch (err) {
+    console.error('Get competition error:', err);
+    return NextResponse.json({ error: 'Failed to load competition' }, { status: 500 });
+  }
+}
+
+// PUT /api/admin/competitions/[slug] — Update complete competition workspace
+export async function PUT(request: NextRequest, context: ContextProps) {
+  const { error, status, session } = await requireAdmin(['super_admin', 'content_admin']);
+  if (error) return NextResponse.json({ error }, { status });
+
+  const { slug } = await context.params;
+
+  try {
+    const body = await request.json();
+
+    const existingRows = await db.query<{ id: string; slug: string }>(
+      'SELECT id, slug FROM competitions WHERE slug = ? OR id = ? LIMIT 1',
+      [slug, slug]
+    );
+
+    if (existingRows.length === 0) {
+      return NextResponse.json({ error: 'Competition not found.' }, { status: 404 });
+    }
+
+    const current = existingRows[0];
+
+    // Safe stringification helpers
+    const serializeJson = (val: unknown, fallback: string = '[]') => {
+      if (val === undefined || val === null) return fallback;
+      if (typeof val === 'string') return val;
+      return JSON.stringify(val);
+    };
+
+    await db.execute(
+      `UPDATE competitions SET
+        name = COALESCE(?, name),
+        category = COALESCE(?, category),
+        district = COALESCE(?, district),
+        district_index = COALESCE(?, district_index),
+        district_tagline = COALESCE(?, district_tagline),
+        tag = COALESCE(?, tag),
+        short_description = COALESCE(?, short_description),
+        full_description = COALESCE(?, full_description),
+        about = COALESCE(?, about),
+        venue = COALESCE(?, venue),
+        eligibility = COALESCE(?, eligibility),
+        team_size_limit = COALESCE(?, team_size_limit),
+        max_team_members = COALESCE(?, max_team_members),
+        is_individual_only = COALESCE(?, is_individual_only),
+        is_fixed_squad = COALESCE(?, is_fixed_squad),
+        theme = COALESCE(?, theme),
+        approved_domains = COALESCE(?, approved_domains),
+        schedule_flow = COALESCE(?, schedule_flow),
+        evaluation_matrix = COALESCE(?, evaluation_matrix),
+        rounds_description = COALESCE(?, rounds_description),
+        rules = COALESCE(?, rules),
+        expectations = COALESCE(?, expectations),
+        format_note = COALESCE(?, format_note),
+        highlights = COALESCE(?, highlights),
+        faqs = COALESCE(?, faqs),
+        card_image = COALESCE(?, card_image),
+        banner_image = COALESCE(?, banner_image),
+        icon_name = COALESCE(?, icon_name),
+        display_order = COALESCE(?, display_order),
+        is_published = COALESCE(?, is_published),
+        registration_open = COALESCE(?, registration_open),
+        google_form_id = COALESCE(?, google_form_id),
+        google_form_url = COALESCE(?, google_form_url),
+        form_response_url = COALESCE(?, form_response_url),
+        acknowledgment_entry_id = COALESCE(?, acknowledgment_entry_id),
+        acknowledgment_label = COALESCE(?, acknowledgment_label),
+        section_visibility = COALESCE(?, section_visibility),
+        custom_sections = COALESCE(?, custom_sections),
+        event_date = CASE WHEN ? = 1 THEN ? ELSE event_date END,
+        venue_directions = CASE WHEN ? = 1 THEN ? ELSE venue_directions END,
+        registration_deadline = CASE WHEN ? = 1 THEN ? ELSE registration_deadline END,
+        registration_instructions = CASE WHEN ? = 1 THEN ? ELSE registration_instructions END,
+        min_team_members = CASE WHEN ? = 1 THEN ? ELSE min_team_members END,
+        published_at = CASE WHEN ? = 1 THEN NOW() ELSE published_at END,
+        published_by = CASE WHEN ? = 1 THEN ? ELSE published_by END
+      WHERE id = ?`,
+      [
+        body.name ?? null,
+        body.category ?? null,
+        body.district ?? null,
+        body.districtIndex !== undefined ? Number(body.districtIndex) : null,
+        body.districtTagline ?? null,
+        body.tag ?? null,
+        body.shortDescription ?? null,
+        body.fullDescription ?? null,
+        body.about ?? null,
+        body.venue ?? null,
+        body.eligibility ?? null,
+        body.teamSizeLimit ?? null,
+        body.maxTeamMembers !== undefined ? Number(body.maxTeamMembers) : null,
+        body.isIndividualOnly !== undefined ? (body.isIndividualOnly ? 1 : 0) : null,
+        body.isFixedSquad !== undefined ? (body.isFixedSquad ? 1 : 0) : null,
+        body.theme ?? null,
+        body.approvedDomains ? serializeJson(body.approvedDomains) : null,
+        body.scheduleFlow ? serializeJson(body.scheduleFlow) : null,
+        body.evaluationMatrix ? serializeJson(body.evaluationMatrix, 'null') : null,
+        body.roundsDescription ? serializeJson(body.roundsDescription) : null,
+        body.rules ? serializeJson(body.rules) : null,
+        body.expectations ? serializeJson(body.expectations) : null,
+        body.formatNote ?? null,
+        body.highlights ? serializeJson(body.highlights) : null,
+        body.faqs ? serializeJson(body.faqs) : null,
+        body.cardImage ?? null,
+        body.bannerImage ?? null,
+        body.iconName ?? null,
+        body.displayOrder !== undefined ? Number(body.displayOrder) : null,
+        body.isPublished !== undefined ? (body.isPublished ? 1 : 0) : null,
+        body.registrationOpen !== undefined ? (body.registrationOpen ? 1 : 0) : null,
+        body.googleFormId ?? null,
+        body.googleFormUrl ?? null,
+        body.formResponseUrl ?? null,
+        body.acknowledgmentEntryId ?? null,
+        body.acknowledgmentLabel ?? null,
+        body.sectionVisibility ? serializeJson(body.sectionVisibility, '{}') : null,
+        body.customSections ? serializeJson(body.customSections, '[]') : null,
+        body.eventDate !== undefined ? 1 : 0,
+        body.eventDate || null,
+        body.venueDirections !== undefined ? 1 : 0,
+        body.venueDirections || null,
+        body.registrationDeadline !== undefined ? 1 : 0,
+        body.registrationDeadline || null,
+        body.registrationInstructions !== undefined ? 1 : 0,
+        body.registrationInstructions || null,
+        body.minTeamMembers !== undefined ? 1 : 0,
+        body.minTeamMembers !== undefined ? Number(body.minTeamMembers) : null,
+        body.isPublished ? 1 : 0,
+        body.isPublished ? 1 : 0,
+        session!.user.id,
+        current.id,
+      ]
+    );
+
+    // Invalidate Next.js cache so changes immediately propagate to public website
+    try {
+      revalidatePath('/');
+      revalidatePath('/competitions');
+      revalidatePath(`/competitions/${current.slug}`);
+      revalidatePath('/districts');
+    } catch {}
+
+    await logAudit(
+      session!.user.id,
+      session!.user.email,
+      'update_competition',
+      'competition',
+      current.id,
+      { slug: current.slug, changes: Object.keys(body) }
+    );
+
+    return NextResponse.json({ success: true, slug: current.slug });
+  } catch (err) {
+    console.error('Update competition error:', err);
+    return NextResponse.json({ error: 'Failed to update competition' }, { status: 500 });
+  }
+}
+
+// DELETE /api/admin/competitions/[slug] — Archive competition (unpublish without destroying registrations)
+export async function DELETE(request: NextRequest, context: ContextProps) {
+  const { error, status, session } = await requireAdmin(['super_admin']);
+  if (error) return NextResponse.json({ error }, { status });
+
+  const { slug } = await context.params;
+
+  try {
+    const existing = await db.query<{ id: string }>('SELECT id FROM competitions WHERE slug = ? OR id = ? LIMIT 1', [slug, slug]);
+    if (existing.length === 0) return NextResponse.json({ error: 'Competition not found.' }, { status: 404 });
+
+    // Soft-archive by unpublishing
+    await db.execute('UPDATE competitions SET is_published = 0, registration_open = 0 WHERE id = ?', [existing[0].id]);
+
+    await logAudit(
+      session!.user.id,
+      session!.user.email,
+      'archive_competition',
+      'competition',
+      existing[0].id,
+      { slug }
+    );
+
+    return NextResponse.json({ success: true, archived: true });
+  } catch (err) {
+    return NextResponse.json({ error: 'Failed to archive competition' }, { status: 500 });
+  }
+}

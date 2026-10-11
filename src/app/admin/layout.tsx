@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import AuthProvider from '@/components/admin/AuthProvider';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminShell from '@/components/admin/AdminShell';
 
 export const metadata: Metadata = {
   title: 'Admin Panel — YUGANTAR 2026',
@@ -12,14 +12,9 @@ export const metadata: Metadata = {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-[#0B1120] text-slate-200">
-        <AdminSidebar />
-        <main className="lg:ml-64 min-h-screen">
-          <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-6">
-            {children}
-          </div>
-        </main>
-      </div>
+      <Suspense fallback={<div className="min-h-screen bg-[#090A0C]" />}>
+        <AdminShell>{children}</AdminShell>
+      </Suspense>
     </AuthProvider>
   );
 }

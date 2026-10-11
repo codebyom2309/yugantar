@@ -26,9 +26,11 @@ export async function GET(request: NextRequest) {
   const competition = searchParams.get('competition') || '';
   const statusFilter = searchParams.get('status') || '';
   const search = searchParams.get('search') || '';
+  const dateFilter = searchParams.get('date') || '';
+  const isAll = searchParams.get('all') === 'true';
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const limit = Math.min(parseInt(searchParams.get('limit') || '25', 10), 100);
-  const offset = (page - 1) * limit;
+  const limit = isAll ? 5000 : Math.min(parseInt(searchParams.get('limit') || '25', 10), 100);
+  const offset = isAll ? 0 : (page - 1) * limit;
 
   try {
     let where = 'WHERE 1=1';
@@ -36,6 +38,7 @@ export async function GET(request: NextRequest) {
 
     if (competition) { where += ' AND competition_slug = ?'; params.push(competition); }
     if (statusFilter) { where += ' AND submission_status = ?'; params.push(statusFilter); }
+    if (dateFilter) { where += ' AND DATE(created_at) = ?'; params.push(dateFilter); }
     if (search) {
       where += ' AND (leader_name LIKE ? OR leader_email LIKE ? OR team_name LIKE ? OR payment_id LIKE ?)';
       const s = `%${search}%`;
@@ -44,6 +47,9 @@ export async function GET(request: NextRequest) {
 
     const [countRow] = await db.query<{ total: number }>(`SELECT COUNT(*) as total FROM registrations ${where}`, params);
     const total = countRow?.total || 0;
+
+    const safeLimit = Math.max(1, limit);
+    const safeOffset = Math.max(0, offset);
 
     const rows = await db.query<{
       id: string; competition_slug: string; leader_name: string; leader_email: string;
@@ -55,25 +61,42 @@ export async function GET(request: NextRequest) {
       `SELECT id, competition_slug, leader_name, leader_email, leader_phone, leader_college,
               leader_branch, leader_semester, team_name, team_size, payment_id, payment_proof_url,
               submission_status, submission_error, submitted_at, created_at, verification_token
-       FROM registrations ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
+       FROM registrations ${where} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+      params
     );
 
-    return NextResponse.json({ registrations: rows, total, page, limit, totalPages: Math.ceil(total / limit) });
+    return NextResponse.json({
+      registrations: rows,
+      total,
+      page: isAll ? 1 : page,
+      limit: safeLimit,
+      totalPages: isAll ? 1 : Math.ceil(total / safeLimit),
+    });
   } catch (err) {
     console.error('Registrations API error:', err);
     return NextResponse.json({ error: 'Failed to load registrations' }, { status: 500 });
   }
 }
 
-// PUT /api/admin/registrations — Update registration status
+// PUT /api/admin/registrations — Update registration status (single or bulk)
 export async function PUT(request: NextRequest) {
   const { error, status, session } = await requireAdmin(['super_admin', 'registration_admin']);
   if (error) return NextResponse.json({ error }, { status });
 
   try {
-    const { id, submissionStatus } = await request.json();
-    if (!id || !submissionStatus) return NextResponse.json({ error: 'Missing id or status' }, { status: 400 });
+    const body = await request.json();
+    const { id, ids, submissionStatus } = body;
+    if (!submissionStatus) return NextResponse.json({ error: 'Missing status' }, { status: 400 });
+
+    if (Array.isArray(ids) && ids.length > 0) {
+      // Bulk update
+      const placeholders = ids.map(() => '?').join(',');
+      await db.execute(`UPDATE registrations SET submission_status = ? WHERE id IN (${placeholders})`, [submissionStatus, ...ids]);
+      await logAudit(session!.user.id, session!.user.email, 'bulk_update_registration_status', 'registration', 'bulk', { count: ids.length, newStatus: submissionStatus });
+      return NextResponse.json({ success: true, updatedCount: ids.length });
+    }
+
+    if (!id) return NextResponse.json({ error: 'Missing id or ids' }, { status: 400 });
 
     await db.execute('UPDATE registrations SET submission_status = ? WHERE id = ?', [submissionStatus, id]);
     await logAudit(session!.user.id, session!.user.email, 'update_registration_status', 'registration', id, { newStatus: submissionStatus });

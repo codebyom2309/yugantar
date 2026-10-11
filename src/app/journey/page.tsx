@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -20,6 +20,25 @@ import {
 
 export default function JourneyPage() {
   const [selectedPhase, setSelectedPhase] = useState<number>(0);
+  const [festival, setFestival] = useState(FESTIVAL_INFO);
+
+  useEffect(() => {
+    fetch('/api/competitions')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.festival) {
+          setFestival((prev) => ({
+            ...prev,
+            name: d.festival.name || d.festival.event_name || prev.name,
+            edition: d.festival.edition || d.festival.event_edition || prev.edition,
+            date: d.festival.date || d.festival.event_date || prev.date,
+            locationShort: d.festival.locationShort || d.festival.event_location_short || prev.locationShort,
+            venue: d.festival.venue || d.festival.event_venue || prev.venue,
+          }));
+        }
+      })
+      .catch((err) => console.warn('Failed to load festival settings:', err));
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8FAFD] flex flex-col">
@@ -47,7 +66,7 @@ export default function JourneyPage() {
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-[#15294A] mb-4 sm:mb-5 text-balance">
               The Journey Through <br />
               <span className="font-editorial text-sunset-glow font-normal tracking-normal">
-                YUGANTAR 2026.
+                {festival.name} {festival.edition}.
               </span>
             </h1>
 
@@ -58,11 +77,11 @@ export default function JourneyPage() {
             <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-[#172B49]">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#DCE5F2] shadow-2xs">
                 <Calendar className="w-3.5 h-3.5 text-[#4B91E8]" />
-                22 October 2026
+                {festival.date}
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#DCE5F2] shadow-2xs">
                 <MapPin className="w-3.5 h-3.5 text-[#9187DE]" />
-                PCE Campus, Nagpur
+                {festival.locationShort}
               </span>
             </div>
           </div>
@@ -178,7 +197,7 @@ export default function JourneyPage() {
                 What to Prepare Before Festival Day
               </h3>
               <p className="text-xs sm:text-sm text-[#60728A] leading-relaxed mb-6 font-normal">
-                Ensure all team members hold valid student identity cards from their respective colleges. For hardware events, prepare your schematics and circuit documentation in advance. Official timetables will be published prior to 22 October 2026.
+                Ensure all team members hold valid student identity cards from their respective colleges. For hardware events, prepare your schematics and circuit documentation in advance. Official timetables will be published prior to {festival.date || '19 October 2026'}.
               </p>
               <div className="flex items-center gap-2 text-xs font-mono text-[#4B91E8] font-semibold">
                 <span>Organized by TELE-ERA · IETE · III Cell · Department of ETC</span>

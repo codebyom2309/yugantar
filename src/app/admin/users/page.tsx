@@ -1,163 +1,252 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, Edit3, Trash2, Shield, X, Save, Loader2 } from 'lucide-react';
+import { Users, Plus, Edit3, Trash2, Shield, X, Save, Loader2, CheckCircle2, Ban } from 'lucide-react';
 
 interface AdminUser {
-  id: string; email: string; name: string; role: string; auth_provider: string;
-  is_enabled: number; avatar_url: string | null; last_login_at: string | null; created_at: string;
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  auth_provider: string;
+  is_enabled: number;
+  avatar_url: string | null;
+  last_login_at: string | null;
+  created_at: string;
 }
 
 const ROLE_OPTIONS = [
-  { value: 'super_admin', label: 'Super Admin', color: 'text-red-400' },
-  { value: 'content_admin', label: 'Content Admin', color: 'text-blue-400' },
-  { value: 'registration_admin', label: 'Registration Admin', color: 'text-amber-400' },
-  { value: 'readonly_admin', label: 'Read Only', color: 'text-slate-400' },
+  { value: 'super_admin', label: 'Super Admin', desc: 'Full root access to all settings, users, and data' },
+  { value: 'content_admin', label: 'Content Admin', desc: 'Can edit festival content, competitions, and FAQs' },
+  { value: 'registration_admin', label: 'Registration Admin', desc: 'Can review and verify delegate registrations' },
+  { value: 'readonly_admin', label: 'Read Only', desc: 'View-only access for operational auditing' },
 ];
-
-const ROLE_STYLES: Record<string, string> = {
-  super_admin: 'bg-red-500/10 text-red-400 border-red-500/20',
-  content_admin: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  registration_admin: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  readonly_admin: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
-};
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
-  const [form, setForm] = useState({ email: '', name: '', role: 'readonly_admin', password: '', authProvider: 'google' as string });
+  const [form, setForm] = useState({
+    email: '',
+    name: '',
+    role: 'readonly_admin',
+    password: '',
+    authProvider: 'google',
+  });
   const [saving, setSaving] = useState(false);
 
   const fetchUsers = async () => {
-    const r = await fetch('/api/admin/users');
-    const d = await r.json();
-    setUsers(d.users || []);
-    setLoading(false);
+    try {
+      const r = await fetch('/api/admin/users');
+      const d = await r.json();
+      setUsers(d.users || []);
+    } catch (err) {
+      console.error('Error fetching admin users:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const openCreate = () => {
     setEditingUser(null);
-    setForm({ email: '', name: '', role: 'readonly_admin', password: '', authProvider: 'google' });
+    setForm({
+      email: '',
+      name: '',
+      role: 'readonly_admin',
+      password: '',
+      authProvider: 'google',
+    });
     setShowModal(true);
   };
 
   const openEdit = (user: AdminUser) => {
     setEditingUser(user);
-    setForm({ email: user.email, name: user.name, role: user.role, password: '', authProvider: user.auth_provider });
+    setForm({
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      password: '',
+      authProvider: user.auth_provider,
+    });
     setShowModal(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     setSaving(true);
-    if (editingUser) {
-      await fetch('/api/admin/users', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: editingUser.id, name: form.name, role: form.role, password: form.password || undefined }),
-      });
-    } else {
-      await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, name: form.name, role: form.role, password: form.password || undefined, authProvider: form.authProvider }),
-      });
+    try {
+      if (editingUser) {
+        await fetch('/api/admin/users', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingUser.id,
+            name: form.name,
+            role: form.role,
+            password: form.password || undefined,
+          }),
+        });
+      } else {
+        await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: form.email,
+            name: form.name,
+            role: form.role,
+            password: form.password || undefined,
+            authProvider: form.authProvider,
+          }),
+        });
+      }
+      setShowModal(false);
+      fetchUsers();
+    } catch (err) {
+      console.error('Error saving user:', err);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setShowModal(false);
-    fetchUsers();
   };
 
   const handleToggle = async (user: AdminUser) => {
-    await fetch('/api/admin/users', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: user.id, isEnabled: user.is_enabled ? 0 : 1 }),
-    });
-    fetchUsers();
+    try {
+      await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id, isEnabled: user.is_enabled ? 0 : 1 }),
+      });
+      fetchUsers();
+    } catch (err) {
+      console.error('Error toggling user:', err);
+    }
   };
 
   const handleDelete = async (user: AdminUser) => {
-    if (!confirm(`Delete admin user "${user.name}" (${user.email})?`)) return;
-    await fetch('/api/admin/users', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: user.id }),
-    });
-    fetchUsers();
+    if (!confirm(`Are you sure you want to revoke access for "${user.name}" (${user.email})?`)) return;
+    try {
+      await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id }),
+      });
+      fetchUsers();
+    } catch (err) {
+      console.error('Error deleting user:', err);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-          <Users className="w-6 h-6 text-blue-400" />
-          Admin Users
-        </h1>
-        <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
-          <Plus className="w-4 h-4" /> Add Admin
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-black/5 dark:border-white/10">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <Users className="w-6 h-6 text-blue-500" />
+            Administrator Accounts
+            <span className="text-sm font-normal text-slate-500 dark:text-zinc-400 font-mono">({users.length})</span>
+          </h1>
+          <p className="text-xs text-slate-600 dark:text-zinc-400 mt-1">
+            Role-based access control, Google Sign-In provisioning, and system permissions.
+          </p>
+        </div>
+
+        <button
+          onClick={openCreate}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Provision Admin</span>
         </button>
       </div>
 
-      <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
+      {/* Users Table */}
+      <div className="admin-glass-panel rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-slate-400 border-b border-slate-700/50 bg-slate-800/60">
-                <th className="text-left py-3 px-4 font-medium">User</th>
-                <th className="text-left py-3 px-3 font-medium">Role</th>
-                <th className="text-left py-3 px-3 font-medium">Provider</th>
-                <th className="text-left py-3 px-3 font-medium">Status</th>
-                <th className="text-left py-3 px-3 font-medium">Last Login</th>
-                <th className="text-right py-3 px-4 font-medium">Actions</th>
+              <tr className="border-b border-black/5 dark:border-white/10 bg-black/5 dark:bg-white/5 text-slate-500 dark:text-zinc-400 text-left font-mono">
+                <th className="py-3 px-4">Administrator</th>
+                <th className="py-3 px-4">Role</th>
+                <th className="py-3 px-4">Auth Method</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Last Login</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-black/5 dark:divide-white/5">
               {loading ? (
                 [...Array(3)].map((_, i) => (
-                  <tr key={i} className="border-b border-slate-800/50 animate-pulse">
-                    {[...Array(6)].map((_, j) => <td key={j} className="py-3 px-3"><div className="h-4 bg-slate-700/50 rounded" /></td>)}
+                  <tr key={i} className="animate-pulse">
+                    {[...Array(6)].map((_, j) => (
+                      <td key={j} className="py-4 px-4">
+                        <div className="h-4 bg-black/10 dark:bg-white/10 rounded" />
+                      </td>
+                    ))}
                   </tr>
                 ))
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-500 dark:text-zinc-400">
+                    No administrators found
+                  </td>
+                </tr>
               ) : (
                 users.map((u) => (
-                  <tr key={u.id} className="border-b border-slate-800/30 hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                          {u.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-200">{u.name}</div>
-                          <div className="text-slate-500 text-[10px]">{u.email}</div>
-                        </div>
-                      </div>
+                  <tr key={u.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition">
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-slate-900 dark:text-white">{u.name}</div>
+                      <div className="text-[11px] font-mono text-slate-500 dark:text-zinc-400">{u.email}</div>
                     </td>
-                    <td className="py-3 px-3">
-                      <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${ROLE_STYLES[u.role] || ROLE_STYLES.readonly_admin}`}>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-700 dark:text-zinc-300 font-semibold">
                         {u.role.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-slate-400 capitalize">{u.auth_provider}</td>
-                    <td className="py-3 px-3">
-                      <button onClick={() => handleToggle(u)} className="flex items-center gap-1.5">
-                        {u.is_enabled ? (
-                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">ENABLED</span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold">DISABLED</span>
-                        )}
-                      </button>
+                    <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-zinc-400 uppercase text-[11px]">
+                      {u.auth_provider}
                     </td>
-                    <td className="py-3 px-3 text-slate-400">
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${
+                          u.is_enabled
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                        }`}
+                      >
+                        {u.is_enabled ? 'Active' : 'Suspended'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-zinc-400 text-[11px]">
                       {u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : 'Never'}
                     </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openEdit(u)} className="p-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => handleDelete(u)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleToggle(u)}
+                          title={u.is_enabled ? 'Suspend' : 'Activate'}
+                          className="p-1.5 rounded-lg admin-glass-panel text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:border-blue-500/40 transition cursor-pointer"
+                        >
+                          {u.is_enabled ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                        </button>
+                        <button
+                          onClick={() => openEdit(u)}
+                          title="Edit"
+                          className="p-1.5 rounded-lg admin-glass-panel text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:border-blue-500/40 transition cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(u)}
+                          title="Revoke"
+                          className="p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500/20 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -170,53 +259,107 @@ export default function AdminUsersPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-white">{editingUser ? 'Edit Admin User' : 'Add Admin User'}</h3>
-              <button onClick={() => setShowModal(false)} className="p-1 rounded-lg hover:bg-slate-700 text-slate-400"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md admin-glass-panel rounded-2xl p-6 shadow-2xl relative">
+            <div className="flex items-center justify-between pb-3 border-b border-black/5 dark:border-white/10 mb-4">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                {editingUser ? 'Edit Administrator' : 'Provision Administrator'}
+              </h2>
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="space-y-4">
-              {!editingUser && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email</label>
-                  <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-                </div>
-              )}
+
+            <form onSubmit={handleSave} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Name</label>
-                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Om Satange"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs"
+                />
               </div>
+
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Role</label>
-                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-                  {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  disabled={!!editingUser}
+                  placeholder="admin@domain.edu.in"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">Role & Permissions</label>
+                <select
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs"
+                >
+                  {ROLE_OPTIONS.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label} — {r.desc}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               {!editingUser && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Auth Provider</label>
-                  <select value={form.authProvider} onChange={(e) => setForm({ ...form, authProvider: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-                    <option value="google">Google OAuth Only</option>
-                    <option value="credentials">Email/Password Only</option>
-                    <option value="both">Both</option>
+                  <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">Authentication Method</label>
+                  <select
+                    value={form.authProvider}
+                    onChange={(e) => setForm({ ...form, authProvider: e.target.value })}
+                    className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs"
+                  >
+                    <option value="google">Google Workspace / Sign-In</option>
+                    <option value="credentials">Email & Password</option>
+                    <option value="both">Both (Google + Password)</option>
                   </select>
                 </div>
               )}
+
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">{editingUser ? 'New Password (optional)' : 'Password (for credentials login)'}</label>
-                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Leave blank for Google-only"
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+                  {editingUser ? 'Reset Password (leave blank to keep unchanged)' : 'Initial Password (optional for Google SSO)'}
+                </label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs font-mono"
+                />
               </div>
-            </div>
-            <button onClick={handleSave} disabled={saving} className="w-full mt-5 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {editingUser ? 'Update User' : 'Create User'}
-            </button>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-black/5 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 rounded-xl admin-glass-panel text-xs text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md shadow-blue-500/20 disabled:opacity-50 transition cursor-pointer"
+                >
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>{editingUser ? 'Save Changes' : 'Provision User'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import { PlaneTakeoff, Clock, MapPin, Radio, Sparkles } from 'lucide-react';
 import { FESTIVAL_INFO } from '@/data/events';
 
 export default function DeparturesTicker() {
+  const [festival, setFestival] = useState(FESTIVAL_INFO);
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -15,7 +16,16 @@ export default function DeparturesTicker() {
   const [currentTimeStr, setCurrentTimeStr] = useState('');
 
   useEffect(() => {
-    const targetDate = new Date(FESTIVAL_INFO.isoDate).getTime();
+    fetch('/api/competitions')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.festival) setFestival(d.festival);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const targetDate = new Date(festival.isoDate).getTime();
 
     const updateClocks = () => {
       const now = new Date().getTime();
@@ -75,7 +85,7 @@ export default function DeparturesTicker() {
 
           <div className="hidden sm:flex items-center gap-2 bg-[#04142B] px-2.5 py-1 rounded border border-[#163665]">
             <span className="text-[#82C9F4] text-[10px]">DATE</span>
-            <span className="font-semibold text-[#FFF4E5]">22 OCT 2026</span>
+            <span className="font-semibold text-[#FFF4E5]">{festival.date ? festival.date.toUpperCase() : '19 OCT 2026'}</span>
           </div>
 
           <div className="hidden md:flex items-center gap-1.5 text-[#82C9F4]">

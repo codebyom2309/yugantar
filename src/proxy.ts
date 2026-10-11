@@ -7,10 +7,12 @@ export function proxy(request: NextRequest) {
 
   // Protect /admin routes (except /admin/login)
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
-    // Check for auth session token cookie
+    // Check for auth session token cookies across production and development
     const sessionToken =
       request.cookies.get('authjs.session-token')?.value ||
-      request.cookies.get('__Secure-authjs.session-token')?.value;
+      request.cookies.get('__Secure-authjs.session-token')?.value ||
+      request.cookies.get('next-auth.session-token')?.value ||
+      request.cookies.get('__Secure-next-auth.session-token')?.value;
 
     if (!sessionToken) {
       const loginUrl = new URL('/admin/login', request.url);
@@ -22,6 +24,8 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
+export default proxy;
+
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin', '/admin/:path*'],
 };

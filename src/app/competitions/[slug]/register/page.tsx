@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { getCompetitionBySlug, getAllCompetitionSlugs } from '@/data/events';
-import { getRegistrationFormBySlug } from '@/data/registrationForms';
+import { getPublicCompetitionBySlug, getFestivalSettings } from '@/lib/competitions';
+import { connection } from 'next/server';
 import {
   ChevronRight,
   Calendar,
@@ -12,8 +12,11 @@ import {
   ArrowLeft,
   FileText,
   ShieldCheck,
+  AlertCircle,
 } from 'lucide-react';
 import RegistrationFormWrapper from './RegistrationFormWrapper';
+import { getAllCompetitionSlugs } from '@/data/events';
+import { getRegistrationFormBySlug } from '@/data/registrationForms';
 
 // Generate static params for all 8 competition registration routes
 export async function generateStaticParams() {
@@ -50,14 +53,23 @@ export default function RegistrationPage({ params }: PageProps) {
 }
 
 async function RegistrationContent({ params }: PageProps) {
+  await connection();
   const { slug } = await params;
 
-  const competition = getCompetitionBySlug(slug);
+  const [competition, festivalSettings] = await Promise.all([
+    getPublicCompetitionBySlug(slug),
+    getFestivalSettings(),
+  ]);
   const formConfig = getRegistrationFormBySlug(slug);
 
   if (!competition || !formConfig) {
     notFound();
   }
+
+  const isRegistrationOpen = Boolean(
+    competition.registrationOpen !== false && festivalSettings.registrationGlobalOpen !== false
+  );
+  const eventDateDisplay = competition.eventDate || festivalSettings.date || '19 October 2026';
 
   return (
     <div className="min-h-screen bg-[#F8FAFD] flex flex-col">
@@ -102,8 +114,15 @@ async function RegistrationContent({ params }: PageProps) {
             <span className="text-xs font-mono text-[#60728A] px-3 py-0.5 rounded-full bg-white border border-[#DCE5F2]">
               {competition.category}
             </span>
-            <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-emerald-600" /> Google Forms Synced
+            <span
+              className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 border ${
+                isRegistrationOpen
+                  ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                  : 'text-rose-700 bg-rose-50 border-rose-200'
+              }`}
+            >
+              <ShieldCheck className="w-3 h-3" />
+              {isRegistrationOpen ? 'Registration Active' : 'Registration Closed'}
             </span>
           </div>
 
@@ -119,11 +138,11 @@ async function RegistrationContent({ params }: PageProps) {
           <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono text-[#172B49]">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-[#DCE5F2] shadow-2xs">
               <Calendar className="w-3.5 h-3.5 text-[#4B91E8]" />
-              <span>22 October 2026</span>
+              <span>{eventDateDisplay}</span>
             </div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-[#DCE5F2] shadow-2xs">
               <MapPin className="w-3.5 h-3.5 text-[#9187DE]" />
-              <span>PCE Campus, Nagpur</span>
+              <span>{competition.venue || 'PCE Campus, Nagpur'}</span>
             </div>
           </div>
         </div>
@@ -136,10 +155,36 @@ async function RegistrationContent({ params }: PageProps) {
             {/* Multi-Step Form Workspace */}
             <div className="lg:col-span-8">
               <div className="nexus-card p-5 sm:p-8 bg-white border border-[#DCE5F2] shadow-sm rounded-3xl">
-                <RegistrationFormWrapper
-                  competitionSlug={competition.slug}
-                  accentColor={competition.accentColor}
-                />
+                {isRegistrationOpen ? (
+                  <RegistrationFormWrapper
+                    competitionSlug={competition.slug}
+                    accentColor={competition.accentColor}
+                  />
+                ) : (
+                  <div className="py-12 px-4 text-center space-y-4">
+                    <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto shadow-2xs">
+                      <AlertCircle className="w-7 h-7" />
+                    </div>
+                    <div className="space-y-2 max-w-md mx-auto">
+                      <h3 className="text-lg font-display font-bold text-[#172B49]">
+                        Registrations Currently Closed
+                      </h3>
+                      <p className="text-xs sm:text-sm text-[#60728A] leading-relaxed">
+                        {festivalSettings.registrationStatusMessage ||
+                          'Official delegate registrations for this arena are not currently accepting submissions. Please check back later or read the competition dossier for schedule updates.'}
+                      </p>
+                    </div>
+                    <div className="pt-2">
+                      <Link
+                        href={`/competitions/${competition.slug}`}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#172B49] text-white text-xs font-mono font-bold hover:bg-[#253D66] transition shadow-xs"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" />
+                        <span>Return to Event Dossier</span>
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
