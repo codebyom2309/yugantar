@@ -7,6 +7,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { COMPETITIONS, Competition, FESTIVAL_INFO } from '@/data/events';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import {
   Cpu,
   Presentation,
@@ -44,8 +45,7 @@ export default function CompetitionsOverviewPage() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
   useEffect(() => {
-    fetch('/api/competitions')
-      .then((r) => r.json())
+    fetchClientFestivalData()
       .then((d) => {
         if (d.competitions && Array.isArray(d.competitions) && d.competitions.length > 0) {
           setCompetitions(d.competitions);

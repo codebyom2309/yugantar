@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
+import { invalidatePublicCache } from '@/lib/cache-invalidation';
 
 async function requireAdmin(allowedRoles?: string[]) {
   const session = await auth();
@@ -210,12 +211,7 @@ export async function PUT(request: NextRequest, context: ContextProps) {
     );
 
     // Invalidate Next.js cache so changes immediately propagate to public website
-    try {
-      revalidatePath('/');
-      revalidatePath('/competitions');
-      revalidatePath(`/competitions/${current.slug}`);
-      revalidatePath('/districts');
-    } catch {}
+    invalidatePublicCache('competitions', current.slug);
 
     await logAudit(
       session!.user.id,
@@ -246,6 +242,8 @@ export async function DELETE(request: NextRequest, context: ContextProps) {
 
     // Soft-archive by unpublishing
     await db.execute('UPDATE competitions SET is_published = 0, registration_open = 0 WHERE id = ?', [existing[0].id]);
+
+    invalidatePublicCache('competitions', slug);
 
     await logAudit(
       session!.user.id,

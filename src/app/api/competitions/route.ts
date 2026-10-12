@@ -9,21 +9,28 @@ export async function GET() {
       getFestivalSettings(),
     ]);
 
-    return NextResponse.json({
-      competitions,
-      festival: {
-        ...festival,
-        event_name: festival.name,
-        event_edition: festival.edition,
-        event_concept: festival.concept,
-        event_tagline: festival.tagline,
-        event_subheading: festival.subheading,
-        event_date: festival.date,
-        event_iso_date: festival.isoDate,
-        event_venue: festival.venue,
-        event_location_short: festival.locationShort,
+    return NextResponse.json(
+      {
+        competitions,
+        festival: {
+          ...festival,
+          event_name: festival.name,
+          event_edition: festival.edition,
+          event_concept: festival.concept,
+          event_tagline: festival.tagline,
+          event_subheading: festival.subheading,
+          event_date: festival.date,
+          event_iso_date: festival.isoDate,
+          event_venue: festival.venue,
+          event_location_short: festival.locationShort,
+        },
       },
-    });
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400',
+        },
+      }
+    );
   } catch (err) {
     console.error('Public competitions API error:', err);
     return NextResponse.json({ error: 'Failed to fetch competitions' }, { status: 500 });

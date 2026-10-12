@@ -1,5 +1,4 @@
 import React, { Suspense } from 'react';
-import { connection } from 'next/server';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
@@ -87,7 +86,6 @@ export default function CompetitionDetailPage({ params }: PageProps) {
 }
 
 async function CompetitionDetailContent({ params }: PageProps) {
-  await connection();
   const { slug } = await params;
   const [competition, festivalSettings] = await Promise.all([
     getPublicCompetitionBySlug(slug),

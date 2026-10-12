@@ -7,6 +7,7 @@ import {
   COMPETITIONS,
   Competition,
 } from '@/data/events';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import {
   Cpu,
   Presentation,
@@ -37,8 +38,7 @@ export default function CompetitionsGrid() {
   const [activeFilter, setActiveFilter] = useState<string>('All');
 
   React.useEffect(() => {
-    fetch('/api/competitions')
-      .then((r) => r.json())
+    fetchClientFestivalData()
       .then((d) => {
         if (d.competitions && Array.isArray(d.competitions) && d.competitions.length > 0) {
           setCompetitions(d.competitions);

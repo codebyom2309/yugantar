@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { FESTIVAL_INFO, ORGANIZERS } from '@/data/events';
 import type { FestivalSettings } from '@/lib/competitions';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 
 // Clean SVG Social Icons
 function InstagramIcon({ className = 'w-4 h-4' }: { className?: string }) {
@@ -57,37 +58,37 @@ export default function Footer({ festival: initialFestival }: { festival?: Festi
       return;
     }
     // Fetch live festival settings from public endpoint if not passed as prop
-    fetch('/api/competitions')
-      .then((r) => r.json())
+    fetchClientFestivalData()
       .then((data) => {
         if (data.festival) {
+          const f = data.festival;
           setFestival((prev) => ({
-            name: data.festival.name || data.festival.event_name || prev?.name || FESTIVAL_INFO.name,
-            edition: data.festival.edition || data.festival.event_edition || prev?.edition || FESTIVAL_INFO.edition,
-            concept: data.festival.concept || data.festival.event_concept || prev?.concept || FESTIVAL_INFO.concept,
-            tagline: data.festival.tagline || data.festival.event_tagline || prev?.tagline || FESTIVAL_INFO.tagline,
-            subheading: data.festival.subheading || data.festival.event_subheading || prev?.subheading || FESTIVAL_INFO.subheading,
-            date: data.festival.date || data.festival.event_date || prev?.date || FESTIVAL_INFO.date,
-            isoDate: data.festival.isoDate || data.festival.event_iso_date || prev?.isoDate || '2026-10-19',
-            venue: data.festival.venue || data.festival.event_venue || prev?.venue || FESTIVAL_INFO.venue,
-            locationShort: data.festival.locationShort || data.festival.event_location_short || prev?.locationShort || FESTIVAL_INFO.locationShort,
-            address: data.festival.address || data.festival.event_address || prev?.address || FESTIVAL_INFO.address,
-            department: data.festival.department || data.festival.event_department || prev?.department || FESTIVAL_INFO.department,
-            organizers: data.festival.organizers || data.festival.event_organizers_text || prev?.organizers || FESTIVAL_INFO.organizers,
-            college: data.festival.college || data.festival.event_college || prev?.college || FESTIVAL_INFO.college,
-            registrationGlobalOpen: data.festival.registrationGlobalOpen ?? true,
-            footerDescription: data.festival.footerDescription || data.festival.footer_description,
-            footerEmail: data.festival.footerEmail || data.festival.footer_email,
-            footerPhone: data.festival.footerPhone || data.festival.footer_phone,
-            footerInstagram: data.festival.footerInstagram || data.festival.footer_instagram,
-            footerLinkedin: data.festival.footerLinkedin || data.festival.footer_linkedin,
-            footerGithub: data.festival.footerGithub || data.festival.footer_github,
-            footerCollegeUrl: data.festival.footerCollegeUrl || data.festival.footer_college_url,
+            name: f.name || f.event_name || prev?.name || FESTIVAL_INFO.name,
+            edition: f.edition || f.event_edition || prev?.edition || FESTIVAL_INFO.edition,
+            concept: f.concept || f.event_concept || prev?.concept || FESTIVAL_INFO.concept,
+            tagline: f.tagline || f.event_tagline || prev?.tagline || FESTIVAL_INFO.tagline,
+            subheading: f.subheading || f.event_subheading || prev?.subheading || FESTIVAL_INFO.subheading,
+            date: f.date || f.event_date || prev?.date || FESTIVAL_INFO.date,
+            isoDate: f.isoDate || f.event_iso_date || prev?.isoDate || '2026-10-19',
+            venue: f.venue || f.event_venue || prev?.venue || FESTIVAL_INFO.venue,
+            locationShort: f.locationShort || f.event_location_short || prev?.locationShort || FESTIVAL_INFO.locationShort,
+            address: f.address || (f.event_address ? String(f.event_address) : '') || prev?.address || FESTIVAL_INFO.address,
+            department: f.department || (f.event_department ? String(f.event_department) : '') || prev?.department || FESTIVAL_INFO.department,
+            organizers: f.organizers || (f.event_organizers_text ? String(f.event_organizers_text) : '') || prev?.organizers || FESTIVAL_INFO.organizers,
+            college: f.college || (f.event_college ? String(f.event_college) : '') || prev?.college || FESTIVAL_INFO.college,
+            registrationGlobalOpen: f.registrationGlobalOpen ?? true,
+            footerDescription: f.footerDescription || (f.footer_description ? String(f.footer_description) : undefined),
+            footerEmail: f.footerEmail || (f.footer_email ? String(f.footer_email) : undefined),
+            footerPhone: f.footerPhone || (f.footer_phone ? String(f.footer_phone) : undefined),
+            footerInstagram: f.footerInstagram || (f.footer_instagram ? String(f.footer_instagram) : undefined),
+            footerLinkedin: f.footerLinkedin || (f.footer_linkedin ? String(f.footer_linkedin) : undefined),
+            footerGithub: f.footerGithub || (f.footer_github ? String(f.footer_github) : undefined),
+            footerCollegeUrl: f.footerCollegeUrl || (f.footer_college_url ? String(f.footer_college_url) : undefined),
             footerCustomLinks: (() => {
-              const raw = data.festival.footerCustomLinks || data.festival.footer_custom_links;
+              const raw = f.footerCustomLinks || f.footer_custom_links;
               if (!raw) return undefined;
               if (Array.isArray(raw)) return raw;
-              try { return JSON.parse(raw); } catch { return undefined; }
+              try { return JSON.parse(String(raw)); } catch { return undefined; }
             })(),
           }));
         }

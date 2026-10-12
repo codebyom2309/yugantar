@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { FESTIVAL_INFO, FESTIVAL_ASSETS } from '@/data/events';
 import type { FestivalSettings } from '@/lib/competitions';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 
 export default function Hero({ festival: initialFestival }: { festival?: FestivalSettings }) {
   const containerRef = useRef<HTMLElement>(null);
@@ -41,8 +42,7 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
     if (initialFestival) {
       setFestival(initialFestival);
     } else {
-      fetch('/api/competitions')
-        .then((r) => r.json())
+      fetchClientFestivalData()
         .then((d) => {
           if (d.festival) setFestival(d.festival);
         })

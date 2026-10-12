@@ -65,13 +65,20 @@ export async function GET(request: NextRequest) {
       params
     );
 
-    return NextResponse.json({
-      registrations: rows,
-      total,
-      page: isAll ? 1 : page,
-      limit: safeLimit,
-      totalPages: isAll ? 1 : Math.ceil(total / safeLimit),
-    });
+    return NextResponse.json(
+      {
+        registrations: rows,
+        total,
+        page: isAll ? 1 : page,
+        limit: safeLimit,
+        totalPages: isAll ? 1 : Math.ceil(total / safeLimit),
+      },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err) {
     console.error('Registrations API error:', err);
     return NextResponse.json({ error: 'Failed to load registrations' }, { status: 500 });

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlaneTakeoff, Clock, MapPin, Radio, Sparkles } from 'lucide-react';
 import { FESTIVAL_INFO } from '@/data/events';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 
 export default function DeparturesTicker() {
   const [festival, setFestival] = useState(FESTIVAL_INFO);
@@ -16,8 +17,7 @@ export default function DeparturesTicker() {
   const [currentTimeStr, setCurrentTimeStr] = useState('');
 
   useEffect(() => {
-    fetch('/api/competitions')
-      .then((r) => r.json())
+    fetchClientFestivalData()
       .then((d) => {
         if (d.festival) setFestival(d.festival);
       })

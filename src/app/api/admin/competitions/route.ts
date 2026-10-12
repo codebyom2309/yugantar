@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
+import { invalidatePublicCache } from '@/lib/cache-invalidation';
 
 async function requireAdmin(allowedRoles?: string[]) {
   const session = await auth();
@@ -133,6 +134,8 @@ export async function POST(request: NextRequest) {
       id,
       { slug, name }
     );
+
+    invalidatePublicCache('competitions', slug);
 
     return NextResponse.json({ success: true, id, slug });
   } catch (err) {

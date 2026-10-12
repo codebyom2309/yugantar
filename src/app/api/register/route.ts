@@ -362,19 +362,26 @@ export async function POST(request: NextRequest) {
     }
 
     // 8. Return comprehensive, honest diagnostic response to client
-    return NextResponse.json({
-      status: finalStatus,
-      registrationId,
-      dbSaved: dbSaveSuccess,
-      googleFormsVerified: googleSubmitSuccess,
-      message: googleSubmitSuccess
-        ? 'Registration confirmed! Your response has been securely saved and recorded in the official Google Form.'
-        : finalStatus === 'failed'
-        ? 'Registration was saved in the database, but the official Google Form rejected the submission.'
-        : 'Registration was saved in the database. Google Forms confirmation timed out.',
-      evidence: confirmationEvidence || undefined,
-      error: googleSubmitError || undefined,
-    });
+    return NextResponse.json(
+      {
+        status: finalStatus,
+        registrationId,
+        dbSaved: dbSaveSuccess,
+        googleFormsVerified: googleSubmitSuccess,
+        message: googleSubmitSuccess
+          ? 'Registration confirmed! Your response has been securely saved and recorded in the official Google Form.'
+          : finalStatus === 'failed'
+          ? 'Registration was saved in the database, but the official Google Form rejected the submission.'
+          : 'Registration was saved in the database. Google Forms confirmation timed out.',
+        evidence: confirmationEvidence || undefined,
+        error: googleSubmitError || undefined,
+      },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err) {
     console.error('Registration API error:', err);
     return NextResponse.json(
@@ -383,7 +390,12 @@ export async function POST(request: NextRequest) {
         error: 'Unable to process registration request.',
         details: err instanceof Error ? err.message : String(err),
       },
-      { status: 500 },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
     );
   }
 }

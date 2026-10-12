@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
 import { formatDriveUrl } from '@/lib/storage';
-import { revalidatePath } from 'next/cache';
+import { invalidatePublicCache } from '@/lib/cache-invalidation';
 
 async function requireAdmin(allowedRoles?: string[]) {
   const session = await auth();
@@ -55,10 +55,7 @@ export async function POST(request: NextRequest) {
 
   await logAudit(session!.user.id, session!.user.email, 'create_organizer', 'organizer', id);
 
-  try {
-    revalidatePath('/about');
-    revalidatePath('/');
-  } catch {}
+  invalidatePublicCache('organizers');
 
   return NextResponse.json({ success: true, id });
 }
@@ -78,10 +75,7 @@ export async function PUT(request: NextRequest) {
   );
 
   await logAudit(session!.user.id, session!.user.email, 'update_organizer', 'organizer', body.id);
-  try {
-    revalidatePath('/about');
-    revalidatePath('/');
-  } catch {}
+  invalidatePublicCache('organizers');
   return NextResponse.json({ success: true });
 }
 
@@ -94,10 +88,7 @@ export async function DELETE(request: NextRequest) {
   await db.execute('DELETE FROM organizers WHERE id = ?', [id]);
   await logAudit(session!.user.id, session!.user.email, 'delete_organizer', 'organizer', id);
 
-  try {
-    revalidatePath('/about');
-    revalidatePath('/');
-  } catch {}
+  invalidatePublicCache('organizers');
 
   return NextResponse.json({ success: true });
 }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { FAQS as STATIC_FAQS, FESTIVAL_INFO } from '@/data/events';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import {
   HelpCircle,
   ChevronRight,
@@ -30,8 +31,7 @@ export default function FaqPage() {
       })
       .catch((err) => console.warn('Failed to load live FAQs, using static fallback:', err));
 
-    fetch('/api/competitions')
-      .then((r) => r.json())
+    fetchClientFestivalData()
       .then((d) => {
         if (d.festival?.event_date) {
           setFestivalDate(d.festival.event_date);

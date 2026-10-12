@@ -28,7 +28,14 @@ export async function GET() {
     is_enabled: number; avatar_url: string | null; last_login_at: string | null; created_at: string;
   }>('SELECT id, email, name, role, auth_provider, is_enabled, avatar_url, last_login_at, created_at FROM admin_users ORDER BY created_at ASC');
 
-  return NextResponse.json({ users });
+  return NextResponse.json(
+    { users },
+    {
+      headers: {
+        'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+      },
+    }
+  );
 }
 
 // POST /api/admin/users — Create user

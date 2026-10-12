@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
-import { revalidatePath } from 'next/cache';
+import { invalidatePublicCache } from '@/lib/cache-invalidation';
 
 async function requireAdmin(allowedRoles?: string[]) {
   const session = await auth();
@@ -90,10 +90,7 @@ export async function POST(request: NextRequest) {
 
     await logAudit(session!.user.id, session!.user.email, 'create_organizer_member', 'organizer_member', id);
 
-    try {
-      revalidatePath('/about');
-      revalidatePath('/');
-    } catch {}
+    invalidatePublicCache('organizers');
 
     return NextResponse.json({ success: true, id });
   } catch (err: unknown) {
@@ -153,10 +150,7 @@ export async function PUT(request: NextRequest) {
 
     await logAudit(session!.user.id, session!.user.email, 'update_organizer_member', 'organizer_member', body.id);
 
-    try {
-      revalidatePath('/about');
-      revalidatePath('/');
-    } catch {}
+    invalidatePublicCache('organizers');
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
@@ -177,10 +171,7 @@ export async function DELETE(request: NextRequest) {
     await db.execute('DELETE FROM organizer_members WHERE id = ?', [id]);
     await logAudit(session!.user.id, session!.user.email, 'delete_organizer_member', 'organizer_member', id);
 
-    try {
-      revalidatePath('/about');
-      revalidatePath('/');
-    } catch {}
+    invalidatePublicCache('organizers');
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

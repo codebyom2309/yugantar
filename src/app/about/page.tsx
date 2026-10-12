@@ -1,5 +1,4 @@
 import React, { Suspense } from 'react';
-import { connection } from 'next/server';
 import Link from 'next/link';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
@@ -58,7 +57,6 @@ export default function AboutPage() {
 }
 
 async function AboutContent() {
-  await connection();
   const [organizers, members, festival] = await Promise.all([
     getPublicOrganizers(),
     getPublicOrganizerMembers(),

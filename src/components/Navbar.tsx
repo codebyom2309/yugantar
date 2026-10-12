@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ArrowUpRight, LayoutGrid, Sparkles } from 'lucide-react';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -20,8 +21,7 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/competitions')
-      .then((r) => r.json())
+    fetchClientFestivalData()
       .then((d) => {
         if (d.festival?.event_date) {
           setEventDateLabel(

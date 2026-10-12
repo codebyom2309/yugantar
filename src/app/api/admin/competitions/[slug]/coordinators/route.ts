@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
 import { formatDriveUrl } from '@/lib/storage';
 import { revalidatePath } from 'next/cache';
+import { invalidatePublicCache } from '@/lib/cache-invalidation';
 
 async function requireAdmin(allowedRoles?: string[]) {
   const session = await auth();
@@ -52,10 +53,7 @@ export async function POST(request: NextRequest, context: ContextProps) {
       ]
     );
 
-    try {
-      revalidatePath(`/competitions/${slug}`);
-      revalidatePath('/competitions');
-    } catch {}
+    invalidatePublicCache('competitions', slug);
 
     return NextResponse.json({ success: true, id });
   } catch (err) {
@@ -103,10 +101,7 @@ export async function PUT(request: NextRequest, context: ContextProps) {
       ]
     );
 
-    try {
-      revalidatePath(`/competitions/${slug}`);
-      revalidatePath('/competitions');
-    } catch {}
+    invalidatePublicCache('competitions', slug);
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -128,10 +123,7 @@ export async function DELETE(request: NextRequest, context: ContextProps) {
 
     await db.execute('DELETE FROM competition_coordinators WHERE id = ?', [id]);
 
-    try {
-      revalidatePath(`/competitions/${slug}`);
-      revalidatePath('/competitions');
-    } catch {}
+    invalidatePublicCache('competitions', slug);
 
     return NextResponse.json({ success: true });
   } catch (err) {

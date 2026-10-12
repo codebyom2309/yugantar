@@ -65,19 +65,26 @@ export async function GET(request: NextRequest) {
       ['event_date']
     );
 
-    return NextResponse.json({
-      stats: {
-        totalRegistrations: regStats?.total || 0,
-        submitted: regStats?.submitted || 0,
-        pending: regStats?.pending || 0,
-        failed: regStats?.failed || 0,
-        adminUsers: adminCount?.count || 0,
+    return NextResponse.json(
+      {
+        stats: {
+          totalRegistrations: regStats?.total || 0,
+          submitted: regStats?.submitted || 0,
+          pending: regStats?.pending || 0,
+          failed: regStats?.failed || 0,
+          adminUsers: adminCount?.count || 0,
+        },
+        festivalDate: settings?.[0]?.setting_value || '19 October 2026',
+        registrationsByCompetition: compBySlug,
+        collegeBreakdown: collegeStats,
+        recentRegistrations: recentRegs,
       },
-      festivalDate: settings?.[0]?.setting_value || '19 October 2026',
-      registrationsByCompetition: compBySlug,
-      collegeBreakdown: collegeStats,
-      recentRegistrations: recentRegs,
-    });
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err) {
     console.error('Dashboard API error:', err);
     return NextResponse.json({ error: 'Failed to load dashboard data' }, { status: 500 });

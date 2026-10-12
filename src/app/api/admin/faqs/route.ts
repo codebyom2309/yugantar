@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
+import { invalidatePublicCache } from '@/lib/cache-invalidation';
 
 async function requireAdmin(allowedRoles?: string[]) {
   const session = await auth();
@@ -27,7 +28,11 @@ export async function GET() {
     competition_slug: string | null; display_order: number; is_published: number; created_at: string;
   }>('SELECT * FROM faqs ORDER BY display_order ASC, created_at ASC');
 
-  return NextResponse.json({ faqs });
+  return NextResponse.json({ faqs }, {
+    headers: {
+      'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+    },
+  });
 }
 
 // POST /api/admin/faqs
@@ -44,6 +49,8 @@ export async function POST(request: NextRequest) {
   );
 
   await logAudit(session!.user.id, session!.user.email, 'create_faq', 'faq', id);
+  invalidatePublicCache('faqs');
+
   return NextResponse.json({ success: true, id });
 }
 
@@ -61,11 +68,8 @@ export async function PUT(request: NextRequest) {
   );
 
   await logAudit(session!.user.id, session!.user.email, 'update_faq', 'faq', id);
-  try {
-    const { revalidatePath } = await import('next/cache');
-    revalidatePath('/faq');
-    revalidatePath('/');
-  } catch {}
+  invalidatePublicCache('faqs');
+
   return NextResponse.json({ success: true });
 }
 
@@ -77,5 +81,8 @@ export async function DELETE(request: NextRequest) {
   const { id } = await request.json();
   await db.execute('DELETE FROM faqs WHERE id = ?', [id]);
   await logAudit(session!.user.id, session!.user.email, 'delete_faq', 'faq', id);
+
+  invalidatePublicCache('faqs');
+
   return NextResponse.json({ success: true });
 }

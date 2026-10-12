@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
+import { invalidatePublicCache } from '@/lib/cache-invalidation';
 
 async function requireAdmin(allowedRoles?: string[]) {
   const session = await auth();
@@ -77,15 +78,7 @@ export async function PUT(request: NextRequest) {
     await logAudit(session!.user.id, session!.user.email, 'update_settings', 'site_settings', 'bulk', { count: settings.length });
     
     // Invalidate public caches so changes reflect immediately
-    try {
-      const { revalidatePath } = await import('next/cache');
-      revalidatePath('/', 'page');
-      revalidatePath('/about', 'page');
-      revalidatePath('/competitions', 'page');
-      revalidatePath('/districts', 'page');
-      revalidatePath('/journey', 'page');
-      revalidatePath('/faq', 'page');
-    } catch {}
+    invalidatePublicCache('settings');
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -105,6 +98,9 @@ export async function POST(request: NextRequest) {
       [key, value, group || 'general', label || key, fieldType || 'text', session!.user.id]
     );
     await logAudit(session!.user.id, session!.user.email, 'create_setting', 'site_settings', key);
+
+    invalidatePublicCache('settings');
+
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: 'Failed to create setting' }, { status: 500 });

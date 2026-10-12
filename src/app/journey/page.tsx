@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { FESTIVAL_JOURNEY, FESTIVAL_INFO } from '@/data/events';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import {
   Compass,
   ArrowRight,
@@ -67,8 +68,7 @@ export default function JourneyPage() {
   const [festival, setFestival] = useState<FestivalSettings | undefined>(undefined);
 
   useEffect(() => {
-    fetch('/api/competitions')
-      .then((r) => r.json())
+    fetchClientFestivalData()
       .then((d) => {
         if (d.festival) {
           setFestival(d.festival);

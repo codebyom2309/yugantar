@@ -1,5 +1,4 @@
 import React, { Suspense } from 'react';
-import { connection } from 'next/server';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import CityIntroduction from '@/components/CityIntroduction';
@@ -34,7 +33,6 @@ export default function HomePage() {
 }
 
 async function HomeContent() {
-  await connection();
   const festival = await getFestivalSettings();
 
   return (

@@ -1,10 +1,17 @@
+import { unstable_cache } from 'next/cache';
 import { db } from '@/lib/db';
 import { COMPETITIONS, Competition, FESTIVAL_INFO, FESTIVAL_ASSETS, getCompetitionBySlug } from '@/data/events';
 
 /**
- * Public Competition Loader — Database-first with robust static fallback.
- * Guarantees that admin updates propagate to public website immediately,
- * while preventing site crashes if the database connection ever hiccups.
+ * Public Competition Loader — Database-first with robust static fallback and Next.js Data Cache.
+ * Backed by unstable_cache with separate domain tags:
+ * - 'competitions': All published competitions and slug details
+ * - 'settings': Festival settings, countdown date, venue, footer info
+ * - 'organizers': Organizers list and organizer committee members
+ * - 'faqs': Published FAQs
+ *
+ * Cache revalidates every 300 seconds (5 min) automatically or on-demand
+ * via targeted admin mutation hooks.
  */
 
 export interface DbCompetition extends Competition {
@@ -81,7 +88,11 @@ export interface DbOrganizerMember {
   is_published: number;
 }
 
-export async function getPublicCompetitions(): Promise<DbCompetition[]> {
+// -----------------------------------------------------------------------------
+// Raw Database Fetchers (With Static Fallback)
+// -----------------------------------------------------------------------------
+
+export async function fetchPublicCompetitionsRaw(): Promise<DbCompetition[]> {
   try {
     const rows = await db.query<Record<string, unknown>>(
       `SELECT * FROM competitions
@@ -100,7 +111,7 @@ export async function getPublicCompetitions(): Promise<DbCompetition[]> {
   return COMPETITIONS as DbCompetition[];
 }
 
-export async function getPublicCompetitionBySlug(slug: string): Promise<DbCompetition | null> {
+export async function fetchPublicCompetitionBySlugRaw(slug: string): Promise<DbCompetition | null> {
   try {
     const rows = await db.query<Record<string, unknown>>(
       `SELECT * FROM competitions
@@ -167,7 +178,7 @@ function deriveIsoDate(displayDate?: string, storedIso?: string): string {
   return FESTIVAL_INFO.isoDate;
 }
 
-export async function getFestivalSettings(): Promise<FestivalSettings> {
+export async function fetchFestivalSettingsRaw(): Promise<FestivalSettings> {
   try {
     const rows = await db.query<{ setting_key: string; setting_value: string }>(
       'SELECT setting_key, setting_value FROM site_settings'
@@ -240,7 +251,7 @@ export async function getFestivalSettings(): Promise<FestivalSettings> {
   };
 }
 
-export async function getPublicOrganizers() {
+export async function fetchPublicOrganizersRaw() {
   try {
     const rows = await db.query<{
       id: string;
@@ -280,7 +291,7 @@ export async function getPublicOrganizers() {
   return ORGANIZERS.map((o) => ({ ...o, id: o.name, logoUrl: null }));
 }
 
-export async function getPublicOrganizerMembers(category?: 'turbo_bits' | 'faculty' | 'core_committee'): Promise<DbOrganizerMember[]> {
+export async function fetchPublicOrganizerMembersRaw(category?: 'turbo_bits' | 'faculty' | 'core_committee'): Promise<DbOrganizerMember[]> {
   try {
     let sql = 'SELECT * FROM organizer_members WHERE is_published = 1';
     const params: string[] = [];
@@ -304,7 +315,7 @@ export async function getPublicOrganizerMembers(category?: 'turbo_bits' | 'facul
   return [];
 }
 
-export async function getPublicFaqs(competitionSlug?: string) {
+export async function fetchPublicFaqsRaw(competitionSlug?: string) {
   try {
     let where = 'WHERE is_published = 1';
     const params: string[] = [];
@@ -336,6 +347,78 @@ export async function getPublicFaqs(competitionSlug?: string) {
 
   return [];
 }
+
+// -----------------------------------------------------------------------------
+// Cached Fetchers (Next.js Data Cache / Vercel Shared Cache)
+// -----------------------------------------------------------------------------
+
+const getCachedPublicCompetitions = unstable_cache(
+  async () => fetchPublicCompetitionsRaw(),
+  ['public-competitions-list'],
+  { revalidate: 300, tags: ['competitions'] }
+);
+
+const getCachedPublicCompetitionBySlug = unstable_cache(
+  async (slug: string) => fetchPublicCompetitionBySlugRaw(slug),
+  ['public-competition-by-slug'],
+  { revalidate: 300, tags: ['competitions'] }
+);
+
+const getCachedFestivalSettings = unstable_cache(
+  async () => fetchFestivalSettingsRaw(),
+  ['festival-settings-data'],
+  { revalidate: 300, tags: ['settings'] }
+);
+
+const getCachedPublicOrganizers = unstable_cache(
+  async () => fetchPublicOrganizersRaw(),
+  ['public-organizers-list'],
+  { revalidate: 300, tags: ['organizers'] }
+);
+
+const getCachedPublicOrganizerMembers = unstable_cache(
+  async (category?: string) => fetchPublicOrganizerMembersRaw(category as 'turbo_bits' | 'faculty' | 'core_committee'),
+  ['public-organizer-members-list'],
+  { revalidate: 300, tags: ['organizers'] }
+);
+
+const getCachedPublicFaqs = unstable_cache(
+  async (competitionSlug?: string) => fetchPublicFaqsRaw(competitionSlug),
+  ['public-faqs-list'],
+  { revalidate: 300, tags: ['faqs'] }
+);
+
+// -----------------------------------------------------------------------------
+// Primary Exported API (Direct Drop-in Replacement for existing callers)
+// -----------------------------------------------------------------------------
+
+export async function getPublicCompetitions(): Promise<DbCompetition[]> {
+  return getCachedPublicCompetitions();
+}
+
+export async function getPublicCompetitionBySlug(slug: string): Promise<DbCompetition | null> {
+  return getCachedPublicCompetitionBySlug(slug);
+}
+
+export async function getFestivalSettings(): Promise<FestivalSettings> {
+  return getCachedFestivalSettings();
+}
+
+export async function getPublicOrganizers() {
+  return getCachedPublicOrganizers();
+}
+
+export async function getPublicOrganizerMembers(category?: 'turbo_bits' | 'faculty' | 'core_committee'): Promise<DbOrganizerMember[]> {
+  return getCachedPublicOrganizerMembers(category);
+}
+
+export async function getPublicFaqs(competitionSlug?: string) {
+  return getCachedPublicFaqs(competitionSlug);
+}
+
+// -----------------------------------------------------------------------------
+// Mapping Helpers
+// -----------------------------------------------------------------------------
 
 function mapDbRowToCompetition(r: Record<string, unknown>): DbCompetition {
   const parseJson = (val: unknown, fallback: unknown) => {

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { COMPETITIONS as FALLBACK_COMPETITIONS, Competition, FESTIVAL_ASSETS, FESTIVAL_INFO } from '@/data/events';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import {
   Compass,
   MapPin,
@@ -67,8 +68,7 @@ export default function DistrictsPage() {
   const [festival, setFestival] = useState<FestivalSettings | undefined>(undefined);
 
   useEffect(() => {
-    fetch('/api/competitions')
-      .then((r) => r.json())
+    fetchClientFestivalData()
       .then((data) => {
         if (data.competitions && data.competitions.length > 0) {
           const dbComps = data.competitions.map((c: any, idx: number) => {
@@ -97,8 +97,8 @@ export default function DistrictsPage() {
           });
           setCompetitions(dbComps);
         }
-        if (data.festival?.districts_map) {
-          setMapArtwork(data.festival.districts_map);
+        if (data.festival?.districts_map || data.festival?.districtsMap) {
+          setMapArtwork(String(data.festival.districts_map || data.festival.districtsMap));
         }
         if (data.festival) {
           setFestival(data.festival);

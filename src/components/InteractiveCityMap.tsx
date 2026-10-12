@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import { COMPETITIONS as FALLBACK_COMPETITIONS, Competition, FESTIVAL_ASSETS } from '@/data/events';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import { MapPin, Compass, ArrowRight, CheckCircle2, Landmark, Sparkles } from 'lucide-react';
 
 const ETC_CENTRAL_SPIRE = {
@@ -33,8 +34,7 @@ export default function InteractiveCityMap() {
   const [activeNodeId, setActiveNodeId] = useState<string>(FALLBACK_COMPETITIONS[0].id);
 
   useEffect(() => {
-    fetch('/api/competitions')
-      .then((r) => r.json())
+    fetchClientFestivalData()
       .then((data) => {
         if (data.competitions && data.competitions.length > 0) {
           const dbComps = data.competitions.map((c: any, idx: number) => {
@@ -63,8 +63,8 @@ export default function InteractiveCityMap() {
           });
           setCompetitions(dbComps);
         }
-        if (data.festival?.districts_map) {
-          setMapArtwork(data.festival.districts_map);
+        if (data.festival?.districts_map || data.festival?.districtsMap) {
+          setMapArtwork(String(data.festival.districts_map || data.festival.districtsMap));
         }
       })
       .catch((err) => console.warn('Failed to load DB competitions for map, using fallback:', err));
