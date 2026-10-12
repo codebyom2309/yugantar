@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const competitions = await db.query<Record<string, unknown>>(
-      `SELECT c.*,
+      `SELECT c.id, c.slug, c.name, c.category, c.district, c.venue,
+              c.eligibility, c.team_size_limit, c.is_published, c.registration_open,
+              c.display_order, c.card_image,
               COALESCE(r.reg_count, 0) as registration_count,
               COALESCE(coord.coord_count, 0) as coordinator_count
        FROM competitions c
@@ -56,7 +58,14 @@ export async function GET(request: NextRequest) {
        ORDER BY c.display_order ASC, c.created_at ASC`
     );
 
-    return NextResponse.json({ competitions });
+    return NextResponse.json(
+      { competitions },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err) {
     console.error('Competitions API error:', err);
     return NextResponse.json({ error: 'Failed to load competitions' }, { status: 500 });
@@ -137,7 +146,14 @@ export async function POST(request: NextRequest) {
 
     invalidatePublicCache('competitions', slug);
 
-    return NextResponse.json({ success: true, id, slug });
+    return NextResponse.json(
+      { success: true, id, slug },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err) {
     console.error('Create competition error:', err);
     return NextResponse.json({ error: 'Failed to create competition' }, { status: 500 });

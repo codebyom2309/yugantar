@@ -35,7 +35,7 @@ export default function SystemStatusPage() {
 
     // 1. TiDB Database check
     try {
-      const r = await fetch('/api/admin/dashboard');
+      const r = await fetch('/api/admin/system');
       if (r.ok) {
         const d = await r.json();
         results.push({
@@ -43,7 +43,7 @@ export default function SystemStatusPage() {
           category: 'core',
           status: 'ok',
           message: 'Operational & Connected',
-          detail: `Managed MySQL protocol • Registrations: ${d.stats?.totalRegistrations ?? '—'} • DB Latency normal`,
+          detail: `Managed MySQL protocol • Ping: ${d.latencyMs ?? '—'}ms • Registrations: ${d.registrationsCount ?? '—'}`,
           icon: Database,
         });
       } else {

@@ -83,19 +83,40 @@ export default function AdminDashboardPage() {
     fetchDashboardData();
   }, []);
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-48 admin-glass-panel rounded-lg" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-black/5 dark:border-white/10">
+          <div className="space-y-2">
+            <div className="h-7 w-56 admin-glass-panel rounded-lg" />
+            <div className="h-4 w-72 admin-glass-panel rounded-md" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-24 admin-glass-panel rounded-xl" />
+            <div className="h-9 w-28 admin-glass-panel rounded-xl" />
+            <div className="h-9 w-40 admin-glass-panel rounded-xl" />
+          </div>
+        </div>
+
+        {/* Banner Skeleton */}
+        <div className="h-16 admin-glass-panel rounded-2xl" />
+
+        {/* 4 Stat Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="h-28 admin-glass-card rounded-2xl" />
           ))}
         </div>
+
+        {/* 2 Detail Panels */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-64 admin-glass-panel rounded-2xl" />
-          <div className="h-64 admin-glass-panel rounded-2xl" />
+          <div className="h-72 admin-glass-panel rounded-2xl" />
+          <div className="h-72 admin-glass-panel rounded-2xl" />
         </div>
+
+        {/* Recent Registrations Table Skeleton */}
+        <div className="h-64 admin-glass-panel rounded-2xl" />
       </div>
     );
   }

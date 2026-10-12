@@ -36,7 +36,14 @@ export async function GET() {
     return true;
   });
 
-  return NextResponse.json({ organizers: uniqueOrganizers });
+  return NextResponse.json(
+    { organizers: uniqueOrganizers },
+    {
+      headers: {
+        'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+      },
+    }
+  );
 }
 
 // POST — create organizer
@@ -57,7 +64,9 @@ export async function POST(request: NextRequest) {
 
   invalidatePublicCache('organizers');
 
-  return NextResponse.json({ success: true, id });
+  return NextResponse.json({ success: true, id }, {
+    headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+  });
 }
 
 // PUT — update organizer
@@ -76,7 +85,9 @@ export async function PUT(request: NextRequest) {
 
   await logAudit(session!.user.id, session!.user.email, 'update_organizer', 'organizer', body.id);
   invalidatePublicCache('organizers');
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true }, {
+    headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+  });
 }
 
 // DELETE — delete organizer
@@ -90,5 +101,7 @@ export async function DELETE(request: NextRequest) {
 
   invalidatePublicCache('organizers');
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true }, {
+    headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+  });
 }

@@ -27,7 +27,14 @@ export async function GET() {
     const settings = await db.query<{ setting_key: string; setting_value: string; setting_group: string; label: string; field_type: string; updated_at: string }>(
       'SELECT * FROM site_settings ORDER BY setting_group, setting_key'
     );
-    return NextResponse.json({ settings });
+    return NextResponse.json(
+      { settings },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err) {
     return NextResponse.json({ error: 'Failed to load settings' }, { status: 500 });
   }
@@ -41,12 +48,16 @@ export async function PUT(request: NextRequest) {
   try {
     const { settings } = await request.json() as { settings: { key: string; value: string }[] };
 
+    const updatePromises: Promise<unknown>[] = [];
+
     for (const s of settings) {
-      await db.execute(
-        `INSERT INTO site_settings (setting_key, setting_value, setting_group, label, field_type, updated_by)
-         VALUES (?, ?, 'general', ?, 'text', ?)
-         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by)`,
-        [s.key, s.value, s.key, session!.user.id]
+      updatePromises.push(
+        db.execute(
+          `INSERT INTO site_settings (setting_key, setting_value, setting_group, label, field_type, updated_by)
+           VALUES (?, ?, 'general', ?, 'text', ?)
+           ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by)`,
+          [s.key, s.value, s.key, session!.user.id]
+        )
       );
 
       if (s.key === 'event_date' && s.value) {
@@ -64,16 +75,20 @@ export async function PUT(request: NextRequest) {
           const year = parts[2];
           if (mm && /^\d{4}$/.test(year) && /^\d{2}$/.test(day)) {
             const iso = `${year}-${mm}-${day}`;
-            await db.execute(
-              `INSERT INTO site_settings (setting_key, setting_value, setting_group, label, field_type, updated_by)
-               VALUES ('event_iso_date', ?, 'general', 'Event ISO Date', 'date', ?)
-               ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by)`,
-              [iso, session!.user.id]
+            updatePromises.push(
+              db.execute(
+                `INSERT INTO site_settings (setting_key, setting_value, setting_group, label, field_type, updated_by)
+                 VALUES ('event_iso_date', ?, 'general', 'Event ISO Date', 'date', ?)
+                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by)`,
+                [iso, session!.user.id]
+              )
             );
           }
         }
       }
     }
+
+    await Promise.all(updatePromises);
 
     await logAudit(session!.user.id, session!.user.email, 'update_settings', 'site_settings', 'bulk', { count: settings.length });
     

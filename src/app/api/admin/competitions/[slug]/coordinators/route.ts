@@ -55,7 +55,9 @@ export async function POST(request: NextRequest, context: ContextProps) {
 
     invalidatePublicCache('competitions', slug);
 
-    return NextResponse.json({ success: true, id });
+    return NextResponse.json({ success: true, id }, {
+      headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+    });
   } catch (err) {
     console.error('Add coordinator error:', err);
     return NextResponse.json({ error: 'Failed to add coordinator' }, { status: 500 });
@@ -103,7 +105,9 @@ export async function PUT(request: NextRequest, context: ContextProps) {
 
     invalidatePublicCache('competitions', slug);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, {
+      headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+    });
   } catch (err) {
     console.error('Update coordinator error:', err);
     return NextResponse.json({ error: 'Failed to update coordinator' }, { status: 500 });
@@ -125,7 +129,9 @@ export async function DELETE(request: NextRequest, context: ContextProps) {
 
     invalidatePublicCache('competitions', slug);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, {
+      headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+    });
   } catch (err) {
     console.error('Delete coordinator error:', err);
     return NextResponse.json({ error: 'Failed to delete coordinator' }, { status: 500 });

@@ -55,23 +55,30 @@ export async function GET(request: NextRequest, context: ContextProps) {
 
     const competition = rows[0];
 
-    // Fetch coordinators
-    const coordinators = await db.query(
-      'SELECT * FROM competition_coordinators WHERE competition_slug = ? AND is_active = 1 ORDER BY display_order ASC, created_at ASC',
-      [competition.slug as string]
-    );
+    // Fetch coordinators and registration count in parallel
+    const [coordinators, [regCount]] = await Promise.all([
+      db.query(
+        'SELECT * FROM competition_coordinators WHERE competition_slug = ? AND is_active = 1 ORDER BY display_order ASC, created_at ASC',
+        [competition.slug as string]
+      ),
+      db.query<{ count: number }>(
+        'SELECT COUNT(*) as count FROM registrations WHERE competition_slug = ?',
+        [competition.slug as string]
+      ),
+    ]);
 
-    // Fetch registration count
-    const [regCount] = await db.query<{ count: number }>(
-      'SELECT COUNT(*) as count FROM registrations WHERE competition_slug = ?',
-      [competition.slug as string]
+    return NextResponse.json(
+      {
+        competition,
+        coordinators,
+        registrationCount: regCount?.count || 0,
+      },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
     );
-
-    return NextResponse.json({
-      competition,
-      coordinators,
-      registrationCount: regCount?.count || 0,
-    });
   } catch (err) {
     console.error('Get competition error:', err);
     return NextResponse.json({ error: 'Failed to load competition' }, { status: 500 });
@@ -222,7 +229,12 @@ export async function PUT(request: NextRequest, context: ContextProps) {
       { slug: current.slug, changes: Object.keys(body) }
     );
 
-    return NextResponse.json({ success: true, slug: current.slug });
+    return NextResponse.json(
+      { success: true, slug: current.slug },
+      {
+        headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+      }
+    );
   } catch (err) {
     console.error('Update competition error:', err);
     return NextResponse.json({ error: 'Failed to update competition' }, { status: 500 });
@@ -254,7 +266,12 @@ export async function DELETE(request: NextRequest, context: ContextProps) {
       { slug }
     );
 
-    return NextResponse.json({ success: true, archived: true });
+    return NextResponse.json(
+      { success: true, archived: true },
+      {
+        headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+      }
+    );
   } catch (err) {
     return NextResponse.json({ error: 'Failed to archive competition' }, { status: 500 });
   }

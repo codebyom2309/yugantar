@@ -77,7 +77,8 @@ export default function RegistrationsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [competition, setCompetition] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [dateFilterDisplay, setDateFilterDisplay] = useState('');
@@ -97,16 +98,32 @@ export default function RegistrationsPage() {
   const [isBulkOperating, setIsBulkOperating] = useState(false);
   const [isExportingAll, setIsExportingAll] = useState(false);
 
+  // Debounce search input by 350ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
   const fetchRegistrations = useCallback(async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: page.toString(), limit: '25' });
-      if (search) params.set('search', search);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       if (competition) params.set('competition', competition);
       if (statusFilter) params.set('status', statusFilter);
       if (dateFilterIso) params.set('date', dateFilterIso);
 
-      const r = await fetch(`/api/admin/registrations?${params}`);
+      const r = await fetch(`/api/admin/registrations?${params}`, { signal: controller.signal });
       const d = await r.json();
       if (r.ok && d.registrations) {
         setRegistrations(d.registrations);
@@ -116,14 +133,19 @@ export default function RegistrationsPage() {
         setRegistrations([]);
         setTotal(0);
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return; // aborted by subsequent keystroke or filter change
+      }
       console.error('Failed to fetch registrations:', err);
       setRegistrations([]);
       setTotal(0);
     } finally {
-      setLoading(false);
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+      }
     }
-  }, [page, search, competition, statusFilter, dateFilterIso]);
+  }, [page, debouncedSearch, competition, statusFilter, dateFilterIso]);
 
   useEffect(() => {
     fetchRegistrations();
@@ -283,7 +305,7 @@ export default function RegistrationsPage() {
     setIsExportingAll(true);
     try {
       const params = new URLSearchParams({ all: 'true' });
-      if (search) params.set('search', search);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       if (competition) params.set('competition', competition);
       if (statusFilter) params.set('status', statusFilter);
       if (dateFilterIso) params.set('date', dateFilterIso);
@@ -427,9 +449,9 @@ export default function RegistrationsPage() {
           <input
             type="text"
             placeholder="Search candidate, email, team name, or payment UTR..."
-            value={search}
+            value={searchInput}
             onChange={(e) => {
-              setSearch(e.target.value);
+              setSearchInput(e.target.value);
               setPage(1);
             }}
             className="admin-glass-input w-full pl-9 pr-3 py-2 rounded-xl text-xs"
@@ -484,11 +506,11 @@ export default function RegistrationsPage() {
           </div>
 
           {/* Reset Filters button */}
-          {(search || competition || statusFilter || dateFilterIso) && (
+          {(searchInput || competition || statusFilter || dateFilterIso) && (
             <button
               type="button"
               onClick={() => {
-                setSearch('');
+                setSearchInput('');
                 setCompetition('');
                 setStatusFilter('');
                 setDateFilterDisplay('');

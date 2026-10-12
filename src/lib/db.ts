@@ -28,7 +28,7 @@ function getPool(): Pool {
     ssl: {
       rejectUnauthorized: true,
     },
-    connectionLimit: 5,
+    connectionLimit: 10,
     waitForConnections: true,
     queueLimit: 0,
     enableKeepAlive: true,

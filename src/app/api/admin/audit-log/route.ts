@@ -23,20 +23,28 @@ export async function GET(request: NextRequest) {
   if (entityType) { where += ' AND entity_type = ?'; params.push(entityType); }
   if (adminEmail) { where += ' AND admin_email = ?'; params.push(adminEmail); }
 
-  const [countRow] = await db.query<{ total: number }>(`SELECT COUNT(*) as total FROM audit_log ${where}`, params);
-  const total = countRow?.total || 0;
-
   const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 100));
   const safeOffset = Math.max(0, Number(offset) || 0);
 
-  const logs = await db.query<{
-    id: string; admin_id: string; admin_email: string; action: string;
-    entity_type: string; entity_id: string; details: string | null;
-    ip_address: string | null; created_at: string;
-  }>(
-    `SELECT * FROM audit_log ${where} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
-    params
-  );
+  const [countRows, logs] = await Promise.all([
+    db.query<{ total: number }>(`SELECT COUNT(*) as total FROM audit_log ${where}`, params),
+    db.query<{
+      id: string; admin_id: string; admin_email: string; action: string;
+      entity_type: string; entity_id: string; details: string | null;
+      ip_address: string | null; created_at: string;
+    }>(
+      `SELECT * FROM audit_log ${where} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+      params
+    ),
+  ]);
+  const total = countRows?.[0]?.total || 0;
 
-  return NextResponse.json({ logs, total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) });
+  return NextResponse.json(
+    { logs, total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) },
+    {
+      headers: {
+        'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+      },
+    }
+  );
 }

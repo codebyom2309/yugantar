@@ -256,6 +256,11 @@ async function main() {
     console.log('  ✓ competitions.custom_sections added');
   } catch { console.log('  → competitions.custom_sections already exists'); }
 
+  try {
+    await connection.execute(`ALTER TABLE registrations ADD INDEX idx_created_at (created_at)`);
+    console.log('  ✓ registrations.idx_created_at added');
+  } catch { console.log('  → registrations.idx_created_at already exists'); }
+
   // =========================================================================
   // SEED: Site Settings from FESTIVAL_INFO
   // =========================================================================

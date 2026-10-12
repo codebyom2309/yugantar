@@ -35,35 +35,40 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error }, { status });
 
   try {
-    const [regStats] = await db.query<{ total: number; submitted: number; pending: number; failed: number }>(
-      `SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN submission_status = 'submitted' THEN 1 ELSE 0 END) as submitted,
-        SUM(CASE WHEN submission_status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN submission_status = 'failed' THEN 1 ELSE 0 END) as failed
-      FROM registrations`
-    );
-
-    const compBySlug = await db.query<{ competition_slug: string; count: number }>(
-      `SELECT competition_slug, COUNT(*) as count FROM registrations GROUP BY competition_slug ORDER BY count DESC`
-    );
-
-    const collegeStats = await db.query<{ leader_college: string; count: number }>(
-      `SELECT leader_college, COUNT(*) as count FROM registrations GROUP BY leader_college ORDER BY count DESC LIMIT 10`
-    );
-
-    const recentRegs = await db.query<{
-      id: string; leader_name: string; leader_email: string; competition_slug: string;
-      submission_status: string; created_at: string;
-    }>(
-      `SELECT id, leader_name, leader_email, competition_slug, submission_status, created_at FROM registrations ORDER BY created_at DESC LIMIT 10`
-    );
-
-    const [adminCount] = await db.query<{ count: number }>('SELECT COUNT(*) as count FROM admin_users WHERE is_enabled = 1');
-    const settings = await db.query<{ setting_key: string; setting_value: string }>(
-      'SELECT setting_key, setting_value FROM site_settings WHERE setting_key = ?',
-      ['event_date']
-    );
+    const [
+      [regStats],
+      compBySlug,
+      collegeStats,
+      recentRegs,
+      [adminCount],
+      settings,
+    ] = await Promise.all([
+      db.query<{ total: number; submitted: number; pending: number; failed: number }>(
+        `SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN submission_status = 'submitted' THEN 1 ELSE 0 END) as submitted,
+          SUM(CASE WHEN submission_status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN submission_status = 'failed' THEN 1 ELSE 0 END) as failed
+        FROM registrations`
+      ),
+      db.query<{ competition_slug: string; count: number }>(
+        `SELECT competition_slug, COUNT(*) as count FROM registrations GROUP BY competition_slug ORDER BY count DESC`
+      ),
+      db.query<{ leader_college: string; count: number }>(
+        `SELECT leader_college, COUNT(*) as count FROM registrations GROUP BY leader_college ORDER BY count DESC LIMIT 10`
+      ),
+      db.query<{
+        id: string; leader_name: string; leader_email: string; competition_slug: string;
+        submission_status: string; created_at: string;
+      }>(
+        `SELECT id, leader_name, leader_email, competition_slug, submission_status, created_at FROM registrations ORDER BY created_at DESC LIMIT 10`
+      ),
+      db.query<{ count: number }>('SELECT COUNT(*) as count FROM admin_users WHERE is_enabled = 1'),
+      db.query<{ setting_key: string; setting_value: string }>(
+        'SELECT setting_key, setting_value FROM site_settings WHERE setting_key = ?',
+        ['event_date']
+      ),
+    ]);
 
     return NextResponse.json(
       {

@@ -8,6 +8,7 @@ import CoordinatorManager from '@/components/admin/CoordinatorManager';
 import AdminTimeRangePicker from '@/components/admin/AdminTimeRangePicker';
 import AdminDatePicker from '@/components/admin/AdminDatePicker';
 import LiveMobileFrame from '@/components/competitions/cards/LiveMobileFrame';
+import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import {
   Trophy,
   ArrowLeft,
@@ -236,8 +237,7 @@ export default function CompetitionEditorPage({
       });
 
       // Load authoritative festival date for inheritance display
-      fetch('/api/competitions')
-        .then((r) => r.json())
+      fetchClientFestivalData()
         .then((d) => {
           if (d.festival?.date) setFestivalDate(d.festival.date);
         })

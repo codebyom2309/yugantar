@@ -61,7 +61,9 @@ export async function POST(request: NextRequest) {
   );
 
   await logAudit(session!.user.id, session!.user.email, 'create_admin_user', 'admin_user', id, { email, role });
-  return NextResponse.json({ success: true, id });
+  return NextResponse.json({ success: true, id }, {
+    headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+  });
 }
 
 // PUT /api/admin/users — Update user
@@ -97,7 +99,9 @@ export async function PUT(request: NextRequest) {
   await db.execute(`UPDATE admin_users SET ${updates.join(', ')} WHERE id = ?`, params);
   await logAudit(session!.user.id, session!.user.email, 'update_admin_user', 'admin_user', id, { role, isEnabled });
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true }, {
+    headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+  });
 }
 
 // DELETE /api/admin/users — Delete user
@@ -110,5 +114,7 @@ export async function DELETE(request: NextRequest) {
 
   await db.execute('DELETE FROM admin_users WHERE id = ?', [id]);
   await logAudit(session!.user.id, session!.user.email, 'delete_admin_user', 'admin_user', id);
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true }, {
+    headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+  });
 }

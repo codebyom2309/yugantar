@@ -38,32 +38,41 @@ export async function GET(request: NextRequest) {
 
     if (competition) { where += ' AND competition_slug = ?'; params.push(competition); }
     if (statusFilter) { where += ' AND submission_status = ?'; params.push(statusFilter); }
-    if (dateFilter) { where += ' AND DATE(created_at) = ?'; params.push(dateFilter); }
+    if (dateFilter) {
+      where += ' AND created_at >= ? AND created_at < ?';
+      const startOfDay = `${dateFilter} 00:00:00`;
+      const nextDate = new Date(dateFilter);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const endOfDay = `${nextDate.toISOString().split('T')[0]} 00:00:00`;
+      params.push(startOfDay, endOfDay);
+    }
     if (search) {
       where += ' AND (leader_name LIKE ? OR leader_email LIKE ? OR team_name LIKE ? OR payment_id LIKE ?)';
       const s = `%${search}%`;
       params.push(s, s, s, s);
     }
 
-    const [countRow] = await db.query<{ total: number }>(`SELECT COUNT(*) as total FROM registrations ${where}`, params);
-    const total = countRow?.total || 0;
-
     const safeLimit = Math.max(1, limit);
     const safeOffset = Math.max(0, offset);
 
-    const rows = await db.query<{
-      id: string; competition_slug: string; leader_name: string; leader_email: string;
-      leader_phone: string; leader_college: string; leader_branch: string; leader_semester: string;
-      team_name: string | null; team_size: number; payment_id: string | null;
-      payment_proof_url: string | null; submission_status: string; submission_error: string | null;
-      submitted_at: string | null; created_at: string; verification_token: string | null;
-    }>(
-      `SELECT id, competition_slug, leader_name, leader_email, leader_phone, leader_college,
-              leader_branch, leader_semester, team_name, team_size, payment_id, payment_proof_url,
-              submission_status, submission_error, submitted_at, created_at, verification_token
-       FROM registrations ${where} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
-      params
-    );
+    // Run count and page data concurrently in parallel
+    const [countRows, rows] = await Promise.all([
+      db.query<{ total: number }>(`SELECT COUNT(*) as total FROM registrations ${where}`, params),
+      db.query<{
+        id: string; competition_slug: string; leader_name: string; leader_email: string;
+        leader_phone: string; leader_college: string; leader_branch: string; leader_semester: string;
+        team_name: string | null; team_size: number; payment_id: string | null;
+        payment_proof_url: string | null; submission_status: string; submission_error: string | null;
+        submitted_at: string | null; created_at: string; verification_token: string | null;
+      }>(
+        `SELECT id, competition_slug, leader_name, leader_email, leader_phone, leader_college,
+                leader_branch, leader_semester, team_name, team_size, payment_id, payment_proof_url,
+                submission_status, submission_error, submitted_at, created_at, verification_token
+         FROM registrations ${where} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+        params
+      ),
+    ]);
+    const total = countRows?.[0]?.total || 0;
 
     return NextResponse.json(
       {
@@ -100,7 +109,9 @@ export async function PUT(request: NextRequest) {
       const placeholders = ids.map(() => '?').join(',');
       await db.execute(`UPDATE registrations SET submission_status = ? WHERE id IN (${placeholders})`, [submissionStatus, ...ids]);
       await logAudit(session!.user.id, session!.user.email, 'bulk_update_registration_status', 'registration', 'bulk', { count: ids.length, newStatus: submissionStatus });
-      return NextResponse.json({ success: true, updatedCount: ids.length });
+      return NextResponse.json({ success: true, updatedCount: ids.length }, {
+        headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+      });
     }
 
     if (!id) return NextResponse.json({ error: 'Missing id or ids' }, { status: 400 });
@@ -108,7 +119,9 @@ export async function PUT(request: NextRequest) {
     await db.execute('UPDATE registrations SET submission_status = ? WHERE id = ?', [submissionStatus, id]);
     await logAudit(session!.user.id, session!.user.email, 'update_registration_status', 'registration', id, { newStatus: submissionStatus });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, {
+      headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+    });
   } catch (err) {
     return NextResponse.json({ error: 'Failed to update registration' }, { status: 500 });
   }
@@ -126,7 +139,9 @@ export async function DELETE(request: NextRequest) {
     await db.execute('DELETE FROM registrations WHERE id = ?', [id]);
     await logAudit(session!.user.id, session!.user.email, 'delete_registration', 'registration', id);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, {
+      headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+    });
   } catch (err) {
     return NextResponse.json({ error: 'Failed to delete registration' }, { status: 500 });
   }

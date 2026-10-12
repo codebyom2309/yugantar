@@ -47,7 +47,15 @@ export async function GET(request: NextRequest) {
     sql += ' ORDER BY display_order ASC, created_at ASC';
 
     const members = await db.query(sql, params);
-    return NextResponse.json({ members });
+
+    return NextResponse.json(
+      { members },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err: unknown) {
     console.error('Failed to get organizer members:', err);
     return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 });
@@ -92,7 +100,12 @@ export async function POST(request: NextRequest) {
 
     invalidatePublicCache('organizers');
 
-    return NextResponse.json({ success: true, id });
+    return NextResponse.json(
+      { success: true, id },
+      {
+        headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+      }
+    );
   } catch (err: unknown) {
     console.error('Failed to create organizer member:', err);
     return NextResponse.json({ error: 'Failed to create member' }, { status: 500 });
@@ -152,7 +165,12 @@ export async function PUT(request: NextRequest) {
 
     invalidatePublicCache('organizers');
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      { success: true },
+      {
+        headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+      }
+    );
   } catch (err: unknown) {
     console.error('Failed to update organizer member:', err);
     return NextResponse.json({ error: 'Failed to update member' }, { status: 500 });
@@ -173,7 +191,12 @@ export async function DELETE(request: NextRequest) {
 
     invalidatePublicCache('organizers');
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      { success: true },
+      {
+        headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+      }
+    );
   } catch (err: unknown) {
     console.error('Failed to delete organizer member:', err);
     return NextResponse.json({ error: 'Failed to delete member' }, { status: 500 });

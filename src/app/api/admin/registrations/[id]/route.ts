@@ -23,7 +23,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       try { reg.form_data = JSON.parse(reg.form_data as string); } catch {}
     }
 
-    return NextResponse.json({ registration: reg });
+    return NextResponse.json(
+      { registration: reg },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err) {
     return NextResponse.json({ error: 'Failed to load registration' }, { status: 500 });
   }

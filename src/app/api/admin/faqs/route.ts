@@ -51,7 +51,9 @@ export async function POST(request: NextRequest) {
   await logAudit(session!.user.id, session!.user.email, 'create_faq', 'faq', id);
   invalidatePublicCache('faqs');
 
-  return NextResponse.json({ success: true, id });
+  return NextResponse.json({ success: true, id }, {
+    headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+  });
 }
 
 // PUT /api/admin/faqs
@@ -70,7 +72,9 @@ export async function PUT(request: NextRequest) {
   await logAudit(session!.user.id, session!.user.email, 'update_faq', 'faq', id);
   invalidatePublicCache('faqs');
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true }, {
+    headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+  });
 }
 
 // DELETE /api/admin/faqs
@@ -84,5 +88,7 @@ export async function DELETE(request: NextRequest) {
 
   invalidatePublicCache('faqs');
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true }, {
+    headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+  });
 }

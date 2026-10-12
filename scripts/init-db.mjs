@@ -50,7 +50,8 @@ async function main() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_competition_slug (competition_slug),
       INDEX idx_leader_email_slug (leader_email, competition_slug),
-      INDEX idx_status (submission_status)
+      INDEX idx_status (submission_status),
+      INDEX idx_created_at (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   `);
 

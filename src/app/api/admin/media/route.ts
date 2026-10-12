@@ -47,7 +47,14 @@ export async function GET(request: NextRequest) {
       params
     );
 
-    return NextResponse.json({ assets: assets || [] });
+    return NextResponse.json(
+      { assets: assets || [] },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err) {
     console.error('Media fetch error:', err);
     return NextResponse.json({ error: 'Failed to load media assets' }, { status: 500 });
