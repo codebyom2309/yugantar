@@ -61,8 +61,8 @@ export default function Navbar() {
         <div
           className={`pointer-events-auto w-full flex items-center justify-between gap-1.5 sm:gap-3 px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-full transition-all duration-300 ${
             isScrolled
-              ? 'bg-white/92 backdrop-blur-2xl border border-white/90 shadow-xl shadow-[#102344]/8'
-              : 'bg-white/80 backdrop-blur-xl border border-white/85 shadow-lg shadow-[#102344]/5'
+              ? 'bg-white/98 backdrop-blur-2xl border border-white shadow-xl shadow-[#102344]/12'
+              : 'bg-white/94 backdrop-blur-2xl border border-white/95 shadow-lg shadow-[#102344]/8'
           }`}
         >
           {/* Brand Identity */}
@@ -119,7 +119,7 @@ export default function Navbar() {
             {/* 8 Arenas Pill */}
             <Link
               href="/competitions"
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white/90 hover:bg-white text-[#15294A] border border-white/80 shadow-2xs text-[11px] sm:text-xs font-mono font-bold tracking-tight transition-all group shrink-0"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white/95 hover:bg-white text-[#15294A] border border-white shadow-2xs text-[11px] sm:text-xs font-mono font-bold tracking-tight transition-all group shrink-0"
             >
               <LayoutGrid className="w-3.5 h-3.5 text-[#FF874D] group-hover:rotate-45 transition-transform duration-300" />
               <span className="whitespace-nowrap">8 Arenas</span>
@@ -129,7 +129,7 @@ export default function Navbar() {
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               type="button"
-              className="lg:hidden w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center text-[#15294A] border border-white/80 shadow-2xs transition-all duration-200 active:scale-95 focus:outline-none shrink-0"
+              className="lg:hidden w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 hover:bg-white flex items-center justify-center text-[#15294A] border border-white shadow-2xs transition-all duration-200 active:scale-95 focus:outline-none shrink-0"
               aria-expanded={mobileMenuOpen}
               aria-label="Toggle navigation menu"
             >

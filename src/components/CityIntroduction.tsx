@@ -22,7 +22,7 @@ export default function CityIntroduction({ festival }: { festival?: FestivalSett
   });
 
   return (
-    <section id="about" className="py-24 sm:py-32 bg-gradient-to-b from-[#FFF8F2] via-[#FFF1E5] to-[#F8FAFD] relative overflow-hidden border-b border-[#F2DECD]">
+    <section id="about" className="pt-12 sm:pt-20 pb-24 sm:pb-32 bg-gradient-to-b from-[#FFF8F2] via-[#FFF1E5] to-[#F8FAFD] relative overflow-hidden border-b border-[#F2DECD]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Editorial Split Layout */}
