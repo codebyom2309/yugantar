@@ -159,6 +159,7 @@ async function RegistrationContent({ params }: PageProps) {
                   <RegistrationFormWrapper
                     competitionSlug={competition.slug}
                     accentColor={competition.accentColor}
+                    competition={competition}
                   />
                 ) : (
                   <div className="py-12 px-4 text-center space-y-4">

@@ -25,6 +25,7 @@ import {
   FileText,
   X,
   Link as LinkIcon,
+  Printer,
 } from 'lucide-react';
 import type { RegistrationFormConfig, FormField } from '@/data/registrationForms';
 import confetti from 'canvas-confetti';
@@ -43,6 +44,10 @@ type SubmissionState =
 interface SubmissionResult {
   status: string;
   registrationId?: string;
+  verificationToken?: string;
+  paymentStatus?: string;
+  whatsappLink?: string;
+  confirmationInstructions?: string;
   message?: string;
   evidence?: string;
   errors?: Record<string, string>;
@@ -541,12 +546,12 @@ function FormFieldInput({
           <select
             value={value}
             onChange={(e) => onChange(field.key, e.target.value)}
-            className={`${baseInputClass} appearance-none pr-10 cursor-pointer`}
+            className={`${baseInputClass} appearance-none pr-10 cursor-pointer bg-white text-[#172B49]`}
             aria-invalid={!!error}
           >
-            <option value="">Select {field.label}...</option>
+            <option value="" className="bg-white text-[#172B49]">Select {field.label}...</option>
             {field.options.map((opt) => (
-              <option key={opt} value={opt}>
+              <option key={opt} value={opt} className="bg-white text-[#172B49]">
                 {opt}
               </option>
             ))}
@@ -601,13 +606,29 @@ function FormFieldInput({
 // Main Multi-Step Registration Form
 // ---------------------------------------------------------------------------
 
+export interface CompetitionPaymentConfig {
+  isPaid?: boolean;
+  registrationFee?: string;
+  qrCodeUrl?: string;
+  upiId?: string;
+  paymentUrl?: string;
+  paymentInstructions?: string;
+  requireUtr?: boolean;
+  requireScreenshot?: boolean;
+  whatsappLink?: string;
+  confirmationInstructions?: string;
+}
+
 export default function RegistrationForm({
   config,
   accentColor = '#E07A43',
+  competition,
 }: {
   config: RegistrationFormConfig;
   accentColor?: string;
+  competition?: CompetitionPaymentConfig;
 }) {
+  const isPaid = Boolean(competition?.isPaid);
   const teamSizeField = config.fields.find((f) => f.key === 'teamSize');
   const availableTeamSizes = teamSizeField?.options || ['1', '2', '3', '4'];
   const defaultTeamSize = String(availableTeamSizes[0] || '1');
@@ -673,6 +694,7 @@ export default function RegistrationForm({
     const leaderKeys = config.fields
       .filter((f) =>
         f.group?.includes('Leader') ||
+        f.group?.includes('Lead') ||
         f.group?.includes('Participant') ||
         f.group?.includes('Candidate') ||
         f.group?.includes('Performer')
@@ -705,9 +727,16 @@ export default function RegistrationForm({
       )
       .map((f) => f.key);
 
-    const paymentKeys = config.fields
-      .filter((f) => f.group?.includes('Payment'))
-      .map((f) => f.key);
+    const paymentKeys = isPaid
+      ? config.fields
+          .filter((f) => {
+            if (!f.group?.includes('Payment')) return false;
+            if (f.key === 'paymentId' && competition?.requireUtr === false) return false;
+            if (f.key === 'paymentProof' && competition?.requireScreenshot === false) return false;
+            return true;
+          })
+          .map((f) => f.key)
+      : [];
 
     const resultSteps: StepDefinition[] = [];
 
@@ -744,15 +773,17 @@ export default function RegistrationForm({
 
     // Step 4: Payment, Review & Submit
     resultSteps.push({
-      id: 'payment_review',
-      title: 'Payment & Final Review',
-      shortTitle: 'Review & Pay',
-      description: 'Upload payment screenshot and verify all registration details.',
+      id: isPaid ? 'payment_review' : 'review_submit',
+      title: isPaid ? 'Payment & Final Review' : 'Final Review & Confirmation',
+      shortTitle: isPaid ? 'Review & Pay' : 'Review & Submit',
+      description: isPaid
+        ? 'Complete UPI fee payment, attach verification proof, and confirm submission.'
+        : 'Verify all entered details and confirm your official event registration.',
       fieldKeys: paymentKeys,
     });
 
     return resultSteps;
-  }, [config]);
+  }, [config, isPaid, competition]);
 
   const currentStep = steps[currentStepIndex] || steps[0];
 
@@ -787,6 +818,15 @@ export default function RegistrationForm({
     const stepErrors: Record<string, string> = {};
 
     for (const field of stepFields) {
+      // If free track, bypass payment fields requirement
+      if (!isPaid && (field.key === 'paymentId' || field.key === 'paymentProof' || field.group === 'Payment')) {
+        continue;
+      }
+      if (isPaid) {
+        if (field.key === 'paymentId' && competition?.requireUtr === false) continue;
+        if (field.key === 'paymentProof' && competition?.requireScreenshot === false) continue;
+      }
+
       const val = values[field.key]?.trim() || '';
 
       if (field.required && !val) {
@@ -890,7 +930,7 @@ export default function RegistrationForm({
 
       const data: SubmissionResult = await response.json();
 
-      if (response.ok && data.status === 'submitted') {
+      if (response.ok && (data.status === 'submitted' || data.status === 'confirmed')) {
         setSubmissionState('submitted');
         setSubmissionResult(data);
         clearDraft(config.competitionSlug);
@@ -934,6 +974,9 @@ export default function RegistrationForm({
   // RENDER: Confirmed Success View
   // -------------------------------------------------------------------------
   if (submissionState === 'submitted') {
+    const isFree = submissionResult?.paymentStatus === 'free';
+    const regId = submissionResult?.registrationId;
+
     return (
       <div className="py-6 sm:py-8 space-y-6 text-center animate-in fade-in zoom-in-95 duration-300">
         <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto text-emerald-600 shadow-xs">
@@ -941,30 +984,49 @@ export default function RegistrationForm({
         </div>
 
         <div className="space-y-2">
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            OFFICIAL CONFIRMATION VERIFIED
-          </span>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              OFFICIAL REGISTRATION RECORDED
+            </span>
+            <span
+              className={`text-[11px] font-mono font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${
+                isFree
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-amber-50 text-amber-800 border-amber-200'
+              }`}
+            >
+              {isFree ? 'FREE TRACK • SPOT CONFIRMED' : 'PAYMENT VERIFICATION PENDING'}
+            </span>
+          </div>
           <h3 className="text-xl sm:text-2xl font-display font-extrabold text-[#172B49]">
-            Registration Successfully Recorded
+            {isFree ? 'Your Arena Spot is Confirmed!' : 'Registration Dossier Submitted!'}
           </h3>
           <p className="text-xs sm:text-sm text-[#60728A] max-w-md mx-auto leading-relaxed">
-            Your registration has been saved in our database and successfully recorded into the official Google Form &amp; Sheets registry.
+            {isFree
+              ? 'Your registration has been securely synced to our system and Department Google Sheets. Download your official delegate pass below.'
+              : 'Your registration has been submitted and synced to Department Google Sheets. Your payment proof is under review by festival coordinators.'}
           </p>
         </div>
 
-        {submissionResult?.registrationId && (
-          <div className="p-4 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] max-w-sm mx-auto text-left space-y-2">
-            <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
-              Permanent Registration Tracking ID
-            </span>
+        {/* Permanent Tracking ID Card */}
+        {regId && (
+          <div className="p-4 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] max-w-md mx-auto text-left space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                Official Registration Credential ID
+              </span>
+              <span className="text-[10px] font-mono text-emerald-600 font-semibold">
+                ✓ Recorded
+              </span>
+            </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-xs font-bold text-[#172B49] truncate">
-                {submissionResult.registrationId}
+              <span className="font-mono text-xs sm:text-sm font-bold text-[#172B49] truncate">
+                {regId}
               </span>
               <button
                 type="button"
                 onClick={handleCopyId}
-                className="p-1.5 rounded-lg bg-white border border-[#DCE5F2] hover:bg-[#EDF5FC] text-[#4B91E8] text-xs font-mono font-bold transition-colors flex items-center gap-1 shrink-0"
+                className="p-1.5 px-2.5 rounded-lg bg-white border border-[#DCE5F2] hover:bg-[#EDF5FC] text-[#4B91E8] text-xs font-mono font-bold transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
               >
                 {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedId ? 'Copied' : 'Copy'}</span>
@@ -973,13 +1035,38 @@ export default function RegistrationForm({
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2 max-w-sm mx-auto">
+        {/* Action Buttons: Download Pass + Join WhatsApp */}
+        <div className="space-y-3 max-w-md mx-auto pt-2">
+          {regId && (
+            <Link
+              href={`/pass/${regId}`}
+              className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#172B49] via-[#244372] to-[#172B49] hover:opacity-95 text-white text-xs sm:text-sm font-mono font-bold shadow-md transition"
+            >
+              <Printer className="w-4 h-4 text-[#F5A16F]" />
+              <span>DOWNLOAD / PRINT OFFICIAL PASS</span>
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Link>
+          )}
+
+          {submissionResult?.whatsappLink && (
+            <a
+              href={submissionResult.whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2.5 px-6 py-3 rounded-2xl bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs sm:text-sm font-mono font-bold shadow-xs transition"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>JOIN OFFICIAL WHATSAPP GROUP</span>
+              <ExternalLink className="w-3.5 h-3.5 ml-1" />
+            </a>
+          )}
+
           <Link
             href="/competitions"
-            className="nexus-btn-ink px-6 py-3 text-xs font-bold gap-2 justify-center flex-1"
+            className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-white border border-[#DCE5F2] text-[#60728A] hover:text-[#172B49] text-xs font-mono font-medium hover:bg-[#F8FAFD] transition"
           >
-            <span>Explore Other Arenas</span>
-            <ArrowRight className="w-3.5 h-3.5 text-[#F5A16F]" />
+            <span>Explore Other Competition Arenas</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#8CA0BA]" />
           </Link>
         </div>
       </div>
@@ -1218,16 +1305,96 @@ export default function RegistrationForm({
             ===================================================================== */}
         {currentStepIndex === steps.length - 1 && (
           <div className="space-y-6 pt-4 border-t border-[#E2E8F0]">
-            {/* Payment Info Card */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#FFF8F2] border border-[#FFE0CE] space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#E07A43] uppercase tracking-wider">
-                <QrCode className="w-4 h-4" />
-                <span>Payment Verification Instructions</span>
+            {/* Payment / Free Track Card */}
+            {isPaid ? (
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#FFF8F2] border border-[#FFE0CE] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#E07A43] uppercase tracking-wider">
+                    <QrCode className="w-4 h-4" />
+                    <span>Payment Verification Instructions</span>
+                  </div>
+                  {competition?.registrationFee && (
+                    <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#E07A43]/10 text-[#E07A43] border border-[#E07A43]/30">
+                      Fee: {competition.registrationFee}
+                    </span>
+                  )}
+                </div>
+
+                {competition?.paymentInstructions ? (
+                  <p className="text-xs text-[#60728A] leading-relaxed">
+                    {competition.paymentInstructions}
+                  </p>
+                ) : (
+                  <p className="text-xs text-[#60728A] leading-relaxed">
+                    Scan the official department QR code below or use the UPI ID to complete your registration fee. Enter the 12-digit UTR Transaction ID and attach your payment screenshot.
+                  </p>
+                )}
+
+                {/* QR and UPI ID Details */}
+                <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
+                  {competition?.qrCodeUrl && (
+                    <div className="p-2 bg-white rounded-xl border border-[#FFE0CE] shrink-0 text-center shadow-xs">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={competition.qrCodeUrl}
+                        alt="Payment QR Code"
+                        className="w-28 h-28 object-contain mx-auto rounded-lg"
+                      />
+                      <span className="text-[10px] font-mono text-[#8CA0BA] block mt-1">Scan &amp; Pay via UPI</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 flex-1 w-full text-left">
+                    {competition?.upiId && (
+                      <div className="p-3 rounded-xl bg-white border border-[#FFE0CE] space-y-1">
+                        <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                          Official UPI ID
+                        </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <code className="text-xs font-mono font-bold text-[#172B49] select-all">
+                            {competition.upiId}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (competition?.upiId) {
+                                navigator.clipboard.writeText(competition.upiId);
+                                setCopiedId(true);
+                                setTimeout(() => setCopiedId(false), 2000);
+                              }
+                            }}
+                            className="p-1 px-2 rounded-lg bg-[#FFF8F2] border border-[#FFE0CE] text-[#E07A43] hover:bg-[#FFE0CE] text-xs font-mono font-bold transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <Copy className="w-3 h-3" />
+                            <span>Copy</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {competition?.upiId && (
+                      <a
+                        href={`upi://pay?pa=${competition.upiId}&pn=YUGANTAR%202026&cu=INR`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E07A43] text-white text-xs font-mono font-bold hover:bg-[#C96835] transition shadow-2xs"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Pay directly via UPI App (Mobile)</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
               </div>
-              <p className="text-xs text-[#60728A] leading-relaxed">
-                Scan the department QR code or complete your UPI transfer. Enter the 12-digit UPI / UTR Transaction ID above and upload your payment screenshot. Files are uploaded directly to our dedicated Cloudinary infrastructure.
-              </p>
-            </div>
+            ) : (
+              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-2 text-left">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Free Registration Track</span>
+                </div>
+                <p className="text-xs text-[#60728A] leading-relaxed">
+                  Registration for this competition arena is 100% free of charge. No payment verification, UTR number, or transaction screenshot is required. Simply review your submission details below and confirm.
+                </p>
+              </div>
+            )}
 
             {/* Dossier Review Card */}
             <div className="p-5 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-4">

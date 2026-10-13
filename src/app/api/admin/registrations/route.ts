@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const competition = searchParams.get('competition') || '';
   const statusFilter = searchParams.get('status') || '';
+  const paymentStatusFilter = searchParams.get('paymentStatus') || '';
   const search = searchParams.get('search') || '';
   const dateFilter = searchParams.get('date') || '';
   const isAll = searchParams.get('all') === 'true';
@@ -38,6 +39,20 @@ export async function GET(request: NextRequest) {
 
     if (competition) { where += ' AND competition_slug = ?'; params.push(competition); }
     if (statusFilter) { where += ' AND submission_status = ?'; params.push(statusFilter); }
+    if (paymentStatusFilter) {
+      if (paymentStatusFilter === 'confirmed') {
+        where += " AND (payment_status IN ('confirmed', 'verified'))";
+      } else if (paymentStatusFilter === 'free') {
+        where += " AND (payment_status = 'free' OR (payment_status IS NULL AND payment_id IS NULL))";
+      } else if (paymentStatusFilter === 'pending') {
+        where += " AND (payment_status = 'pending' OR (payment_status IS NULL AND payment_id IS NOT NULL))";
+      } else if (paymentStatusFilter === 'rejected') {
+        where += " AND payment_status = 'rejected'";
+      } else {
+        where += ' AND payment_status = ?';
+        params.push(paymentStatusFilter);
+      }
+    }
     if (dateFilter) {
       where += ' AND created_at >= ? AND created_at < ?';
       const startOfDay = `${dateFilter} 00:00:00`;
@@ -55,8 +70,8 @@ export async function GET(request: NextRequest) {
     const safeLimit = Math.max(1, limit);
     const safeOffset = Math.max(0, offset);
 
-    // Run count and page data concurrently in parallel
-    const [countRows, rows] = await Promise.all([
+    // Run count, page data, and settings concurrently in parallel
+    const [countRows, rows, settingRows] = await Promise.all([
       db.query<{ total: number }>(`SELECT COUNT(*) as total FROM registrations ${where}`, params),
       db.query<{
         id: string; competition_slug: string; leader_name: string; leader_email: string;
@@ -64,15 +79,21 @@ export async function GET(request: NextRequest) {
         team_name: string | null; team_size: number; payment_id: string | null;
         payment_proof_url: string | null; submission_status: string; submission_error: string | null;
         submitted_at: string | null; created_at: string; verification_token: string | null;
+        payment_status: string | null; verified_by: string | null; verified_at: string | null;
       }>(
         `SELECT id, competition_slug, leader_name, leader_email, leader_phone, leader_college,
                 leader_branch, leader_semester, team_name, team_size, payment_id, payment_proof_url,
-                submission_status, submission_error, submitted_at, created_at, verification_token
+                submission_status, submission_error, submitted_at, created_at, verification_token,
+                payment_status, verified_by, verified_at
          FROM registrations ${where} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
         params
       ),
+      db.query<{ setting_value: string }>(
+        "SELECT setting_value FROM site_settings WHERE setting_key = 'registration_storage_mode' LIMIT 1"
+      ),
     ]);
     const total = countRows?.[0]?.total || 0;
+    const storageMode = settingRows?.[0]?.setting_value || 'minimal';
 
     return NextResponse.json(
       {
@@ -81,6 +102,7 @@ export async function GET(request: NextRequest) {
         page: isAll ? 1 : page,
         limit: safeLimit,
         totalPages: isAll ? 1 : Math.ceil(total / safeLimit),
+        storageMode,
       },
       {
         headers: {
@@ -94,15 +116,54 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PUT /api/admin/registrations — Update registration status (single or bulk)
+// PUT /api/admin/registrations — Update registration status or payment status (single or bulk)
 export async function PUT(request: NextRequest) {
   const { error, status, session } = await requireAdmin(['super_admin', 'registration_admin']);
   if (error) return NextResponse.json({ error }, { status });
 
   try {
     const body = await request.json();
-    const { id, ids, submissionStatus } = body;
-    if (!submissionStatus) return NextResponse.json({ error: 'Missing status' }, { status: 400 });
+    const { id, ids, submissionStatus, paymentStatus } = body;
+
+    // 1. Update Payment Status (with audit verification timestamp and admin identity)
+    if (paymentStatus) {
+      const isConfirm = paymentStatus === 'confirmed';
+      if (Array.isArray(ids) && ids.length > 0) {
+        const placeholders = ids.map(() => '?').join(',');
+        await db.execute(
+          `UPDATE registrations 
+           SET payment_status = ?, 
+               submission_status = CASE WHEN ? = 1 THEN 'confirmed' ELSE submission_status END,
+               verified_by = ?, 
+               verified_at = NOW() 
+           WHERE id IN (${placeholders})`,
+          [paymentStatus, isConfirm ? 1 : 0, session!.user.email, ...ids]
+        );
+        await logAudit(session!.user.id, session!.user.email, 'bulk_update_payment_status', 'registration', 'bulk', { count: ids.length, newPaymentStatus: paymentStatus });
+        return NextResponse.json({ success: true, updatedCount: ids.length }, {
+          headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+        });
+      }
+
+      if (id) {
+        await db.execute(
+          `UPDATE registrations 
+           SET payment_status = ?, 
+               submission_status = CASE WHEN ? = 1 THEN 'confirmed' ELSE submission_status END,
+               verified_by = ?, 
+               verified_at = NOW() 
+           WHERE id = ?`,
+          [paymentStatus, isConfirm ? 1 : 0, session!.user.email, id]
+        );
+        await logAudit(session!.user.id, session!.user.email, 'update_payment_status', 'registration', id, { newPaymentStatus: paymentStatus });
+        return NextResponse.json({ success: true }, {
+          headers: { 'Cache-Control': 'private, no-store, no-cache, must-revalidate' },
+        });
+      }
+    }
+
+    // 2. Update Submission Status
+    if (!submissionStatus) return NextResponse.json({ error: 'Missing status or paymentStatus' }, { status: 400 });
 
     if (Array.isArray(ids) && ids.length > 0) {
       // Bulk update

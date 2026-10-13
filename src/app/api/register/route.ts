@@ -54,14 +54,29 @@ export async function POST(request: NextRequest) {
     }
 
     // 2b. Authoritative server-side registration gating (Global & Track)
+    let isPaid = false;
+    let requireUtr = false;
+    let requireScreenshot = false;
+    let compWhatsApp: string | null = null;
+    let confirmationInstructions: string | null = null;
+    let storageMode = 'minimal';
+    let globalWhatsApp: string | null = null;
+
     try {
       const siteSettings = await db.query<{ setting_key: string; setting_value: string }>(
-        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('registration_global_open', 'registration_status_message')"
+        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('registration_global_open', 'registration_status_message', 'registration_storage_mode', 'global_whatsapp_link')"
       );
       const settingsMap: Record<string, string> = {};
       siteSettings.forEach((r) => {
         settingsMap[r.setting_key] = r.setting_value;
       });
+
+      if (settingsMap.registration_storage_mode) {
+        storageMode = settingsMap.registration_storage_mode;
+      }
+      if (settingsMap.global_whatsapp_link) {
+        globalWhatsApp = settingsMap.global_whatsapp_link;
+      }
 
       if (settingsMap.registration_global_open === '0') {
         return NextResponse.json(
@@ -78,12 +93,24 @@ export async function POST(request: NextRequest) {
       const compRows = await db.query<{
         registration_open: number;
         registration_deadline: string | null;
+        is_paid: number;
+        require_utr: number;
+        require_screenshot: number;
+        whatsapp_link: string | null;
+        confirmation_instructions: string | null;
       }>(
-        'SELECT registration_open, registration_deadline FROM competitions WHERE slug = ? LIMIT 1',
+        'SELECT registration_open, registration_deadline, is_paid, require_utr, require_screenshot, whatsapp_link, confirmation_instructions FROM competitions WHERE slug = ? LIMIT 1',
         [competitionSlug]
       );
       if (compRows.length > 0) {
-        if (compRows[0].registration_open === 0) {
+        const comp = compRows[0];
+        isPaid = Boolean(comp.is_paid);
+        requireUtr = Boolean(comp.require_utr);
+        requireScreenshot = Boolean(comp.require_screenshot);
+        compWhatsApp = comp.whatsapp_link;
+        confirmationInstructions = comp.confirmation_instructions;
+
+        if (comp.registration_open === 0) {
           return NextResponse.json(
             {
               status: 'failed',
@@ -92,13 +119,13 @@ export async function POST(request: NextRequest) {
             { status: 403 }
           );
         }
-        if (compRows[0].registration_deadline) {
-          const deadline = new Date(compRows[0].registration_deadline);
+        if (comp.registration_deadline) {
+          const deadline = new Date(comp.registration_deadline);
           if (!isNaN(deadline.getTime()) && Date.now() > deadline.getTime()) {
             return NextResponse.json(
               {
                 status: 'failed',
-                error: `Registration for this competition closed on ${compRows[0].registration_deadline}.`,
+                error: `Registration for this competition closed on ${comp.registration_deadline}.`,
               },
               { status: 403 }
             );
@@ -113,6 +140,20 @@ export async function POST(request: NextRequest) {
     const safeFormValues = formValues || {};
     const errors: Record<string, string> = {};
     for (const field of formConfig.fields) {
+      // If competition is free, bypass payment fields requirement
+      if (!isPaid && (field.key === 'paymentId' || field.key === 'paymentProof' || field.group === 'Payment')) {
+        continue;
+      }
+
+      // If competition is paid, check specific toggles
+      if (isPaid) {
+        if (field.key === 'paymentId' && !requireUtr) {
+          continue;
+        }
+        if (field.key === 'paymentProof' && !requireScreenshot) {
+          continue;
+        }
+      }
       // Check conditional visibility (e.g. member 2/3/4 based on teamSize)
       if (field.showWhen) {
         const depValue = safeFormValues[field.showWhen.field];
@@ -233,8 +274,12 @@ export async function POST(request: NextRequest) {
     // 4. Generate persistent registration ID and secure verification token
     const registrationId = randomUUID();
     const verificationToken = 'yug_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    const initialPaymentStatus = isPaid ? 'pending' : 'free';
+    const effectivePaymentId = paymentId || null;
+    const effectivePaymentProof = paymentProof || null;
+    const formDataPayload = storageMode === 'full' ? JSON.stringify(formValues) : null;
 
-    // 5. Initial save to database with 'pending' status
+    // 5. Initial save to database
     let dbSaveSuccess = false;
     try {
       await db.execute(
@@ -244,8 +289,9 @@ export async function POST(request: NextRequest) {
           leader_college, leader_branch, leader_semester,
           team_name, team_size, form_data,
           payment_id, payment_proof_url,
-          google_form_id, submission_status, verification_token
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          google_form_id, submission_status, verification_token,
+          payment_status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           registrationId,
           formConfig.competitionSlug,
@@ -258,17 +304,28 @@ export async function POST(request: NextRequest) {
           leaderSemester,
           teamName,
           teamSize,
-          JSON.stringify(formValues),
-          paymentId,
-          paymentProof,
+          formDataPayload,
+          effectivePaymentId,
+          effectivePaymentProof,
           formConfig.googleFormId,
-          'pending',
+          isPaid ? 'pending' : 'confirmed',
           verificationToken,
+          initialPaymentStatus,
         ],
       );
       dbSaveSuccess = true;
     } catch (dbErr) {
       console.error('Database initial insert error:', dbErr);
+    }
+
+    if (!dbSaveSuccess) {
+      return NextResponse.json(
+        {
+          status: 'failed',
+          error: 'Unable to record registration in festival database. Please verify your connection and try again.',
+        },
+        { status: 500 }
+      );
     }
 
     // 6. Real Google Forms submission via verified formResponseUrl
@@ -288,7 +345,13 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        const value = formValues[field.key]?.trim() || '';
+        let value = formValues[field.key]?.trim() || '';
+        // If free track and payment field is empty, provide valid placeholder so Google Form accepts it
+        if (!isPaid && !value) {
+          if (field.key === 'paymentId') value = 'FREE-TRACK';
+          if (field.key === 'paymentProof') value = 'https://yugantar.pce.ac.in/free-track';
+        }
+
         if (value) {
           googleFormData.append(`entry.${field.entryId}`, value);
         }
@@ -338,7 +401,7 @@ export async function POST(request: NextRequest) {
 
     // 7. Update status in database
     const finalStatus = googleSubmitSuccess
-      ? 'submitted'
+      ? (isPaid ? 'submitted' : 'confirmed')
       : googleSubmitError && !googleSubmitError.includes('Network')
       ? 'failed'
       : 'unknown';
@@ -361,15 +424,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 8. Return comprehensive, honest diagnostic response to client
+    // 8. Return comprehensive response to client
+    const whatsappLink = compWhatsApp || globalWhatsApp || null;
+
     return NextResponse.json(
       {
         status: finalStatus,
         registrationId,
+        verificationToken,
+        paymentStatus: initialPaymentStatus,
+        whatsappLink,
+        confirmationInstructions,
         dbSaved: dbSaveSuccess,
         googleFormsVerified: googleSubmitSuccess,
         message: googleSubmitSuccess
-          ? 'Registration confirmed! Your response has been securely saved and recorded in the official Google Form.'
+          ? (isPaid
+              ? 'Registration submitted! Please save your registration pass and await payment verification.'
+              : 'Registration confirmed! Your spot is secured. Download your official delegate pass below.')
           : finalStatus === 'failed'
           ? 'Registration was saved in the database, but the official Google Form rejected the submission.'
           : 'Registration was saved in the database. Google Forms confirmation timed out.',

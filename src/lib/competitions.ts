@@ -22,6 +22,16 @@ export interface DbCompetition extends Competition {
   registrationDeadline?: string;
   registrationInstructions?: string;
   minTeamMembers?: number;
+  isPaid?: boolean;
+  registrationFee?: string;
+  qrCodeUrl?: string;
+  upiId?: string;
+  paymentUrl?: string;
+  paymentInstructions?: string;
+  requireUtr?: boolean;
+  requireScreenshot?: boolean;
+  whatsappLink?: string;
+  confirmationInstructions?: string;
   sectionVisibility?: Record<string, boolean>;
   customSections?: Array<{
     id: string;
@@ -496,5 +506,15 @@ function mapDbRowToCompetition(r: Record<string, unknown>): DbCompetition {
     registrationDeadline: r.registration_deadline ? String(r.registration_deadline) : undefined,
     registrationInstructions: r.registration_instructions ? String(r.registration_instructions) : undefined,
     minTeamMembers: Number(r.min_team_members || 1),
+    isPaid: Boolean(r.is_paid),
+    registrationFee: r.registration_fee ? String(r.registration_fee) : 'Free',
+    qrCodeUrl: r.qr_code_url ? String(r.qr_code_url) : undefined,
+    upiId: r.upi_id ? String(r.upi_id) : undefined,
+    paymentUrl: r.payment_url ? String(r.payment_url) : undefined,
+    paymentInstructions: r.payment_instructions ? String(r.payment_instructions) : undefined,
+    requireUtr: Boolean(r.require_utr),
+    requireScreenshot: Boolean(r.require_screenshot),
+    whatsappLink: r.whatsapp_link ? String(r.whatsapp_link) : undefined,
+    confirmationInstructions: r.confirmation_instructions ? String(r.confirmation_instructions) : undefined,
   };
 }

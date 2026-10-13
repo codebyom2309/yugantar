@@ -2,7 +2,19 @@ import React, { Suspense } from 'react';
 import { connection } from 'next/server';
 import { db } from '@/lib/db';
 import Link from 'next/link';
-import { ShieldCheck, AlertTriangle, XCircle, ArrowLeft, Calendar, MapPin, Users, Award } from 'lucide-react';
+import {
+  ShieldCheck,
+  Clock,
+  XCircle,
+  ArrowLeft,
+  Calendar,
+  MapPin,
+  Users,
+  Award,
+  ExternalLink,
+  Building2,
+  CheckCircle2,
+} from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -18,17 +30,28 @@ interface RegistrationVerificationRecord {
   id: string;
   competition_slug: string;
   leader_name: string;
+  leader_college: string;
+  leader_branch: string;
   team_name: string | null;
   team_size: number;
+  payment_status: string | null;
   submission_status: string;
   created_at: string;
   verification_token: string | null;
   pass_issued_at: string | null;
 }
 
+function VerifySkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFD] flex items-center justify-center p-6 animate-pulse">
+      <div className="w-full max-w-md h-[500px] bg-white rounded-3xl border border-[#DCE5F2]" />
+    </div>
+  );
+}
+
 export default function VerifyPage({ params }: VerifyPageProps) {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#090A0C]" />}>
+    <Suspense fallback={<VerifySkeleton />}>
       <VerifyContent params={params} />
     </Suspense>
   );
@@ -42,8 +65,9 @@ async function VerifyContent({ params }: VerifyPageProps) {
 
   try {
     const rows = await db.query<RegistrationVerificationRecord>(
-      `SELECT id, competition_slug, leader_name, team_name, team_size, 
-              submission_status, created_at, verification_token, pass_issued_at 
+      `SELECT id, competition_slug, leader_name, leader_college, leader_branch,
+              team_name, team_size, payment_status, submission_status, created_at,
+              verification_token, pass_issued_at 
        FROM registrations 
        WHERE verification_token = ? OR id = ? 
        LIMIT 1`,
@@ -73,192 +97,199 @@ async function VerifyContent({ params }: VerifyPageProps) {
         if (compRows[0].venue) compVenue = compRows[0].venue;
         if (compRows[0].event_date) compDate = compRows[0].event_date;
       }
-      const settings = await db.query<{ value: string }>('SELECT value FROM site_settings WHERE key_name = ?', ['event_date']);
-      if (settings?.[0]?.value && (!compRows?.[0]?.event_date)) compDate = settings[0].value;
+      const settings = await db.query<{ setting_value: string }>(
+        'SELECT setting_value FROM site_settings WHERE setting_key = ? LIMIT 1',
+        ['event_date']
+      );
+      if (settings?.[0]?.setting_value && (!compRows?.[0]?.event_date)) {
+        compDate = settings[0].setting_value;
+      }
     } catch {}
   }
 
   const isFound = !!reg;
-  const isConfirmed = reg?.submission_status === 'confirmed';
-  const isPending = reg?.submission_status === 'pending' || reg?.submission_status === 'submitted';
-  const isFailed = reg?.submission_status === 'failed' || reg?.submission_status === 'cancelled';
+  const isFree = reg?.payment_status === 'free';
+  const isPaymentVerified = reg?.payment_status === 'confirmed' || reg?.payment_status === 'verified';
+  const isConfirmed = isFree || isPaymentVerified || reg?.submission_status === 'confirmed';
+  const isPending = !isConfirmed && (reg?.submission_status === 'pending' || reg?.submission_status === 'submitted' || reg?.payment_status === 'pending');
 
   const refCode = reg ? `YUG-26-${reg.id.substring(0, 8).toUpperCase()}` : '';
 
   return (
-    <div className="min-h-screen bg-[#090A0C] text-[#F5F5F5] flex flex-col items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen bg-[#F8FAFD] text-[#172B49] flex flex-col items-center justify-center p-4 sm:p-6">
       {/* Brand Navigation */}
-      <div className="w-full max-w-md mb-6 flex items-center justify-between">
+      <div className="w-full max-w-md mb-5 flex items-center justify-between">
         <Link
           href="/"
-          className="flex items-center gap-2 text-xs font-mono text-zinc-400 hover:text-white transition"
+          className="inline-flex items-center gap-2 text-xs font-mono font-medium text-[#60728A] hover:text-[#172B49] transition"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>YUGANTAR 2026 PORTAL</span>
+          <span>YUGANTAR 2026</span>
         </Link>
-        <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-widest">
-          SYSTEM VERIFY
+        <span className="text-[11px] font-mono text-[#8CA0BA] uppercase tracking-widest">
+          CREDENTIAL VERIFY
         </span>
       </div>
 
       {/* Main Verification Card */}
-      <div className="w-full max-w-md bg-[#14171B] border border-[#2A2E35] rounded-2xl overflow-hidden shadow-2xl relative">
+      <div className="w-full max-w-md bg-white border border-[#DCE5F2] rounded-3xl overflow-hidden shadow-xl relative">
         {/* Verification Status Header */}
         <div
-          className={`p-6 border-b text-center relative ${
+          className={`p-6 sm:p-8 border-b text-center relative ${
             isConfirmed
-              ? 'bg-emerald-950/40 border-emerald-800/40'
+              ? 'bg-gradient-to-b from-emerald-50/80 to-white border-emerald-100'
               : isPending
-              ? 'bg-amber-950/40 border-amber-800/40'
-              : 'bg-rose-950/40 border-rose-800/40'
+              ? 'bg-gradient-to-b from-amber-50/80 to-white border-amber-100'
+              : 'bg-gradient-to-b from-rose-50/80 to-white border-rose-100'
           }`}
         >
           {isConfirmed ? (
             <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mb-3 shadow-lg shadow-emerald-950">
-                <ShieldCheck className="w-8 h-8" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-100/70 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-3 shadow-sm">
+                <ShieldCheck className="w-9 h-9" />
               </div>
-              <h1 className="text-xl font-bold text-emerald-300">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3 py-0.5 rounded-full border border-emerald-200 mb-1">
+                {isFree ? 'FREE TRACK CONFIRMED' : 'PAYMENT VERIFIED'}
+              </span>
+              <h1 className="text-xl font-display font-extrabold text-[#172B49]">
                 OFFICIAL DELEGATE VERIFIED
               </h1>
-              <p className="text-xs text-emerald-400/80 mt-1 font-mono">
+              <p className="text-xs text-[#60728A] mt-1">
                 Authentic registration recorded in YUGANTAR 2026 Registry
               </p>
             </div>
           ) : isPending ? (
             <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 mb-3 shadow-lg shadow-amber-950">
-                <AlertTriangle className="w-8 h-8" />
+              <div className="w-16 h-16 rounded-2xl bg-amber-100/70 border border-amber-200 flex items-center justify-center text-amber-600 mb-3 shadow-sm">
+                <Clock className="w-9 h-9" />
               </div>
-              <h1 className="text-xl font-bold text-amber-300">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-700 bg-amber-50 px-3 py-0.5 rounded-full border border-amber-200 mb-1">
+                AWAITING UTR AUDIT
+              </span>
+              <h1 className="text-xl font-display font-extrabold text-[#172B49]">
                 REGISTRATION PENDING REVIEW
               </h1>
-              <p className="text-xs text-amber-400/80 mt-1 font-mono">
-                Submission recorded. Awaiting final desk confirmation.
+              <p className="text-xs text-[#60728A] mt-1">
+                Submission recorded. Awaiting payment committee approval.
               </p>
             </div>
           ) : (
             <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-3 shadow-lg shadow-rose-950">
-                <XCircle className="w-8 h-8" />
+              <div className="w-16 h-16 rounded-2xl bg-rose-100/70 border border-rose-200 flex items-center justify-center text-rose-600 mb-3 shadow-sm">
+                <XCircle className="w-9 h-9" />
               </div>
-              <h1 className="text-xl font-bold text-rose-300">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-rose-700 bg-rose-50 px-3 py-0.5 rounded-full border border-rose-200 mb-1">
+                NOT VERIFIED
+              </span>
+              <h1 className="text-xl font-display font-extrabold text-[#172B49]">
                 {isFound ? 'INVALID CREDENTIAL' : 'TOKEN NOT FOUND'}
               </h1>
-              <p className="text-xs text-rose-400/80 mt-1 font-mono">
+              <p className="text-xs text-[#60728A] mt-1">
                 {isFound
-                  ? 'This registration has failed or was cancelled.'
-                  : 'No registration matches this verification code.'}
+                  ? 'This registration was rejected or cancelled.'
+                  : 'No event registration matches this verification token.'}
               </p>
             </div>
           )}
         </div>
 
-        {/* Credential Data (Privacy safe: no personal emails or phone numbers exposed) */}
+        {/* Credential Data (Privacy safe: no personal phone/email exposed) */}
         {isFound && reg && (
-          <div className="p-6 space-y-5">
+          <div className="p-6 space-y-4">
             {/* Reference Badge */}
-            <div className="flex items-center justify-between p-3 rounded-lg bg-[#0D0F12] border border-[#2A2E35]">
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2]">
               <div>
-                <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+                <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
                   REGISTRATION REFERENCE
                 </span>
-                <span className="text-sm font-mono font-bold text-white tracking-wider">
+                <span className="text-sm font-mono font-bold text-[#172B49] tracking-wider">
                   {refCode}
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] font-mono uppercase text-zinc-500 block">
-                  STATUS
+                <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                  ENTRY STATUS
                 </span>
                 <span
-                  className={`text-xs font-mono font-semibold uppercase ${
+                  className={`text-xs font-mono font-bold uppercase ${
                     isConfirmed
-                      ? 'text-emerald-400'
+                      ? 'text-emerald-700'
                       : isPending
-                      ? 'text-amber-400'
-                      : 'text-rose-400'
+                      ? 'text-amber-700'
+                      : 'text-rose-700'
                   }`}
                 >
-                  {reg.submission_status}
+                  {isConfirmed ? 'Authorized' : isPending ? 'Pending' : 'Void'}
                 </span>
               </div>
             </div>
 
             {/* Competition Details */}
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <Award className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">
-                    COMPETITION
+            <div className="space-y-3 pt-1">
+              <div className="flex items-start gap-3 p-3 rounded-xl border border-[#E2E8F0]">
+                <Award className="w-4 h-4 text-[#4B91E8] shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                    COMPETITION TRACK
                   </span>
-                  <div className="text-sm font-semibold text-zinc-100">
+                  <div className="text-sm font-bold text-[#172B49] truncate">
                     {compName}
                   </div>
-                  <div className="text-xs text-zinc-400">
+                  <div className="text-[11px] text-[#60728A]">
                     Category: {compCategory}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <Users className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">
-                    REGISTERED ENTITY
+              <div className="flex items-start gap-3 p-3 rounded-xl border border-[#E2E8F0]">
+                <Users className="w-4 h-4 text-[#9187DE] shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                    REGISTERED DELEGATION
                   </span>
-                  <div className="text-sm font-semibold text-zinc-100">
+                  <div className="text-sm font-bold text-[#172B49] truncate">
                     {reg.team_name || reg.leader_name}
                   </div>
-                  <div className="text-xs text-zinc-400">
-                    Delegate size: {reg.team_size} {reg.team_size === 1 ? 'Participant' : 'Members'}
+                  <div className="text-[11px] text-[#60728A]">
+                    Squad size: {reg.team_size} {reg.team_size === 1 ? 'Participant' : 'Members'} · {reg.leader_college}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <Calendar className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">
-                    FESTIVAL DATE
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-[#F8FAFD] border border-[#E2E8F0]">
+                  <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                    DATE
                   </span>
-                  <div className="text-sm text-zinc-200">
+                  <div className="text-xs font-bold text-[#172B49] mt-0.5">
                     {compDate}
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">
-                    VENUE
+                <div className="p-3 rounded-xl bg-[#F8FAFD] border border-[#E2E8F0]">
+                  <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                    LOCATION
                   </span>
-                  <div className="text-xs text-zinc-300">
+                  <div className="text-xs font-bold text-[#172B49] mt-0.5 truncate">
                     {compVenue}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* View Full Pass Link if confirmed */}
-            {isConfirmed && (
-              <div className="pt-2">
-                <Link
-                  href={`/pass/${reg.id}`}
-                  className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition shadow"
-                >
-                  View Printable Pass
-                </Link>
-              </div>
-            )}
+            {/* Official Verification Confirmation Note */}
+            <div className="pt-2 text-center">
+              <span className="text-[11px] font-mono text-[#60728A] flex items-center justify-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Verified Official Credential • Festival Verification Portal</span>
+              </span>
+            </div>
           </div>
         )}
 
         {/* Footer info */}
-        <div className="p-4 bg-[#0D0F12] border-t border-[#2A2E35] text-center text-[11px] font-mono text-zinc-500">
-          Cryptographically Verified • YUGANTAR 2026 Operations
+        <div className="p-3.5 bg-[#EDF5FC] border-t border-[#DCE5F2] text-center text-[10px] font-mono text-[#60728A]">
+          TELE-ERA Forum • Priyadarshini College of Engineering, Nagpur
         </div>
       </div>
     </div>

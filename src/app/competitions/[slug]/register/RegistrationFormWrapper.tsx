@@ -7,9 +7,11 @@ import { getRegistrationFormBySlug } from '@/data/registrationForms';
 export default function RegistrationFormWrapper({
   competitionSlug,
   accentColor,
+  competition,
 }: {
   competitionSlug: string;
   accentColor?: string;
+  competition?: any;
 }) {
   const formConfig = getRegistrationFormBySlug(competitionSlug);
 
@@ -21,5 +23,11 @@ export default function RegistrationFormWrapper({
     );
   }
 
-  return <RegistrationForm config={formConfig} accentColor={accentColor} />;
+  return (
+    <RegistrationForm
+      config={formConfig}
+      accentColor={accentColor}
+      competition={competition}
+    />
+  );
 }

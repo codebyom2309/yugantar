@@ -12,6 +12,7 @@ import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import {
   Trophy,
   ArrowLeft,
+  ArrowRight,
   Save,
   Eye,
   EyeOff,
@@ -40,6 +41,10 @@ import {
   ChevronDown,
   Info,
   Link2,
+  QrCode,
+  CreditCard,
+  MessageCircle,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface Coordinator {
@@ -145,7 +150,20 @@ export default function CompetitionEditorPage({
     registrationDeadline: '',
     registrationInstructions: '',
     minTeamMembers: 1,
+    isPaid: false,
+    registrationFee: 'Free',
+    qrCodeUrl: '',
+    upiId: '',
+    paymentUrl: '',
+    paymentInstructions: '',
+    requireUtr: false,
+    requireScreenshot: false,
+    whatsappLink: '',
+    confirmationInstructions: '',
   });
+
+  const [associatedSpreadsheet, setAssociatedSpreadsheet] = useState<{ id: string; display_name: string; spreadsheet_url: string } | null>(null);
+  const [uploadingQr, setUploadingQr] = useState(false);
 
   const [festivalDate, setFestivalDate] = useState('19 October 2026');
 
@@ -234,7 +252,27 @@ export default function CompetitionEditorPage({
         registrationDeadline: c.registration_deadline || '',
         registrationInstructions: c.registration_instructions || '',
         minTeamMembers: c.min_team_members || 1,
+        isPaid: Boolean(c.is_paid),
+        registrationFee: c.registration_fee || 'Free',
+        qrCodeUrl: c.qr_code_url || '',
+        upiId: c.upi_id || '',
+        paymentUrl: c.payment_url || '',
+        paymentInstructions: c.payment_instructions || '',
+        requireUtr: Boolean(c.require_utr),
+        requireScreenshot: Boolean(c.require_screenshot),
+        whatsappLink: c.whatsapp_link || '',
+        confirmationInstructions: c.confirmation_instructions || '',
       });
+
+      // Fetch linked spreadsheet from Spreadsheet Manager for this track
+      fetch(`/api/admin/spreadsheets?competition=${c.slug}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.spreadsheets && data.spreadsheets.length > 0) {
+            setAssociatedSpreadsheet(data.spreadsheets[0]);
+          }
+        })
+        .catch(() => {});
 
       // Load authoritative festival date for inheritance display
       fetchClientFestivalData()
@@ -295,6 +333,35 @@ export default function CompetitionEditorPage({
   const updateFormField = <K extends keyof typeof form>(key: K, val: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: val }));
     setIsDirty(true);
+  };
+
+  const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingQr(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('entityId', slug);
+      fd.append('role', 'payment_qr');
+      fd.append('entityType', 'competition');
+      fd.append('altText', `${slug} payment QR code`);
+
+      const res = await fetch('/api/admin/media', {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to upload QR image');
+      }
+      updateFormField('qrCodeUrl', data.asset.url);
+    } catch (err: any) {
+      alert(`QR upload failed: ${err.message}`);
+    } finally {
+      setUploadingQr(false);
+      e.target.value = '';
+    }
   };
 
   const toggleSectionVisibility = (secKey: string) => {
@@ -958,6 +1025,262 @@ export default function CompetitionEditorPage({
                       placeholder="e.g. Keep your project synopsis PDF and payment UTR ready before proceeding..."
                       className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 leading-relaxed"
                     />
+                  </div>
+                </div>
+
+                {/* Associated Response Spreadsheet */}
+                <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/20 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-sky-900 dark:text-sky-200 flex items-center gap-1.5 uppercase tracking-wider font-mono">
+                      <FileSpreadsheet className="w-4 h-4 text-sky-500" />
+                      <span>Associated Response Spreadsheet</span>
+                    </span>
+                    <Link
+                      href="/admin/spreadsheets"
+                      className="text-[11px] font-mono font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+                    >
+                      <span>Manage All Links</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                  {associatedSpreadsheet ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10">
+                      <div className="min-w-0">
+                        <span className="font-bold text-slate-900 dark:text-white block truncate text-xs">
+                          {associatedSpreadsheet.display_name}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-500 truncate block">
+                          {associatedSpreadsheet.spreadsheet_url}
+                        </span>
+                      </div>
+                      <a
+                        href={associatedSpreadsheet.spreadsheet_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-mono text-xs font-bold shrink-0 transition"
+                      >
+                        <span>Open Sheet</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-500 dark:text-neutral-400">
+                      No response spreadsheet mapped yet for this competition track. You can add one in the Spreadsheet Manager.
+                    </p>
+                  )}
+                </div>
+
+                {/* Payment Configuration Card */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-black/10 dark:border-white/10 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-[#E07A43]" />
+                      <h4 className="font-bold text-xs uppercase font-mono tracking-wider text-slate-900 dark:text-white">
+                        Payment &amp; Fees Configuration
+                      </h4>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-slate-500">Track Fee Mode:</span>
+                      <button
+                        type="button"
+                        onClick={() => updateFormField('isPaid', !form.isPaid)}
+                        className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all ${
+                          form.isPaid
+                            ? 'bg-[#E07A43] text-white shadow-2xs'
+                            : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                        }`}
+                      >
+                        {form.isPaid ? 'Paid Competition' : 'Free Competition'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {form.isPaid ? (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
+                            Registration Fee Display *
+                          </label>
+                          <input
+                            type="text"
+                            value={form.registrationFee}
+                            onChange={(e) => updateFormField('registrationFee', e.target.value)}
+                            placeholder="e.g. ₹200 per team, ₹100 per person"
+                            className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
+                            UPI ID / VPA
+                          </label>
+                          <input
+                            type="text"
+                            value={form.upiId}
+                            onChange={(e) => updateFormField('upiId', e.target.value)}
+                            placeholder="e.g. teleera@oksbi or 9876543210@paytm"
+                            className="w-full px-3 py-2 rounded-xl admin-glass-panel font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
+                            Payment URL / UPI Deep Link (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={form.paymentUrl}
+                            onChange={(e) => updateFormField('paymentUrl', e.target.value)}
+                            placeholder="upi://pay?pa=... or payment portal link"
+                            className="w-full px-3 py-2 rounded-xl admin-glass-panel font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
+                            Payment Instructions
+                          </label>
+                          <input
+                            type="text"
+                            value={form.paymentInstructions}
+                            onChange={(e) => updateFormField('paymentInstructions', e.target.value)}
+                            placeholder="e.g. Mention Team Name in payment notes"
+                            className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* QR Code Section */}
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-800/60 border border-black/5 dark:border-white/5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                            <QrCode className="w-4 h-4 text-blue-500" />
+                            <span>Payment QR Code</span>
+                          </span>
+                          {form.qrCodeUrl && (
+                            <button
+                              type="button"
+                              onClick={() => updateFormField('qrCodeUrl', '')}
+                              className="text-[11px] font-mono text-rose-500 hover:underline flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Remove QR</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                          {form.qrCodeUrl ? (
+                            <div className="relative w-28 h-28 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white p-1 shrink-0">
+                              <img
+                                src={form.qrCodeUrl}
+                                alt="Payment QR Code preview"
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-28 h-28 rounded-xl border border-dashed border-slate-300 dark:border-neutral-700 flex flex-col items-center justify-center text-slate-400 shrink-0">
+                              <QrCode className="w-8 h-8 opacity-40 mb-1" />
+                              <span className="text-[10px] font-mono">No QR Image</span>
+                            </div>
+                          )}
+
+                          <div className="flex-1 space-y-2 w-full">
+                            <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-black/10 dark:border-white/10 hover:border-blue-500 cursor-pointer text-xs font-mono font-bold text-slate-700 dark:text-zinc-200 transition">
+                              <Upload className="w-3.5 h-3.5 text-blue-500" />
+                              <span>{uploadingQr ? 'Uploading QR...' : 'Upload QR Image'}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleQrUpload}
+                                disabled={uploadingQr}
+                                className="hidden"
+                              />
+                            </label>
+                            <input
+                              type="url"
+                              value={form.qrCodeUrl}
+                              onChange={(e) => updateFormField('qrCodeUrl', e.target.value)}
+                              placeholder="Or paste QR Image URL..."
+                              className="w-full px-3 py-1.5 text-xs font-mono rounded-lg admin-glass-panel text-slate-900 dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Toggles: UTR & Screenshot */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-neutral-800/40 border border-black/5 dark:border-white/5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.requireUtr}
+                            onChange={(e) => updateFormField('requireUtr', e.target.checked)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-xs text-slate-800 dark:text-zinc-200 font-medium">
+                            Require UTR / Transaction ID
+                          </span>
+                        </label>
+
+                        <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-neutral-800/40 border border-black/5 dark:border-white/5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.requireScreenshot}
+                            onChange={(e) => updateFormField('requireScreenshot', e.target.checked)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-xs text-slate-800 dark:text-zinc-200 font-medium">
+                            Require Payment Screenshot Upload
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 text-xs text-emerald-800 dark:text-emerald-300">
+                      ✓ Free track configured. Payment step, QR code, UTR, and screenshot fields are completely omitted from the registration form.
+                    </div>
+                  )}
+                </div>
+
+                {/* WhatsApp & Confirmation Experience Card */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-black/10 dark:border-white/10 space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-black/10 dark:border-white/10">
+                    <MessageCircle className="w-4 h-4 text-emerald-500" />
+                    <h4 className="font-bold text-xs uppercase font-mono tracking-wider text-slate-900 dark:text-white">
+                      WhatsApp Community &amp; Confirmation Experience
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
+                        Competition WhatsApp Group Link
+                      </label>
+                      <input
+                        type="url"
+                        value={form.whatsappLink}
+                        onChange={(e) => updateFormField('whatsappLink', e.target.value)}
+                        placeholder="https://chat.whatsapp.com/..."
+                        className="w-full px-3 py-2 rounded-xl admin-glass-panel font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                      />
+                      <p className="text-[10px] text-slate-400">
+                        Displayed as an action button on the registration pass and confirmation screen.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
+                        Post-Registration Instructions
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={form.confirmationInstructions}
+                        onChange={(e) => updateFormField('confirmationInstructions', e.target.value)}
+                        placeholder="e.g., Join the official WhatsApp group and download your official credential pass..."
+                        className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

@@ -51,6 +51,9 @@ interface Registration {
   submitted_at: string | null;
   created_at: string;
   verification_token: string | null;
+  payment_status?: string | null;
+  verified_by?: string | null;
+  verified_at?: string | null;
 }
 
 const SLUG_LABELS: Record<string, string> = {
@@ -66,9 +69,18 @@ const SLUG_LABELS: Record<string, string> = {
 
 const STATUS_STYLES: Record<string, string> = {
   submitted: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 font-semibold',
+  confirmed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 font-semibold',
   pending: 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 font-semibold',
   failed: 'bg-rose-100 text-rose-900 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 font-semibold',
   unknown: 'bg-slate-100 text-slate-800 dark:bg-neutral-800 dark:text-neutral-300 border border-slate-300 dark:border-neutral-700 font-semibold',
+};
+
+const PAYMENT_STATUS_STYLES: Record<string, string> = {
+  free: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-300 dark:border-blue-500/30 font-semibold',
+  confirmed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 font-semibold',
+  verified: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 font-semibold',
+  pending: 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 font-semibold',
+  rejected: 'bg-rose-100 text-rose-900 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 font-semibold',
 };
 
 export default function RegistrationsPage() {
@@ -81,8 +93,11 @@ export default function RegistrationsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [competition, setCompetition] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [dateFilterDisplay, setDateFilterDisplay] = useState('');
   const [dateFilterIso, setDateFilterIso] = useState('');
+  const [storageMode, setStorageMode] = useState<string>('minimal');
+  const [spreadsheetsMap, setSpreadsheetsMap] = useState<Record<string, string>>({});
 
   // View Layout Mode: auto (responsive cards on mobile, table on desktop) or explicit
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
@@ -121,6 +136,7 @@ export default function RegistrationsPage() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (competition) params.set('competition', competition);
       if (statusFilter) params.set('status', statusFilter);
+      if (paymentStatusFilter) params.set('paymentStatus', paymentStatusFilter);
       if (dateFilterIso) params.set('date', dateFilterIso);
 
       const r = await fetch(`/api/admin/registrations?${params}`, { signal: controller.signal });
@@ -129,6 +145,7 @@ export default function RegistrationsPage() {
         setRegistrations(d.registrations);
         setTotal(d.total || 0);
         setTotalPages(d.totalPages || 1);
+        if (d.storageMode) setStorageMode(d.storageMode);
       } else {
         setRegistrations([]);
         setTotal(0);
@@ -145,11 +162,27 @@ export default function RegistrationsPage() {
         setLoading(false);
       }
     }
-  }, [page, debouncedSearch, competition, statusFilter, dateFilterIso]);
+  }, [page, debouncedSearch, competition, statusFilter, paymentStatusFilter, dateFilterIso]);
 
   useEffect(() => {
     fetchRegistrations();
   }, [fetchRegistrations]);
+
+  useEffect(() => {
+    // Load spreadsheet links for direct external sheet navigation
+    fetch('/api/admin/spreadsheets')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.spreadsheets && Array.isArray(data.spreadsheets)) {
+          const map: Record<string, string> = {};
+          data.spreadsheets.forEach((s: any) => {
+            if (s.competition_slug) map[s.competition_slug] = s.spreadsheet_url;
+          });
+          setSpreadsheetsMap(map);
+        }
+      })
+      .catch((err) => console.warn('Failed to load spreadsheets map:', err));
+  }, []);
 
   // Bulk Selection Handlers
   const isAllCurrentSelected = useMemo(() => {
@@ -189,6 +222,59 @@ export default function RegistrationsPage() {
       }
     } catch (err) {
       console.error('Failed to update registration status:', err);
+    }
+  };
+
+  const handleUpdatePaymentStatus = async (id: string, newPaymentStatus: 'confirmed' | 'rejected') => {
+    try {
+      await fetch('/api/admin/registrations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, paymentStatus: newPaymentStatus }),
+      });
+      fetchRegistrations();
+      if (selectedReg && selectedReg.id === id) {
+        setSelectedReg((prev) =>
+          prev
+            ? {
+                ...prev,
+                payment_status: newPaymentStatus,
+                submission_status: newPaymentStatus === 'confirmed' ? 'confirmed' : prev.submission_status,
+              }
+            : null
+        );
+      }
+      if (qrModalReg && qrModalReg.id === id) {
+        setQrModalReg((prev) =>
+          prev
+            ? {
+                ...prev,
+                payment_status: newPaymentStatus,
+                submission_status: newPaymentStatus === 'confirmed' ? 'confirmed' : prev.submission_status,
+              }
+            : null
+        );
+      }
+    } catch (err) {
+      console.error('Failed to update payment status:', err);
+    }
+  };
+
+  const handleBulkPaymentStatusChange = async (newPaymentStatus: 'confirmed' | 'rejected') => {
+    if (selectedIds.length === 0) return;
+    setIsBulkOperating(true);
+    try {
+      await fetch('/api/admin/registrations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds, paymentStatus: newPaymentStatus }),
+      });
+      setSelectedIds([]);
+      fetchRegistrations();
+    } catch (err) {
+      console.error('Failed to execute bulk payment status update:', err);
+    } finally {
+      setIsBulkOperating(false);
     }
   };
 
@@ -268,7 +354,10 @@ export default function RegistrationsPage() {
       'Team Name',
       'Team Size',
       'Payment ID (UTR)',
-      'Status',
+      'Payment Status',
+      'Verified By',
+      'Verified At',
+      'Accreditation Status',
       'Date Created',
       'Verification Token',
     ];
@@ -285,6 +374,9 @@ export default function RegistrationsPage() {
       r.team_name || '',
       r.team_size,
       r.payment_id || '',
+      r.payment_status || (r.payment_id ? 'pending' : 'free'),
+      r.verified_by || '',
+      r.verified_at ? new Date(r.verified_at).toLocaleString() : '',
       r.submission_status,
       new Date(r.created_at).toLocaleString(),
       r.verification_token || '',
@@ -308,6 +400,7 @@ export default function RegistrationsPage() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (competition) params.set('competition', competition);
       if (statusFilter) params.set('status', statusFilter);
+      if (paymentStatusFilter) params.set('paymentStatus', paymentStatusFilter);
       if (dateFilterIso) params.set('date', dateFilterIso);
 
       const r = await fetch(`/api/admin/registrations?${params}`);
@@ -331,8 +424,8 @@ export default function RegistrationsPage() {
   };
 
   // Quick summary counts
-  const confirmedCount = registrations.filter((r) => r.submission_status === 'submitted').length;
-  const pendingCount = registrations.filter((r) => r.submission_status === 'pending').length;
+  const confirmedCount = registrations.filter((r) => r.submission_status === 'submitted' || r.submission_status === 'confirmed').length;
+  const pendingPaymentCount = registrations.filter((r) => (r.payment_status || (r.payment_id ? 'pending' : 'free')).toLowerCase() === 'pending').length;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -349,6 +442,42 @@ export default function RegistrationsPage() {
           <p className="text-xs text-slate-600 dark:text-zinc-400 mt-0.5">
             Real-time participant database, payment verification, and pass credentials
           </p>
+
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold border ${
+                storageMode === 'minimal'
+                  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                  : 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+              }`}
+              title="Storage mode from site_settings. Minimal mode keeps TiDB lean and preserves full responses in Google Sheets."
+            >
+              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+              <span>Retention: {storageMode === 'minimal' ? 'Minimal (TiDB Storage Optimized)' : storageMode.toUpperCase()}</span>
+            </span>
+
+            {/* Direct Google Sheets quick link if filtered or general */}
+            {competition && spreadsheetsMap[competition] && (
+              <a
+                href={spreadsheetsMap[competition]}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition"
+              >
+                <FileSpreadsheet className="w-3 h-3" />
+                <span>Open Google Sheet ({SLUG_LABELS[competition] || competition})</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            )}
+
+            <Link
+              href="/admin/spreadsheets"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white border border-black/10 dark:border-white/10 transition"
+            >
+              <span>Manage Sheets</span>
+              <ExternalLink className="w-2.5 h-2.5" />
+            </Link>
+          </div>
         </div>
 
         {/* Action Controls & View Switcher */}
@@ -426,8 +555,8 @@ export default function RegistrationsPage() {
 
         <div className="p-3 rounded-2xl admin-glass-card flex items-center justify-between">
           <div>
-            <span className="text-[10px] uppercase font-mono text-amber-600 dark:text-amber-400 block font-semibold">Pending</span>
-            <span className="text-base sm:text-lg font-bold font-mono text-amber-600 dark:text-amber-400">{pendingCount}</span>
+            <span className="text-[10px] uppercase font-mono text-amber-600 dark:text-amber-400 block font-semibold">Payment Pending</span>
+            <span className="text-base sm:text-lg font-bold font-mono text-amber-600 dark:text-amber-400">{pendingPaymentCount}</span>
           </div>
           <Clock className="w-4 h-4 text-amber-500" />
         </div>
@@ -459,7 +588,7 @@ export default function RegistrationsPage() {
         </div>
 
         {/* Filters Row: Stacks vertically on phone screens, wraps gracefully on tablet/desktop */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex items-center gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:flex items-center gap-2">
           {/* Competition Filter */}
           <select
             value={competition}
@@ -477,7 +606,23 @@ export default function RegistrationsPage() {
             ))}
           </select>
 
-          {/* Status Filter */}
+          {/* Payment Status Filter */}
+          <select
+            value={paymentStatusFilter}
+            onChange={(e) => {
+              setPaymentStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            className="admin-glass-input w-full lg:w-auto px-3 py-2 rounded-xl text-xs cursor-pointer"
+          >
+            <option value="">All Payment Statuses</option>
+            <option value="free">Free Registration Track</option>
+            <option value="confirmed">Payment Verified</option>
+            <option value="pending">Verification Pending</option>
+            <option value="rejected">Payment Rejected</option>
+          </select>
+
+          {/* Accreditation / Submission Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -486,7 +631,7 @@ export default function RegistrationsPage() {
             }}
             className="admin-glass-input w-full lg:w-auto px-3 py-2 rounded-xl text-xs cursor-pointer"
           >
-            <option value="">All Statuses</option>
+            <option value="">All Entry Statuses</option>
             <option value="submitted">Confirmed (Submitted)</option>
             <option value="pending">Pending Review</option>
             <option value="failed">Failed / Flagged</option>
@@ -506,13 +651,14 @@ export default function RegistrationsPage() {
           </div>
 
           {/* Reset Filters button */}
-          {(searchInput || competition || statusFilter || dateFilterIso) && (
+          {(searchInput || competition || statusFilter || paymentStatusFilter || dateFilterIso) && (
             <button
               type="button"
               onClick={() => {
                 setSearchInput('');
                 setCompetition('');
                 setStatusFilter('');
+                setPaymentStatusFilter('');
                 setDateFilterDisplay('');
                 setDateFilterIso('');
                 setPage(1);
@@ -541,8 +687,26 @@ export default function RegistrationsPage() {
             <button
               type="button"
               disabled={isBulkOperating}
+              onClick={() => handleBulkPaymentStatusChange('confirmed')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Verify Payment</span>
+            </button>
+            <button
+              type="button"
+              disabled={isBulkOperating}
+              onClick={() => handleBulkPaymentStatusChange('rejected')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Reject Payment</span>
+            </button>
+            <button
+              type="button"
+              disabled={isBulkOperating}
               onClick={() => handleBulkStatusChange('submitted')}
-              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
+              className="px-3 py-1.5 rounded-xl admin-glass-panel text-slate-700 dark:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/10 font-semibold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
             >
               Mark Confirmed
             </button>
@@ -550,7 +714,7 @@ export default function RegistrationsPage() {
               type="button"
               disabled={isBulkOperating}
               onClick={() => handleBulkStatusChange('pending')}
-              className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
+              className="px-3 py-1.5 rounded-xl admin-glass-panel text-slate-700 dark:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/10 font-semibold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
             >
               Mark Pending
             </button>
@@ -655,6 +819,56 @@ export default function RegistrationsPage() {
                   </span>
                 </div>
 
+                {/* Payment Status & Quick Action Row */}
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-500 dark:text-zinc-400 pt-1 border-t border-black/5 dark:border-white/5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase">Payment:</span>
+                    {(() => {
+                      const pStatus = (r.payment_status || (r.payment_id ? 'pending' : 'free')).toLowerCase();
+                      return (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono border ${
+                            PAYMENT_STATUS_STYLES[pStatus] || PAYMENT_STATUS_STYLES.pending
+                          }`}
+                        >
+                          {pStatus === 'free'
+                            ? 'Free Track'
+                            : pStatus === 'confirmed' || pStatus === 'verified'
+                            ? 'Verified'
+                            : pStatus === 'rejected'
+                            ? 'Rejected'
+                            : 'Pending'}
+                        </span>
+                      );
+                    })()}
+                  </div>
+
+                  {(() => {
+                    const pStatus = (r.payment_status || (r.payment_id ? 'pending' : 'free')).toLowerCase();
+                    if (pStatus === 'pending') {
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdatePaymentStatus(r.id, 'confirmed')}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold cursor-pointer transition shadow-2xs"
+                          title="Quick Verify Payment"
+                        >
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>Verify Payment</span>
+                        </button>
+                      );
+                    }
+                    if (r.verified_by) {
+                      return (
+                        <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono truncate max-w-[120px]">
+                          by {r.verified_by.split('@')[0]}
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+
                 {/* Mobile Action Buttons */}
                 <div className="flex items-center justify-end gap-2 pt-1 border-t border-black/5 dark:border-white/5">
                   <button
@@ -717,7 +931,8 @@ export default function RegistrationsPage() {
                 <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Track</th>
                 <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">College</th>
                 <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Payment UTR</th>
-                <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Status</th>
+                <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Payment Status</th>
+                <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Accreditation</th>
                 <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Date Recorded</th>
                 <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-right">Actions</th>
               </tr>
@@ -727,7 +942,7 @@ export default function RegistrationsPage() {
                 [...Array(6)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     <td className="py-3 px-3 text-center"><div className="w-4 h-4 bg-black/10 dark:bg-white/10 rounded mx-auto" /></td>
-                    {[...Array(7)].map((_, j) => (
+                    {[...Array(8)].map((_, j) => (
                       <td key={j} className="py-3 px-3">
                         <div className="h-4 bg-black/10 dark:bg-white/10 rounded" />
                       </td>
@@ -736,7 +951,7 @@ export default function RegistrationsPage() {
                 ))
               ) : registrations.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500 dark:text-zinc-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-500 dark:text-zinc-400">
                     No registrations found matching the active criteria.
                   </td>
                 </tr>
@@ -792,6 +1007,50 @@ export default function RegistrationsPage() {
                         ) : (
                           '—'
                         )}
+                      </td>
+
+                      {/* Payment Status Cell */}
+                      <td className="py-3 px-3">
+                        {(() => {
+                          const pStatus = (r.payment_status || (r.payment_id ? 'pending' : 'free')).toLowerCase();
+                          return (
+                            <div className="flex flex-col gap-1 items-start">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono border whitespace-nowrap ${
+                                    PAYMENT_STATUS_STYLES[pStatus] || PAYMENT_STATUS_STYLES.pending
+                                  }`}
+                                >
+                                  {pStatus === 'free'
+                                    ? 'Free Track'
+                                    : pStatus === 'confirmed' || pStatus === 'verified'
+                                    ? 'Verified'
+                                    : pStatus === 'rejected'
+                                    ? 'Rejected'
+                                    : 'Pending'}
+                                </span>
+                                {pStatus === 'pending' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdatePaymentStatus(r.id, 'confirmed')}
+                                    className="p-1 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 cursor-pointer transition shadow-2xs"
+                                    title="Quick Verify Payment"
+                                  >
+                                    <ShieldCheck className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              {r.verified_by && (
+                                <span
+                                  className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono truncate max-w-[120px]"
+                                  title={`Verified by ${r.verified_by} ${r.verified_at ? `on ${new Date(r.verified_at).toLocaleDateString()}` : ''}`}
+                                >
+                                  by {r.verified_by.split('@')[0]}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Status Selector */}
@@ -974,6 +1233,41 @@ export default function RegistrationsPage() {
               </span>
             </div>
 
+            {/* Quick Payment Status Bar */}
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/5 dark:bg-white/5 text-xs">
+              <span className="text-slate-600 dark:text-zinc-400 font-medium">Payment Status:</span>
+              <div className="flex items-center gap-1.5">
+                {(() => {
+                  const pStatus = (qrModalReg.payment_status || (qrModalReg.payment_id ? 'pending' : 'free')).toLowerCase();
+                  return (
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono border ${
+                        PAYMENT_STATUS_STYLES[pStatus] || PAYMENT_STATUS_STYLES.pending
+                      }`}
+                    >
+                      {pStatus === 'free'
+                        ? 'Free Track'
+                        : pStatus === 'confirmed' || pStatus === 'verified'
+                        ? 'Verified'
+                        : pStatus === 'rejected'
+                        ? 'Rejected'
+                        : 'Pending'}
+                    </span>
+                  );
+                })()}
+                {(qrModalReg.payment_status || (qrModalReg.payment_id ? 'pending' : 'free')).toLowerCase() === 'pending' && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePaymentStatus(qrModalReg.id, 'confirmed')}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold font-mono transition cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Verify</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Quick Status Bar */}
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/5 dark:bg-white/5 text-xs">
               <span className="text-slate-600 dark:text-zinc-400 font-medium">Accreditation:</span>
@@ -982,7 +1276,7 @@ export default function RegistrationsPage() {
                   type="button"
                   onClick={() => handleStatusChange(qrModalReg.id, 'submitted')}
                   className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition cursor-pointer ${
-                    qrModalReg.submission_status === 'submitted'
+                    qrModalReg.submission_status === 'submitted' || qrModalReg.submission_status === 'confirmed'
                       ? 'bg-emerald-600 text-white'
                       : 'admin-glass-panel text-slate-600 dark:text-zinc-400'
                   }`}
@@ -1063,17 +1357,73 @@ export default function RegistrationsPage() {
               </button>
             </div>
 
-            {/* Quick Status Action Pill inside Modal */}
+            {/* Payment & Audit Verification Control Panel */}
+            <div className="p-3.5 rounded-2xl admin-glass-card space-y-3 border border-black/5 dark:border-white/10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div>
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-zinc-400 block font-semibold">
+                    Payment Verification Status
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    {(() => {
+                      const pStatus = (selectedReg.payment_status || (selectedReg.payment_id ? 'pending' : 'free')).toLowerCase();
+                      return (
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase font-mono border ${
+                            PAYMENT_STATUS_STYLES[pStatus] || PAYMENT_STATUS_STYLES.pending
+                          }`}
+                        >
+                          {pStatus === 'free'
+                            ? 'Free Registration Track'
+                            : pStatus === 'confirmed' || pStatus === 'verified'
+                            ? 'Payment Verified'
+                            : pStatus === 'rejected'
+                            ? 'Payment Rejected'
+                            : 'Verification Pending'}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  {selectedReg.verified_by && (
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono block mt-1">
+                      Verified by <strong className="text-slate-800 dark:text-slate-200">{selectedReg.verified_by}</strong>
+                      {selectedReg.verified_at ? ` on ${new Date(selectedReg.verified_at).toLocaleString()}` : ''}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePaymentStatus(selectedReg.id, 'confirmed')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Verify Payment</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePaymentStatus(selectedReg.id, 'rejected')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Reject</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Candidate Accreditation / Submission Status */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl admin-glass-card">
               <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                Current Verification Status:
+                Candidate Accreditation / Entry Status:
               </span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleStatusChange(selectedReg.id, 'submitted')}
                   className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition cursor-pointer ${
-                    selectedReg.submission_status === 'submitted'
+                    selectedReg.submission_status === 'submitted' || selectedReg.submission_status === 'confirmed'
                       ? 'bg-emerald-600 text-white shadow-emerald-500/20'
                       : 'admin-glass-panel text-slate-600 dark:text-zinc-400 hover:text-emerald-500'
                   }`}
@@ -1112,16 +1462,35 @@ export default function RegistrationsPage() {
               )}
 
               {selectedReg.payment_proof_url && (
-                <div className="p-3 rounded-xl admin-glass-card flex items-center justify-between">
-                  <span className="text-slate-600 dark:text-zinc-400 font-medium">Payment Proof Screenshot</span>
-                  <a
-                    href={selectedReg.payment_proof_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-colors"
-                  >
-                    View Image <ExternalLink className="w-3 h-3" />
-                  </a>
+                <div className="p-3.5 rounded-xl admin-glass-card space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-zinc-400 font-medium">Payment Proof Screenshot</span>
+                    <a
+                      href={selectedReg.payment_proof_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-colors"
+                    >
+                      View Full Size <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <div className="rounded-lg overflow-hidden border border-black/10 dark:border-white/10 max-h-56 bg-black/5 flex items-center justify-center p-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedReg.payment_proof_url}
+                      alt="Payment Proof Screenshot"
+                      className="max-h-52 object-contain rounded"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {storageMode === 'minimal' && (
+                <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-[11px] flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 shrink-0 text-blue-500" />
+                  <span>
+                    Storage Mode: <strong>Minimal</strong> (TiDB storage optimized). Full responses archived directly in Google Sheets.
+                  </span>
                 </div>
               )}
             </div>

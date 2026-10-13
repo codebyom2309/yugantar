@@ -4,7 +4,19 @@ import { db } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import QRCode from 'qrcode';
 import Link from 'next/link';
-import { CheckCircle2, AlertCircle, Clock, Printer, ArrowLeft, ShieldCheck } from 'lucide-react';
+import {
+  Printer,
+  ArrowLeft,
+  ShieldCheck,
+  Clock,
+  AlertCircle,
+  ExternalLink,
+  Calendar,
+  MapPin,
+  Building2,
+  GraduationCap,
+  Sparkles,
+} from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -20,17 +32,32 @@ interface RegistrationPassRecord {
   id: string;
   competition_slug: string;
   leader_name: string;
+  leader_email: string;
+  leader_phone: string;
+  leader_college: string;
+  leader_branch: string;
+  leader_semester: string;
   team_name: string | null;
   team_size: number;
+  payment_id: string | null;
+  payment_status: string | null;
   submission_status: string;
   created_at: string;
   verification_token: string | null;
   pass_issued_at: string | null;
 }
 
+function PassSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFD] flex items-center justify-center p-6 animate-pulse">
+      <div className="w-full max-w-xl h-[600px] bg-white rounded-3xl border border-[#DCE5F2]" />
+    </div>
+  );
+}
+
 export default function PassPage({ params }: PassPageProps) {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#090A0C]" />}>
+    <Suspense fallback={<PassSkeleton />}>
       <PassContent params={params} />
     </Suspense>
   );
@@ -44,8 +71,10 @@ async function PassContent({ params }: PassPageProps) {
 
   try {
     const rows = await db.query<RegistrationPassRecord>(
-      `SELECT id, competition_slug, leader_name, team_name, team_size, 
-              submission_status, created_at, verification_token, pass_issued_at 
+      `SELECT id, competition_slug, leader_name, leader_email, leader_phone,
+              leader_college, leader_branch, leader_semester, team_name, team_size,
+              payment_id, payment_status, submission_status, created_at,
+              verification_token, pass_issued_at 
        FROM registrations WHERE id = ? OR verification_token = ? LIMIT 1`,
       [id, id]
     );
@@ -62,27 +91,48 @@ async function PassContent({ params }: PassPageProps) {
 
   // Fetch competition details
   let compName = reg.competition_slug.replace(/-/g, ' ').toUpperCase();
+  let compCategory = 'Hardware & Circuits';
   let compVenue = 'Priyadarshini College of Engineering, Nagpur';
   let compDate = '19 October 2026';
+  let accentColor = '#4B91E8';
+
   try {
-    const compRows = await db.query<{ name: string; venue: string; event_date: string }>(
-      'SELECT name, venue, event_date FROM competitions WHERE slug = ? LIMIT 1',
+    const compRows = await db.query<{
+      name: string;
+      category: string;
+      venue: string;
+      event_date: string;
+      accent_color: string;
+    }>(
+      'SELECT name, category, venue, event_date, accent_color FROM competitions WHERE slug = ? LIMIT 1',
       [reg.competition_slug]
     );
     if (compRows && compRows.length > 0) {
-      compName = compRows[0].name;
-      if (compRows[0].venue) compVenue = compRows[0].venue;
-      if (compRows[0].event_date) compDate = compRows[0].event_date;
+      const c = compRows[0];
+      compName = c.name;
+      if (c.category) compCategory = c.category;
+      if (c.venue) compVenue = c.venue;
+      if (c.event_date) compDate = c.event_date;
+      if (c.accent_color) accentColor = c.accent_color;
     }
-    const settings = await db.query<{ value: string }>('SELECT value FROM site_settings WHERE key_name = ?', ['event_date']);
-    if (settings?.[0]?.value && (!compRows?.[0]?.event_date)) compDate = settings[0].value;
-  } catch {}
+    const settings = await db.query<{ setting_value: string }>(
+      'SELECT setting_value FROM site_settings WHERE setting_key = ? LIMIT 1',
+      ['event_date']
+    );
+    if (settings?.[0]?.setting_value && (!compRows?.[0]?.event_date)) {
+      compDate = settings[0].setting_value;
+    }
+  } catch (compErr) {
+    console.warn('Failed to fetch full competition metadata for pass:', compErr);
+  }
 
-  const isConfirmed = reg.submission_status === 'confirmed';
-  const isPending = reg.submission_status === 'pending' || reg.submission_status === 'submitted';
-  const isFailed = reg.submission_status === 'failed' || reg.submission_status === 'cancelled';
+  const isFree = reg.payment_status === 'free';
+  const isPaymentVerified = reg.payment_status === 'confirmed' || reg.payment_status === 'verified';
+  const isConfirmed = isFree || isPaymentVerified || reg.submission_status === 'confirmed';
+  const isPending = !isConfirmed && (reg.submission_status === 'pending' || reg.submission_status === 'submitted' || reg.payment_status === 'pending');
+  const isRejected = reg.submission_status === 'failed' || reg.payment_status === 'rejected';
 
-  // Generate QR Code URL
+  // Generate QR Code URL pointing to /verify/[token]
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yugantar2026.pce.ac.in';
   const verifyToken = reg.verification_token || reg.id;
   const verifyUrl = `${appUrl}/verify/${verifyToken}`;
@@ -93,7 +143,7 @@ async function PassContent({ params }: PassPageProps) {
       margin: 1,
       width: 240,
       color: {
-        dark: '#000000',
+        dark: '#172B49',
         light: '#FFFFFF',
       },
     });
@@ -104,169 +154,235 @@ async function PassContent({ params }: PassPageProps) {
   const passReference = `YUG-26-${reg.id.substring(0, 8).toUpperCase()}`;
 
   return (
-    <div className="min-h-screen bg-[#090A0C] text-[#F5F5F5] flex flex-col items-center justify-center p-4 sm:p-6 print:bg-white print:text-black print:p-0">
+    <div className="min-h-screen bg-[#F8FAFD] text-[#172B49] flex flex-col items-center justify-center p-4 sm:p-6 print:bg-white print:p-0">
       {/* Top action bar - Hidden on print */}
-      <div className="w-full max-w-lg mb-6 flex items-center justify-between print:hidden">
+      <div className="w-full max-w-xl mb-5 flex items-center justify-between print:hidden">
         <Link
           href="/"
-          className="flex items-center gap-2 text-xs font-mono text-zinc-400 hover:text-white transition"
+          className="inline-flex items-center gap-2 text-xs font-mono font-medium text-[#60728A] hover:text-[#172B49] transition"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>YUGANTAR 2026</span>
+          <span>Back to YUGANTAR 2026</span>
         </Link>
-        <button
-          type="button"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#14171B] border border-[#2A2E35] text-xs font-mono text-zinc-300 hover:text-white hover:border-zinc-500 transition shadow-sm cursor-pointer"
-          data-print-trigger
-        >
-          <Printer className="w-3.5 h-3.5" />
-          <span>Print Pass</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/verify/${verifyToken}`}
+            target="_blank"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#DCE5F2] text-xs font-mono font-semibold text-[#60728A] hover:text-[#172B49] hover:bg-[#EDF5FC] transition shadow-2xs"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Verify Live</span>
+          </Link>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#172B49] text-white text-xs font-mono font-bold hover:bg-[#233C63] transition shadow-xs cursor-pointer"
+            data-print-trigger
+          >
+            <Printer className="w-3.5 h-3.5 text-[#F5A16F]" />
+            <span>Print / Save PDF</span>
+          </button>
+        </div>
       </div>
 
-      {/* Main Pass Container */}
-      <div className="w-full max-w-lg bg-[#14171B] border border-[#2A2E35] rounded-2xl overflow-hidden shadow-2xl relative print:border-2 print:border-black print:shadow-none print:bg-white">
-        {/* Top Header Banner */}
-        <div className="p-6 bg-gradient-to-b from-[#1A1D22] to-[#14171B] border-b border-[#2A2E35] relative print:border-b-2 print:border-black print:bg-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-[10px] font-mono tracking-widest uppercase text-zinc-400 block mb-1">
-                Official Credential • YUGANTAR 2026
-              </span>
-              <h1 className="text-2xl font-bold tracking-tight text-white print:text-black">
-                DELEGATE PASS
+      {/* Main Pass Container — Cloud White Theme with Navy Typography */}
+      <div className="w-full max-w-xl bg-white border border-[#DCE5F2] rounded-3xl overflow-hidden shadow-xl relative print:border-2 print:border-[#172B49] print:shadow-none print:rounded-none">
+        {/* Top Header Banner: Institutional & Forum Branding */}
+        <div className="p-6 bg-gradient-to-br from-[#EDF5FC] via-white to-[#F8FAFD] border-b border-[#DCE5F2] relative">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-[#4B91E8] bg-[#EDF5FC] px-2.5 py-0.5 rounded-full border border-[#B8D5F8]">
+                  TELE-ERA FORUM
+                </span>
+                <span className="text-[10px] font-mono tracking-wider uppercase text-[#8CA0BA]">
+                  PCE NAGPUR
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-display font-extrabold tracking-tight text-[#172B49]">
+                YUGANTAR 2026
               </h1>
-              <p className="text-xs text-zinc-400 print:text-zinc-600 mt-0.5">
+              <p className="text-xs text-[#60728A] font-medium leading-tight">
+                Department of Electronics &amp; Telecommunication Engineering
+              </p>
+              <p className="text-[11px] text-[#8CA0BA]">
                 Priyadarshini College of Engineering, Nagpur
               </p>
             </div>
-            {/* Status Badge */}
-            <div className="text-right">
-              {isConfirmed ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 print:bg-gray-100 print:text-black print:border-black">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  CONFIRMED
-                </span>
-              ) : isPending ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-950/80 text-amber-400 border border-amber-800/60 print:bg-gray-100 print:text-black">
-                  <Clock className="w-3.5 h-3.5" />
-                  VERIFICATION PENDING
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-950/80 text-rose-400 border border-rose-800/60 print:bg-gray-100 print:text-black">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  INVALID / REJECTED
-                </span>
-              )}
+
+            {/* Official Pass Badge */}
+            <div className="text-right shrink-0">
+              <div className="px-3 py-1 rounded-xl bg-[#172B49] text-white text-[11px] font-mono font-bold tracking-wider uppercase mb-1">
+                DELEGATE PASS
+              </div>
+              <span className="text-[10px] font-mono text-[#8CA0BA] block">
+                {passReference}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Verification Status Banner if not confirmed */}
-        {!isConfirmed && (
-          <div className="px-6 py-3 bg-amber-950/40 border-b border-amber-800/30 text-amber-300 text-xs flex items-center gap-2 print:border-b print:text-black">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+        {/* Verification Status Ribbon */}
+        <div
+          className={`px-6 py-2.5 flex items-center justify-between text-xs font-mono font-bold border-b ${
+            isConfirmed
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : isPending
+              ? 'bg-amber-50 text-amber-900 border-amber-200'
+              : 'bg-rose-50 text-rose-900 border-rose-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {isConfirmed ? (
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : isPending ? (
+              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
             <span>
-              {isPending
-                ? 'This entry pass is currently undergoing verification by the registration committee.'
-                : 'This registration has not been approved or has been cancelled.'}
+              {isConfirmed
+                ? (isFree ? 'ENTRY AUTHORIZED • FREE TRACK' : 'ENTRY AUTHORIZED • PAYMENT VERIFIED')
+                : isPending
+                ? 'VERIFICATION PENDING • COMMITTEE REVIEW'
+                : 'INVALID / REGISTRATION REJECTED'}
             </span>
           </div>
-        )}
+          <span className="text-[10px] uppercase tracking-wider hidden sm:inline">
+            {isConfirmed ? 'AUTHENTIC' : isPending ? 'AWAITING UTR AUDIT' : 'VOID'}
+          </span>
+        </div>
 
         {/* Pass Details Body */}
-        <div className="p-6 space-y-6">
-          {/* Competition Info */}
-          <div>
-            <span className="text-[10px] font-mono tracking-wider uppercase text-zinc-500 block mb-1">
-              COMPETITION TRACK
+        <div className="p-6 sm:p-8 space-y-6">
+          {/* Competition Track Highlight */}
+          <div className="p-4 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2]">
+            <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-[#8CA0BA] block mb-1">
+              COMPETITION ARENA
             </span>
-            <div className="text-lg font-semibold text-white print:text-black">
+            <div className="text-lg sm:text-xl font-display font-extrabold text-[#172B49]">
               {compName}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[11px] font-mono text-[#60728A]">
+                Category: {compCategory}
+              </span>
             </div>
           </div>
 
-          {/* Participant / Squad Grid */}
-          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[#2A2E35]/60 print:border-zinc-300">
-            <div>
-              <span className="text-[10px] font-mono tracking-wider uppercase text-zinc-500 block mb-1">
-                {reg.team_name ? 'TEAM / SQUAD' : 'PRIMARY PARTICIPANT'}
+          {/* Participant & Team Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-3.5 rounded-xl border border-[#E2E8F0] space-y-1">
+              <span className="text-[10px] font-mono tracking-wider uppercase text-[#8CA0BA] block">
+                {reg.team_name ? 'TEAM LEADER' : 'PRIMARY PARTICIPANT'}
               </span>
-              <div className="text-sm font-semibold text-zinc-200 print:text-black">
-                {reg.team_name || reg.leader_name}
+              <div className="text-sm font-bold text-[#172B49]">
+                {reg.leader_name}
               </div>
-              {reg.team_name && (
-                <div className="text-xs text-zinc-400 print:text-zinc-600 mt-0.5">
-                  Lead: {reg.leader_name}
+              <div className="text-[11px] font-mono text-[#60728A]">
+                Ref: YUG-26-{reg.id.substring(0, 8).toUpperCase()}
+              </div>
+              <div className="text-[10px] font-mono text-[#4B91E8] font-semibold">
+                Status: {isConfirmed ? 'Credential Confirmed' : isPending ? 'Pending Audit' : 'Invalid'}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-[#E2E8F0] space-y-1">
+              <span className="text-[10px] font-mono tracking-wider uppercase text-[#8CA0BA] block">
+                TEAM / DELEGATION
+              </span>
+              <div className="text-sm font-bold text-[#172B49]">
+                {reg.team_name || 'Solo Participant'}
+              </div>
+              <div className="text-[11px] text-[#60728A]">
+                Squad Size: {reg.team_size} {reg.team_size === 1 ? 'Member' : 'Members'}
+              </div>
+              {reg.payment_id && reg.payment_id !== 'FREE-TRACK' && (
+                <div className="text-[11px] font-mono text-[#4B91E8] truncate">
+                  UTR: {reg.payment_id}
                 </div>
               )}
             </div>
-            <div>
-              <span className="text-[10px] font-mono tracking-wider uppercase text-zinc-500 block mb-1">
-                DELEGATE SIZE
-              </span>
-              <div className="text-sm font-semibold text-zinc-200 print:text-black">
-                {reg.team_size} {reg.team_size === 1 ? 'Participant' : 'Members'}
-              </div>
+          </div>
+
+          {/* College & Department */}
+          <div className="p-3.5 rounded-xl border border-[#E2E8F0] space-y-1">
+            <span className="text-[10px] font-mono tracking-wider uppercase text-[#8CA0BA] block">
+              ACADEMIC AFFILIATION
+            </span>
+            <div className="text-xs font-bold text-[#172B49]">
+              {reg.leader_college}
+            </div>
+            <div className="text-[11px] text-[#60728A]">
+              Branch: {reg.leader_branch} · Semester {reg.leader_semester}
             </div>
           </div>
 
           {/* Date & Venue */}
-          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[#2A2E35]/60 print:border-zinc-300">
-            <div>
-              <span className="text-[10px] font-mono tracking-wider uppercase text-zinc-500 block mb-1">
-                EVENT DATE
-              </span>
-              <div className="text-sm font-medium text-zinc-200 print:text-black">
-                {compDate}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#F8FAFD] border border-[#E2E8F0]">
+              <Calendar className="w-4 h-4 text-[#4B91E8] shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                  REPORTING DATE
+                </span>
+                <span className="text-xs font-bold text-[#172B49]">
+                  {compDate}
+                </span>
               </div>
             </div>
-            <div>
-              <span className="text-[10px] font-mono tracking-wider uppercase text-zinc-500 block mb-1">
-                REPORTING VENUE
-              </span>
-              <div className="text-xs text-zinc-300 print:text-black line-clamp-2">
-                {compVenue}
+
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#F8FAFD] border border-[#E2E8F0]">
+              <MapPin className="w-4 h-4 text-[#E07A43] shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                  VENUE
+                </span>
+                <span className="text-xs font-bold text-[#172B49] line-clamp-1">
+                  {compVenue}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* QR Code and Reference Block */}
-          <div className="pt-4 border-t border-[#2A2E35] flex items-center justify-between gap-4 print:border-black">
-            <div>
-              <span className="text-[10px] font-mono tracking-wider uppercase text-zinc-500 block mb-0.5">
-                PASS REFERENCE
+          {/* QR Code and Check-in Verification Block */}
+          <div className="pt-4 border-t border-[#DCE5F2] flex items-center justify-between gap-4">
+            <div className="space-y-1 max-w-[280px]">
+              <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-[#8CA0BA] block">
+                DIGITAL ENTRY CREDENTIAL
               </span>
-              <div className="text-sm font-mono font-bold tracking-wider text-zinc-100 print:text-black">
+              <div className="text-xs font-mono font-extrabold text-[#172B49]">
                 {passReference}
               </div>
-              <p className="text-[11px] text-zinc-400 print:text-zinc-600 mt-1 max-w-[200px] leading-tight">
-                Scan on-site at the security & desk check-in point to verify entry authorization.
+              <p className="text-[11px] text-[#60728A] leading-relaxed">
+                Present this QR code on your mobile device or printed pass at the college entry gate and registration desk for check-in validation.
               </p>
             </div>
 
-            {/* QR Code Graphic */}
-            <div className="p-2 bg-white rounded-xl shadow-inner shrink-0 border border-zinc-200">
+            {/* High-Resolution QR Graphic */}
+            <div className="p-2.5 bg-white rounded-2xl shadow-sm shrink-0 border border-[#DCE5F2] text-center">
               {qrDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={qrDataUrl}
                   alt={`QR Verification Code for ${passReference}`}
-                  className="w-24 h-24 sm:w-28 sm:h-28"
+                  className="w-24 h-24 sm:w-28 sm:h-28 mx-auto"
                 />
               ) : (
-                <div className="w-24 h-24 flex items-center justify-center text-xs text-zinc-500">
-                  QR Error
+                <div className="w-24 h-24 flex items-center justify-center text-xs text-[#8CA0BA]">
+                  QR Code
                 </div>
               )}
+              <span className="text-[9px] font-mono text-[#8CA0BA] block mt-1 uppercase">
+                Scan to Verify
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Footer Bar */}
-        <div className="p-4 bg-[#0D0F12] border-t border-[#2A2E35] flex items-center justify-between text-[11px] font-mono text-zinc-500 print:bg-white print:border-t-2 print:border-black">
-          <span>YUGANTAR 2026 • NEXUS CITY</span>
-          <span>AUTONOMOUS CREDENTIAL</span>
+        {/* Footer Security Stamp */}
+        <div className="p-4 bg-[#EDF5FC] border-t border-[#DCE5F2] flex flex-wrap items-center justify-between text-[11px] font-mono text-[#60728A] gap-2">
+          <span>YUGANTAR 2026 • TELE-ERA FORUM</span>
+          <span>AUTONOMOUS CREDENTIAL #PCE-ETC</span>
         </div>
       </div>
 
