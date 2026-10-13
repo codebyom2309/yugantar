@@ -24,6 +24,8 @@ export interface DbCompetition extends Competition {
   minTeamMembers?: number;
   isPaid?: boolean;
   registrationFee?: string;
+  qrMode?: 'upload' | 'generate';
+  payeeName?: string;
   qrCodeUrl?: string;
   upiId?: string;
   paymentUrl?: string;
@@ -506,15 +508,17 @@ function mapDbRowToCompetition(r: Record<string, unknown>): DbCompetition {
     registrationDeadline: r.registration_deadline ? String(r.registration_deadline) : undefined,
     registrationInstructions: r.registration_instructions ? String(r.registration_instructions) : undefined,
     minTeamMembers: Number(r.min_team_members || 1),
-    isPaid: Boolean(r.is_paid),
-    registrationFee: r.registration_fee ? String(r.registration_fee) : 'Free',
-    qrCodeUrl: r.qr_code_url ? String(r.qr_code_url) : undefined,
-    upiId: r.upi_id ? String(r.upi_id) : undefined,
+    isPaid: r.is_paid !== undefined && r.is_paid !== null ? Boolean(r.is_paid) : Boolean(COMPETITIONS.find((c) => c.slug === r.slug)?.isPaid),
+    registrationFee: r.registration_fee ? String(r.registration_fee) : (COMPETITIONS.find((c) => c.slug === r.slug)?.registrationFee || 'Free'),
+    qrMode: (r.qr_mode as 'upload' | 'generate') || COMPETITIONS.find((c) => c.slug === r.slug)?.qrMode || (r.qr_code_url ? 'upload' : 'generate'),
+    payeeName: r.payee_name ? String(r.payee_name) : (COMPETITIONS.find((c) => c.slug === r.slug)?.payeeName || 'TELE-ERA YUGANTAR 2026'),
+    qrCodeUrl: r.qr_code_url ? String(r.qr_code_url) : COMPETITIONS.find((c) => c.slug === r.slug)?.qrCodeUrl,
+    upiId: r.upi_id ? String(r.upi_id) : (COMPETITIONS.find((c) => c.slug === r.slug)?.upiId || 'teleera@oksbi'),
     paymentUrl: r.payment_url ? String(r.payment_url) : undefined,
     paymentInstructions: r.payment_instructions ? String(r.payment_instructions) : undefined,
-    requireUtr: Boolean(r.require_utr),
-    requireScreenshot: Boolean(r.require_screenshot),
-    whatsappLink: r.whatsapp_link ? String(r.whatsapp_link) : undefined,
+    requireUtr: r.require_utr !== undefined && r.require_utr !== null ? Boolean(r.require_utr) : Boolean(COMPETITIONS.find((c) => c.slug === r.slug)?.requireUtr),
+    requireScreenshot: r.require_screenshot !== undefined && r.require_screenshot !== null ? Boolean(r.require_screenshot) : Boolean(COMPETITIONS.find((c) => c.slug === r.slug)?.requireScreenshot),
+    whatsappLink: r.whatsapp_link ? String(r.whatsapp_link) : COMPETITIONS.find((c) => c.slug === r.slug)?.whatsappLink,
     confirmationInstructions: r.confirmation_instructions ? String(r.confirmation_instructions) : undefined,
   };
 }

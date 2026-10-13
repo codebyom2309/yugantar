@@ -26,9 +26,11 @@ import {
   X,
   Link as LinkIcon,
   Printer,
+  Download,
 } from 'lucide-react';
 import type { RegistrationFormConfig, FormField } from '@/data/registrationForms';
 import confetti from 'canvas-confetti';
+import QRCode from 'qrcode';
 
 // ---------------------------------------------------------------------------
 // Types & Constants
@@ -44,6 +46,7 @@ type SubmissionState =
 interface SubmissionResult {
   status: string;
   registrationId?: string;
+  passToken?: string;
   verificationToken?: string;
   paymentStatus?: string;
   whatsappLink?: string;
@@ -491,7 +494,7 @@ function FormFieldInput({
   competitionSlug: string;
   onChange: (key: string, value: string) => void;
 }) {
-  const baseInputClass = `w-full px-4 py-3 rounded-xl bg-white border text-sm text-[#172B49] font-normal placeholder:text-[#8CA0BA] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4B91E8]/20 focus:border-[#4B91E8] ${
+  const baseInputClass = `w-full px-4 py-3 min-h-[48px] rounded-xl bg-white border text-sm text-[#172B49] font-medium placeholder:text-[#8CA0BA] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4B91E8]/20 focus:border-[#4B91E8] ${
     error
       ? 'border-red-400 bg-red-50/20 focus:ring-red-400/20 focus:border-red-400'
       : 'border-[#DCE5F2] hover:border-[#B8D5F8]'
@@ -514,9 +517,17 @@ function FormFieldInput({
   if (field.type === 'select' && field.key.toLowerCase().includes('college') && field.options) {
     return (
       <div className="space-y-1.5" id={`field-${field.key}`}>
-        <label className="flex items-center gap-1.5 text-xs font-bold text-[#172B49]">
-          {field.label}
-          {field.required && <span className="text-[#E06573]">*</span>}
+        <label className="flex items-center justify-between text-xs font-bold text-[#172B49]">
+          <span className="flex items-center gap-1.5">{field.label}</span>
+          {field.required ? (
+            <span className="text-[10px] font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+              Required
+            </span>
+          ) : (
+            <span className="text-[10px] font-mono text-[#8CA0BA] bg-[#F1F5F9] px-2 py-0.5 rounded-md">
+              Optional
+            </span>
+          )}
         </label>
         <SearchableCollegeSelect
           value={value}
@@ -536,9 +547,17 @@ function FormFieldInput({
 
   return (
     <div className="space-y-1.5" id={`field-${field.key}`}>
-      <label className="flex items-center gap-1.5 text-xs font-bold text-[#172B49]">
-        {field.label}
-        {field.required && <span className="text-[#E06573]">*</span>}
+      <label className="flex items-center justify-between text-xs font-bold text-[#172B49]">
+        <span className="flex items-center gap-1.5">{field.label}</span>
+        {field.required ? (
+          <span className="text-[10px] font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+            Required
+          </span>
+        ) : (
+          <span className="text-[10px] font-mono text-[#8CA0BA] bg-[#F1F5F9] px-2 py-0.5 rounded-md">
+            Optional
+          </span>
+        )}
       </label>
 
       {field.type === 'select' && field.options ? (
@@ -546,23 +565,26 @@ function FormFieldInput({
           <select
             value={value}
             onChange={(e) => onChange(field.key, e.target.value)}
+            style={{ colorScheme: 'light' }}
             className={`${baseInputClass} appearance-none pr-10 cursor-pointer bg-white text-[#172B49]`}
             aria-invalid={!!error}
           >
-            <option value="" className="bg-white text-[#172B49]">Select {field.label}...</option>
+            <option value="" style={{ colorScheme: 'light' }} className="bg-white text-[#172B49]">
+              Select {field.label}...
+            </option>
             {field.options.map((opt) => (
-              <option key={opt} value={opt} className="bg-white text-[#172B49]">
+              <option key={opt} value={opt} style={{ colorScheme: 'light' }} className="bg-white text-[#172B49]">
                 {opt}
               </option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8CA0BA] pointer-events-none" />
+          <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8CA0BA] pointer-events-none" />
         </div>
       ) : field.type === 'textarea' ? (
         <textarea
           value={value}
           onChange={(e) => onChange(field.key, e.target.value)}
-          className={`${baseInputClass} min-h-[90px] resize-y`}
+          className={`${baseInputClass} min-h-[96px] resize-y`}
           placeholder={field.placeholder}
           aria-invalid={!!error}
         />
@@ -617,6 +639,8 @@ export interface CompetitionPaymentConfig {
   requireScreenshot?: boolean;
   whatsappLink?: string;
   confirmationInstructions?: string;
+  qrMode?: 'upload' | 'generate' | string;
+  payeeName?: string;
 }
 
 export default function RegistrationForm({
@@ -643,7 +667,66 @@ export default function RegistrationForm({
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
   const [isDraftSaved, setIsDraftSaved] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+  const [dynamicQrUrl, setDynamicQrUrl] = useState<string | null>(null);
+  const [useLeaderDetails, setUseLeaderDetails] = useState<Record<number, boolean>>({});
   const submitLockRef = useRef(false);
+
+  // Generate dynamic UPI QR Code if in generate mode or if uploaded QR is absent
+  useEffect(() => {
+    if (isPaid && competition?.upiId) {
+      const isGenerateMode = competition.qrMode === 'generate' || !competition.qrCodeUrl;
+      if (isGenerateMode) {
+        const feeDigits = (competition.registrationFee || '').replace(/[^0-9]/g, '');
+        const payee = competition.payeeName || 'TELE-ERA YUGANTAR 2026';
+        const upiUri = `upi://pay?pa=${competition.upiId}&pn=${encodeURIComponent(payee)}${feeDigits ? `&am=${feeDigits}` : ''}&cu=INR`;
+        QRCode.toDataURL(upiUri, {
+          width: 256,
+          margin: 2,
+          color: {
+            dark: '#172B49',
+            light: '#FFFFFF',
+          },
+        })
+          .then((url) => setDynamicQrUrl(url))
+          .catch((err) => console.error('Failed to generate dynamic UPI QR code:', err));
+      }
+    }
+  }, [isPaid, competition?.upiId, competition?.payeeName, competition?.registrationFee, competition?.qrMode, competition?.qrCodeUrl]);
+
+  // Handle toggling "Use team leader's details" for member 2, 3, 4
+  const handleToggleLeaderDetails = (memberIdx: number, checked: boolean) => {
+    setUseLeaderDetails((prev) => ({ ...prev, [memberIdx]: checked }));
+    if (checked) {
+      const lCollege =
+        values.leaderCollege ||
+        values.collegeName ||
+        values.candidateCollege ||
+        values.squadLeaderCollege ||
+        '';
+      const lBranch =
+        values.leaderBranch ||
+        values.branch ||
+        values.candidateBranch ||
+        values.squadLeaderBranch ||
+        '';
+      const lSemester =
+        values.leaderSemester ||
+        values.semester ||
+        values.candidateSemester ||
+        values.squadLeaderSemester ||
+        '';
+
+      setValues((prev) => ({
+        ...prev,
+        [`member${memberIdx}College`]: lCollege,
+        [`member${memberIdx}Branch`]: lBranch,
+        [`member${memberIdx}Semester`]: lSemester,
+        [`player${memberIdx}College`]: lCollege,
+        [`player${memberIdx}Branch`]: lBranch,
+        [`player${memberIdx}Semester`]: lSemester,
+      }));
+    }
+  };
 
   // Load draft on mount
   useEffect(() => {
@@ -935,6 +1018,14 @@ export default function RegistrationForm({
         setSubmissionResult(data);
         clearDraft(config.competitionSlug);
 
+        if (data.passToken && data.registrationId) {
+          try {
+            localStorage.setItem(`yugantar_pass_token_${data.registrationId}`, data.passToken);
+          } catch {
+            // localStorage optional
+          }
+        }
+
         try {
           confetti({
             particleCount: 80,
@@ -976,6 +1067,11 @@ export default function RegistrationForm({
   if (submissionState === 'submitted') {
     const isFree = submissionResult?.paymentStatus === 'free';
     const regId = submissionResult?.registrationId;
+    const token = submissionResult?.passToken;
+    const pdfDownloadUrl = `/api/pass/${regId}/pdf${token ? `?token=${token}` : ''}`;
+    const digitalPassUrl = `/pass/${regId}${token ? `?token=${token}` : ''}`;
+    const rawWhatsapp = submissionResult?.whatsappLink || competition?.whatsappLink || '';
+    const hasValidWhatsapp = Boolean(rawWhatsapp && (rawWhatsapp.startsWith('http://') || rawWhatsapp.startsWith('https://')));
 
     return (
       <div className="py-6 sm:py-8 space-y-6 text-center animate-in fade-in zoom-in-95 duration-300">
@@ -1003,30 +1099,30 @@ export default function RegistrationForm({
           </h3>
           <p className="text-xs sm:text-sm text-[#60728A] max-w-md mx-auto leading-relaxed">
             {isFree
-              ? 'Your registration has been securely synced to our system and Department Google Sheets. Download your official delegate pass below.'
-              : 'Your registration has been submitted and synced to Department Google Sheets. Your payment proof is under review by festival coordinators.'}
+              ? 'Your registration has been securely recorded and synced to the Department Google Sheet. Download your official delegate pass below.'
+              : 'Your registration has been recorded and synced to the Department Google Sheet. Your payment proof is under audit by festival coordinators.'}
           </p>
         </div>
 
         {/* Permanent Tracking ID Card */}
         {regId && (
-          <div className="p-4 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] max-w-md mx-auto text-left space-y-2">
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] max-w-md mx-auto text-left space-y-2.5 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+              <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block tracking-wider">
                 Official Registration Credential ID
               </span>
-              <span className="text-[10px] font-mono text-emerald-600 font-semibold">
+              <span className="text-[10px] font-mono text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                 ✓ Recorded
               </span>
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-xs sm:text-sm font-bold text-[#172B49] truncate">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-mono text-xs sm:text-sm font-bold text-[#172B49] truncate select-all">
                 {regId}
               </span>
               <button
                 type="button"
                 onClick={handleCopyId}
-                className="p-1.5 px-2.5 rounded-lg bg-white border border-[#DCE5F2] hover:bg-[#EDF5FC] text-[#4B91E8] text-xs font-mono font-bold transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
+                className="p-1.5 px-3 rounded-xl bg-white border border-[#DCE5F2] hover:bg-[#EDF5FC] text-[#4B91E8] text-xs font-mono font-bold transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs"
               >
                 {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedId ? 'Copied' : 'Copy'}</span>
@@ -1035,35 +1131,51 @@ export default function RegistrationForm({
           </div>
         )}
 
-        {/* Action Buttons: Download Pass + Join WhatsApp */}
+        {/* Action Buttons: Direct PDF Download + Digital Pass + WhatsApp */}
         <div className="space-y-3 max-w-md mx-auto pt-2">
           {regId && (
-            <Link
-              href={`/pass/${regId}`}
-              className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#172B49] via-[#244372] to-[#172B49] hover:opacity-95 text-white text-xs sm:text-sm font-mono font-bold shadow-md transition"
-            >
-              <Printer className="w-4 h-4 text-[#F5A16F]" />
-              <span>DOWNLOAD / PRINT OFFICIAL PASS</span>
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Link>
+            <>
+              <a
+                href={pdfDownloadUrl}
+                download={`YUGANTAR-2026-PASS-${regId.substring(0, 8)}.pdf`}
+                className="w-full flex items-center justify-center gap-2.5 min-h-[48px] px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#172B49] via-[#244372] to-[#172B49] hover:opacity-95 text-white text-xs sm:text-sm font-mono font-bold shadow-md transition"
+              >
+                <Download className="w-4 h-4 text-[#F5A16F]" />
+                <span>DOWNLOAD REGISTRATION PASS (PDF)</span>
+                <ArrowRight className="w-4 h-4 ml-1 text-[#F5A16F]" />
+              </a>
+
+              <Link
+                href={digitalPassUrl}
+                className="w-full flex items-center justify-center gap-2 min-h-[44px] px-6 py-2.5 rounded-xl bg-white border border-[#DCE5F2] hover:bg-[#EDF5FC] text-[#172B49] text-xs font-mono font-bold transition shadow-xs"
+              >
+                <Printer className="w-3.5 h-3.5 text-[#4B91E8]" />
+                <span>VIEW DIGITAL PASS IN BROWSER</span>
+              </Link>
+            </>
           )}
 
-          {submissionResult?.whatsappLink && (
-            <a
-              href={submissionResult.whatsappLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2.5 px-6 py-3 rounded-2xl bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs sm:text-sm font-mono font-bold shadow-xs transition"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>JOIN OFFICIAL WHATSAPP GROUP</span>
-              <ExternalLink className="w-3.5 h-3.5 ml-1" />
-            </a>
+          {hasValidWhatsapp && (
+            <div className="pt-1">
+              <a
+                href={rawWhatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2.5 min-h-[48px] px-6 py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs sm:text-sm font-mono font-bold shadow-xs transition"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>JOIN OFFICIAL WHATSAPP COMMUNITY</span>
+                <ExternalLink className="w-3.5 h-3.5 ml-1" />
+              </a>
+              <span className="text-[10px] text-[#8CA0BA] block mt-1.5">
+                Official coordinator WhatsApp group invite link for track schedule updates
+              </span>
+            </div>
           )}
 
           <Link
             href="/competitions"
-            className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-white border border-[#DCE5F2] text-[#60728A] hover:text-[#172B49] text-xs font-mono font-medium hover:bg-[#F8FAFD] transition"
+            className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-6 py-2.5 rounded-xl bg-white border border-[#DCE5F2] text-[#60728A] hover:text-[#172B49] text-xs font-mono font-medium hover:bg-[#F8FAFD] transition"
           >
             <span>Explore Other Competition Arenas</span>
             <ArrowRight className="w-3.5 h-3.5 text-[#8CA0BA]" />
@@ -1103,7 +1215,7 @@ export default function RegistrationForm({
           <button
             type="button"
             onClick={() => setSubmissionState('idle')}
-            className="nexus-btn-sunset px-6 py-3 text-xs font-bold gap-2 justify-center flex-1"
+            className="nexus-btn-sunset px-6 py-3 min-h-[48px] text-xs font-bold gap-2 justify-center flex-1"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Review &amp; Retry</span>
@@ -1142,7 +1254,7 @@ export default function RegistrationForm({
           <button
             type="button"
             onClick={() => setSubmissionState('idle')}
-            className="nexus-btn-secondary px-6 py-3 text-xs font-bold gap-2 w-full justify-center"
+            className="nexus-btn-secondary px-6 py-3 min-h-[48px] text-xs font-bold gap-2 w-full justify-center"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Return to Form</span>
@@ -1158,14 +1270,20 @@ export default function RegistrationForm({
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
       {/* =====================================================================
-          STEPPER PROGRESS HEADER (Responsive for 320px - Desktop)
+          STEPPER PROGRESS HEADER (Dynamically adapted to steps.length)
           ===================================================================== */}
       <div className="pb-4 border-b border-[#E2E8F0] space-y-3">
         {/* Desktop Step Badges */}
-        <div className="hidden sm:grid grid-cols-4 gap-2">
+        <div
+          className="hidden sm:grid gap-2"
+          style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+        >
           {steps.map((st, idx) => {
             const isCurrent = idx === currentStepIndex;
             const isCompleted = idx < currentStepIndex;
+            const stepHasErrors = st.fieldKeys.some((k) => Boolean(errors[k])) ||
+              (st.id.includes('review') && Boolean(errors['_acknowledgment']));
+
             return (
               <button
                 key={st.id}
@@ -1176,7 +1294,7 @@ export default function RegistrationForm({
                   isCurrent
                     ? 'bg-white border-[#4B91E8] shadow-xs'
                     : isCompleted
-                    ? 'bg-[#EDF5FC] border-[#B8D5F8] text-[#4B91E8] cursor-pointer'
+                    ? 'bg-[#EDF5FC] border-[#B8D5F8] text-[#4B91E8] cursor-pointer hover:bg-[#E3EFFB]'
                     : 'bg-[#F8FAFD] border-transparent text-[#8CA0BA] opacity-60'
                 }`}
               >
@@ -1191,7 +1309,7 @@ export default function RegistrationForm({
                 >
                   {isCompleted ? <Check className="w-3.5 h-3.5" /> : idx + 1}
                 </div>
-                <div className="truncate">
+                <div className="truncate flex-1">
                   <span className="text-[10px] font-mono uppercase block text-[#8CA0BA] leading-none">
                     Step {idx + 1}
                   </span>
@@ -1199,6 +1317,9 @@ export default function RegistrationForm({
                     {st.shortTitle}
                   </span>
                 </div>
+                {stepHasErrors && (
+                  <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" title="Validation errors in this step" />
+                )}
               </button>
             );
           })}
@@ -1210,11 +1331,11 @@ export default function RegistrationForm({
             <span className="font-mono font-bold text-[#4B91E8]">
               Step {currentStepIndex + 1} of {steps.length}
             </span>
-            <span className="font-bold text-[#172B49]">
+            <span className="font-bold text-[#172B49] truncate max-w-[200px]">
               {currentStep.title}
             </span>
           </div>
-          <div className="h-1.5 w-full bg-[#E2E8F0] rounded-full overflow-hidden">
+          <div className="h-2 w-full bg-[#E2E8F0] rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#4B91E8] to-[#E07A43] transition-all duration-300"
               style={{
@@ -1242,7 +1363,7 @@ export default function RegistrationForm({
                 type="button"
                 onClick={handleClearDraft}
                 title="Clear Draft"
-                className="text-[10px] font-mono text-[#8CA0BA] hover:text-red-600 p-1 transition-colors"
+                className="text-[10px] font-mono text-[#8CA0BA] hover:text-red-600 p-1.5 transition-colors rounded-lg hover:bg-red-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -1257,11 +1378,11 @@ export default function RegistrationForm({
       <div className="space-y-5">
         {/* If team step, show dynamic team size selector based on config options */}
         {currentStep.id === 'team' && (
-          <div className="p-4 rounded-2xl bg-[#EDF5FC] border border-[#DCE5F2] space-y-3">
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#EDF5FC] border border-[#DCE5F2] space-y-3">
             <label className="text-xs font-bold text-[#172B49] block">
               Select Number of Members in Team / Squad:
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2.5">
               {availableTeamSizes.map((size) => {
                 const isSelected = (values.teamSize || defaultTeamSize) === size;
                 return (
@@ -1269,7 +1390,7 @@ export default function RegistrationForm({
                     key={size}
                     type="button"
                     onClick={() => handleFieldChange('teamSize', size)}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-mono font-bold transition-all ${
+                    className={`min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-mono font-bold transition-all ${
                       isSelected
                         ? 'bg-[#172B49] text-white shadow-xs'
                         : 'bg-white text-[#60728A] hover:bg-white/80 border border-[#DCE5F2]'
@@ -1289,35 +1410,100 @@ export default function RegistrationForm({
         )}
 
         {/* Regular fields for this step */}
-        {currentStepFields.map((field) => (
-          <FormFieldInput
-            key={field.key}
-            field={field}
-            value={values[field.key] || ''}
-            error={errors[field.key]}
-            competitionSlug={config.competitionSlug}
-            onChange={handleFieldChange}
-          />
-        ))}
+        {currentStepFields.map((field) => {
+          const memberMatch = currentStep.id === 'team' ? field.key.match(/(?:member|player)(\d)Name/i) : null;
+          const memberIdx = memberMatch ? parseInt(memberMatch[1], 10) : null;
+
+          return (
+            <React.Fragment key={field.key}>
+              {memberIdx && (
+                <div className="pt-3 pb-1">
+                  <div className="p-4 rounded-2xl bg-[#EDF5FC] border border-[#B8D5F8] space-y-2.5 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#172B49] flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-md bg-[#172B49] text-white flex items-center justify-center text-[10px]">
+                          0{memberIdx}
+                        </span>
+                        Member 0{memberIdx} Details
+                      </span>
+                      <span className="text-[10px] font-mono font-semibold text-[#1E5FA8] bg-white px-2 py-0.5 rounded-md border border-[#B8D5F8]">
+                        Independent Validation
+                      </span>
+                    </div>
+
+                    <label className="flex items-start sm:items-center gap-3 p-2.5 rounded-xl bg-white/80 border border-[#DCE5F2] hover:bg-white transition cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(useLeaderDetails[memberIdx])}
+                        onChange={(e) => handleToggleLeaderDetails(memberIdx, e.target.checked)}
+                        className="w-4 h-4 mt-0.5 sm:mt-0 rounded text-[#4B91E8] border-[#DCE5F2] focus:ring-[#4B91E8] cursor-pointer shrink-0"
+                      />
+                      <div className="text-left">
+                        <span className="text-xs font-bold text-[#172B49] block">
+                          Autofill College, Branch &amp; Semester from Team Leader
+                        </span>
+                        <span className="text-[11px] text-[#60728A] block">
+                          Copies leader&apos;s academic institution. Values remain individually editable below.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
+              <FormFieldInput
+                field={field}
+                value={values[field.key] || ''}
+                error={errors[field.key]}
+                competitionSlug={config.competitionSlug}
+                onChange={handleFieldChange}
+              />
+            </React.Fragment>
+          );
+        })}
 
         {/* =====================================================================
             FINAL STEP ONLY: PAYMENT REVIEW & UNDERTAKING
             ===================================================================== */}
         {currentStepIndex === steps.length - 1 && (
           <div className="space-y-6 pt-4 border-t border-[#E2E8F0]">
-            {/* Payment / Free Track Card */}
+            {/* Payment Section (Paid Tracks Only) */}
             {isPaid ? (
-              <div className="p-4 sm:p-5 rounded-2xl bg-[#FFF8F2] border border-[#FFE0CE] space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="p-4 sm:p-6 rounded-2xl bg-[#FFF8F2] border border-[#FFE0CE] space-y-4">
+                {/* Header Row */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-[#E07A43] uppercase tracking-wider">
-                    <QrCode className="w-4 h-4" />
-                    <span>Payment Verification Instructions</span>
+                    <QrCode className="w-4 h-4 text-[#E07A43]" />
+                    <span>Official Payment Verification Sequence</span>
                   </div>
                   {competition?.registrationFee && (
-                    <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#E07A43]/10 text-[#E07A43] border border-[#E07A43]/30">
+                    <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#E07A43] text-white shadow-2xs">
                       Fee: {competition.registrationFee}
                     </span>
                   )}
+                </div>
+
+                {/* 5-Step Numbered Payment Walkthrough */}
+                <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-[11px] font-mono text-[#60728A] pt-1 pb-1">
+                  <div className="p-2 rounded-xl bg-white border border-[#FFE0CE]">
+                    <span className="text-[#E07A43] font-bold block">1. Review Fee</span>
+                    <span>{competition?.registrationFee || '₹300'}</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-[#FFE0CE]">
+                    <span className="text-[#E07A43] font-bold block">2. Scan / Tap</span>
+                    <span>QR or UPI Link</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-[#FFE0CE]">
+                    <span className="text-[#E07A43] font-bold block">3. Transfer</span>
+                    <span>Via UPI App</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-[#FFE0CE]">
+                    <span className="text-[#E07A43] font-bold block">4. Enter UTR</span>
+                    <span>12-Digit Ref ID</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-[#FFE0CE]">
+                    <span className="text-[#E07A43] font-bold block">5. Attach Proof</span>
+                    <span>Screenshot image</span>
+                  </div>
                 </div>
 
                 {competition?.paymentInstructions ? (
@@ -1331,20 +1517,38 @@ export default function RegistrationForm({
                 )}
 
                 {/* QR and UPI ID Details */}
-                <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-                  {competition?.qrCodeUrl && (
-                    <div className="p-2 bg-white rounded-xl border border-[#FFE0CE] shrink-0 text-center shadow-xs">
+                <div className="flex flex-col sm:flex-row items-center gap-4 pt-1">
+                  {(competition?.qrCodeUrl || dynamicQrUrl) ? (
+                    <div className="p-3 bg-white rounded-2xl border border-[#FFE0CE] shrink-0 text-center shadow-xs">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={competition.qrCodeUrl}
+                        src={competition?.qrMode === 'upload' && competition.qrCodeUrl ? competition.qrCodeUrl : (dynamicQrUrl || competition?.qrCodeUrl)}
                         alt="Payment QR Code"
-                        className="w-28 h-28 object-contain mx-auto rounded-lg"
+                        className="w-32 h-32 object-contain mx-auto rounded-xl"
                       />
-                      <span className="text-[10px] font-mono text-[#8CA0BA] block mt-1">Scan &amp; Pay via UPI</span>
+                      <span className="text-[10px] font-mono text-[#8CA0BA] block mt-1.5 font-bold">
+                        {competition?.qrMode === 'upload' ? 'Official Department QR' : 'Dynamic UPI QR'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-left text-xs text-amber-800 space-y-1">
+                      <span className="font-bold block">Admin Configuration Notice</span>
+                      <span>Payment QR code is being generated or configured by coordinators. You may use the official UPI ID below to complete your fee.</span>
                     </div>
                   )}
 
-                  <div className="space-y-2 flex-1 w-full text-left">
+                  <div className="space-y-2.5 flex-1 w-full text-left">
+                    {competition?.payeeName && (
+                      <div className="p-3 rounded-xl bg-white border border-[#FFE0CE]">
+                        <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                          Official Payee Name
+                        </span>
+                        <span className="text-xs font-bold text-[#172B49]">
+                          {competition.payeeName}
+                        </span>
+                      </div>
+                    )}
+
                     {competition?.upiId && (
                       <div className="p-3 rounded-xl bg-white border border-[#FFE0CE] space-y-1">
                         <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
@@ -1363,10 +1567,10 @@ export default function RegistrationForm({
                                 setTimeout(() => setCopiedId(false), 2000);
                               }
                             }}
-                            className="p-1 px-2 rounded-lg bg-[#FFF8F2] border border-[#FFE0CE] text-[#E07A43] hover:bg-[#FFE0CE] text-xs font-mono font-bold transition flex items-center gap-1 cursor-pointer"
+                            className="p-1.5 px-2.5 rounded-lg bg-[#FFF8F2] border border-[#FFE0CE] text-[#E07A43] hover:bg-[#FFE0CE] text-xs font-mono font-bold transition flex items-center gap-1 cursor-pointer"
                           >
-                            <Copy className="w-3 h-3" />
-                            <span>Copy</span>
+                            {copiedId ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedId ? 'Copied' : 'Copy'}</span>
                           </button>
                         </div>
                       </div>
@@ -1374,14 +1578,18 @@ export default function RegistrationForm({
 
                     {competition?.upiId && (
                       <a
-                        href={`upi://pay?pa=${competition.upiId}&pn=YUGANTAR%202026&cu=INR`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E07A43] text-white text-xs font-mono font-bold hover:bg-[#C96835] transition shadow-2xs"
+                        href={`upi://pay?pa=${competition.upiId}&pn=${encodeURIComponent(competition?.payeeName || 'YUGANTAR 2026')}${(competition.registrationFee || '').replace(/[^0-9]/g, '') ? `&am=${(competition.registrationFee || '').replace(/[^0-9]/g, '')}` : ''}&cu=INR`}
+                        className="inline-flex items-center justify-center gap-2 min-h-[44px] w-full px-4 py-2 rounded-xl bg-[#E07A43] text-white text-xs font-mono font-bold hover:bg-[#C96835] transition shadow-2xs"
                       >
-                        <ExternalLink className="w-3 h-3" />
+                        <ExternalLink className="w-3.5 h-3.5" />
                         <span>Pay directly via UPI App (Mobile)</span>
                       </a>
                     )}
                   </div>
+                </div>
+
+                <div className="pt-1 text-[11px] font-mono text-[#8CA0BA] border-t border-[#FFE0CE]/60">
+                  ℹ️ Note: Payment status is verified by coordinators against official bank statement UTR records before festival check-in.
                 </div>
               </div>
             ) : (
@@ -1396,97 +1604,188 @@ export default function RegistrationForm({
               </div>
             )}
 
-            {/* Dossier Review Card */}
-            <div className="p-5 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
+            {/* Structured Dossier Review Cards */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-1">
                 <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#172B49]">
                   Registration Summary Dossier
                 </h4>
                 <span className="text-[10px] font-mono text-[#8CA0BA]">
-                  Review before submitting
+                  Review before final submission
                 </span>
               </div>
 
-              <div className="space-y-3 text-xs">
-                {/* Leader Summary */}
-                <div className="flex items-start justify-between gap-2 pb-2 border-b border-[#E2E8F0]/60">
-                  <div>
-                    <span className="text-[#8CA0BA] block text-[11px]">Team Leader / Participant:</span>
-                    <span className="font-bold text-[#172B49]">
-                      {values.leaderName || values.candidateName || values.performerName || 'Not specified'}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                {/* Card 1: Participant / Lead Info */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-3 text-left">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+                    <span className="font-mono text-[10px] uppercase font-bold text-[#4B91E8]">
+                      Participant / Leader
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleJumpToStep(0)}
+                      className="text-[#4B91E8] hover:underline text-[11px] font-mono font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit2 className="w-3 h-3" /> Edit
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="font-bold text-[#172B49] text-sm block">
+                      {values.leaderName || values.candidateName || values.performerName || values.name || 'Not specified'}
+                    </span>
+                    <span className="text-[#60728A] block break-all text-[11px]">
+                      {values.leaderEmail || values.email || values.candidateEmail || 'No email entered'}
                     </span>
                     <span className="text-[#60728A] block text-[11px]">
-                      {values.leaderEmail || values.email} · {values.leaderPhone || values.contactNumber}
+                      {values.leaderPhone || values.contactNumber || values.candidatePhone || 'No phone entered'}
                     </span>
-                    <span className="text-[#60728A] block text-[11px]">
-                      {values.leaderCollege || values.collegeName} ({values.leaderBranch || values.branch})
+                    <span className="text-[#172B49] font-medium block pt-1 text-[11px]">
+                      {values.leaderCollege || values.collegeName || values.candidateCollege || 'Institution not set'}
+                      {' · '}
+                      {values.leaderBranch || values.branch || values.candidateBranch || 'Branch not set'}
+                      {' (Sem '}{values.leaderSemester || values.semester || values.candidateSemester || '—'}{')'}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleJumpToStep(0)}
-                    className="text-[#4B91E8] hover:underline text-[11px] font-mono font-bold flex items-center gap-1 shrink-0"
-                  >
-                    <Edit2 className="w-3 h-3" /> Edit
-                  </button>
                 </div>
 
-                {/* Track Details Summary */}
-                {(values.projectTitle || values.presentationTitle || values.ideaTitle || values.posterTitle || values.teamName || values.squadName) && (
-                  <div className="flex items-start justify-between gap-2 pb-2 border-b border-[#E2E8F0]/60">
-                    <div>
-                      <span className="text-[#8CA0BA] block text-[11px]">Submission Focus:</span>
-                      <span className="font-bold text-[#172B49]">
-                        {values.projectTitle || values.presentationTitle || values.ideaTitle || values.posterTitle || values.teamName || values.squadName}
-                      </span>
-                      {values.projectTheme && (
-                        <span className="text-[#60728A] block text-[11px]">
-                          Theme: {values.projectTheme}
-                        </span>
-                      )}
-                    </div>
+                {/* Card 2: Track Specifics */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-3 text-left">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+                    <span className="font-mono text-[10px] uppercase font-bold text-[#9187DE]">
+                      Track Deliverables
+                    </span>
                     {steps.some((s) => s.id === 'track') && (
                       <button
                         type="button"
                         onClick={() => handleJumpToStep(1)}
-                        className="text-[#4B91E8] hover:underline text-[11px] font-mono font-bold flex items-center gap-1 shrink-0"
+                        className="text-[#4B91E8] hover:underline text-[11px] font-mono font-bold flex items-center gap-1 cursor-pointer"
                       >
                         <Edit2 className="w-3 h-3" /> Edit
                       </button>
                     )}
                   </div>
+                  <div className="space-y-1">
+                    <span className="font-bold text-[#172B49] block break-words">
+                      {values.projectTitle || values.presentationTitle || values.ideaTitle || values.posterTitle || values.performanceType || values.preferredDomain || config.competitionName}
+                    </span>
+                    {values.projectTheme && (
+                      <span className="text-[#60728A] block text-[11px]">
+                        Theme: {values.projectTheme}
+                      </span>
+                    )}
+                    {values.gameTitle && (
+                      <span className="text-[#60728A] block text-[11px]">
+                        Game Title: {values.gameTitle}
+                      </span>
+                    )}
+                    {values.prn && (
+                      <span className="text-[#60728A] block text-[11px]">
+                        PRN / Roll No: {values.prn}
+                      </span>
+                    )}
+                    {values.cgpa && (
+                      <span className="text-[#60728A] block text-[11px]">
+                        CGPA / %: {values.cgpa}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card 3: Team Roster (If team track) */}
+                {steps.some((s) => s.id === 'team') && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-3 text-left">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+                      <span className="font-mono text-[10px] uppercase font-bold text-[#E07A43]">
+                        Team Composition
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleJumpToStep(steps.findIndex((s) => s.id === 'team'))}
+                        className="text-[#4B91E8] hover:underline text-[11px] font-mono font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Edit2 className="w-3 h-3" /> Edit
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full bg-white border border-[#DCE5F2] text-[10px] font-mono font-bold text-[#172B49]">
+                          {values.teamSize === '1' ? 'Solo (1 Member)' : `${values.teamSize || defaultTeamSize} Members`}
+                        </span>
+                        {values.teamName && (
+                          <span className="font-bold text-[#172B49] text-xs">
+                            {values.teamName}
+                          </span>
+                        )}
+                      </div>
+                      {values.teamSize !== '1' && (
+                        <div className="space-y-1 pt-1.5 text-[11px] text-[#60728A]">
+                          {values.member2Name && <div>• Member 2: <strong className="text-[#172B49]">{values.member2Name}</strong> ({values.member2College || 'Leader College'})</div>}
+                          {values.member3Name && <div>• Member 3: <strong className="text-[#172B49]">{values.member3Name}</strong> ({values.member3College || 'Leader College'})</div>}
+                          {values.member4Name && <div>• Member 4: <strong className="text-[#172B49]">{values.member4Name}</strong> ({values.member4College || 'Leader College'})</div>}
+                          {values.player2Name && <div>• Player 2: <strong className="text-[#172B49]">{values.player2Name}</strong></div>}
+                          {values.player3Name && <div>• Player 3: <strong className="text-[#172B49]">{values.player3Name}</strong></div>}
+                          {values.player4Name && <div>• Player 4: <strong className="text-[#172B49]">{values.player4Name}</strong></div>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
 
-                {/* Team Size */}
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="text-[#8CA0BA] block text-[11px]">Team Composition:</span>
-                    <span className="font-bold text-[#172B49]">
-                      {values.teamSize === '1' ? 'Solo (1 Member)' : `${values.teamSize || defaultTeamSize} Members`}
+                {/* Card 4: Payment / Verification status */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-3 text-left">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+                    <span className="font-mono text-[10px] uppercase font-bold text-emerald-700">
+                      Payment Verification
+                    </span>
+                    <span className="text-[10px] font-mono text-[#8CA0BA]">
+                      {isPaid ? 'Verification Pending' : 'Free Entry'}
                     </span>
                   </div>
-                  {steps.some((s) => s.id === 'team') && (
-                    <button
-                      type="button"
-                      onClick={() => handleJumpToStep(2)}
-                      className="text-[#4B91E8] hover:underline text-[11px] font-mono font-bold flex items-center gap-1 shrink-0"
-                    >
-                      <Edit2 className="w-3 h-3" /> Edit
-                    </button>
-                  )}
+                  <div className="space-y-1 text-[11px]">
+                    <div>
+                      <span className="text-[#8CA0BA] block">Track Fee:</span>
+                      <span className="font-bold text-[#172B49]">{isPaid ? (competition?.registrationFee || '₹300') : 'FREE'}</span>
+                    </div>
+                    {isPaid && values.paymentId && (
+                      <div>
+                        <span className="text-[#8CA0BA] block">Transaction UTR:</span>
+                        <span className="font-mono font-bold text-[#172B49] select-all">{values.paymentId}</span>
+                      </div>
+                    )}
+                    {isPaid && values.paymentProof && (
+                      <div className="pt-0.5">
+                        <span className="text-[#8CA0BA] block">Proof Attachment:</span>
+                        <span className="text-emerald-700 font-bold">✓ Screenshot attached</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Rules & Undertaking Checkbox */}
+            {/* Rules & Undertaking Checkbox Card */}
             <div
-              className={`p-4 rounded-2xl border transition-all ${
+              onClick={() => {
+                const nextState = !acknowledged;
+                setAcknowledged(nextState);
+                if (nextState) {
+                  setErrors((prev) => {
+                    const next = { ...prev };
+                    delete next['_acknowledgment'];
+                    return next;
+                  });
+                }
+              }}
+              className={`p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer text-left select-none ${
                 errors['_acknowledgment']
                   ? 'bg-red-50/40 border-red-300'
-                  : 'bg-white border-[#DCE5F2]'
+                  : acknowledged
+                  ? 'bg-emerald-50/30 border-emerald-300'
+                  : 'bg-white border-[#DCE5F2] hover:border-[#4B91E8]'
               }`}
             >
-              <label className="flex items-start gap-3 cursor-pointer select-none">
+              <div className="flex items-start gap-3.5">
                 <input
                   type="checkbox"
                   checked={acknowledged}
@@ -1500,16 +1799,21 @@ export default function RegistrationForm({
                       });
                     }
                   }}
-                  className="w-4 h-4 mt-0.5 rounded border-[#DCE5F2] text-[#4B91E8] focus:ring-[#4B91E8] shrink-0"
+                  className="w-5 h-5 mt-0.5 rounded border-[#DCE5F2] text-[#4B91E8] focus:ring-[#4B91E8] cursor-pointer shrink-0"
                 />
-                <span className="text-xs text-[#172B49] leading-relaxed">
-                  {config.acknowledgmentLabel}
-                </span>
-              </label>
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-[#172B49] block">
+                    Participant Undertaking &amp; Festival Guidelines
+                  </span>
+                  <span className="text-xs text-[#60728A] leading-relaxed block">
+                    {config.acknowledgmentLabel}
+                  </span>
+                </div>
+              </div>
 
               {errors['_acknowledgment'] && (
-                <p className="flex items-center gap-1 text-[11px] text-red-600 font-medium pt-2 pl-7">
-                  <AlertCircle className="w-3 h-3 shrink-0" />
+                <p className="flex items-center gap-1.5 text-[11px] text-red-600 font-bold pt-2.5 pl-8">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   {errors['_acknowledgment']}
                 </p>
               )}
@@ -1526,7 +1830,7 @@ export default function RegistrationForm({
           <button
             type="button"
             onClick={handlePrevStep}
-            className="nexus-btn-secondary px-5 py-3 text-xs font-bold gap-2"
+            className="nexus-btn-secondary px-6 py-3 min-h-[48px] text-xs font-bold gap-2 cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back</span>
@@ -1539,16 +1843,16 @@ export default function RegistrationForm({
           <button
             type="button"
             onClick={handleNextStep}
-            className="nexus-btn-ink px-6 py-3 text-xs font-bold gap-2 ml-auto"
+            className="nexus-btn-ink px-7 py-3 min-h-[48px] text-xs font-bold gap-2 ml-auto cursor-pointer"
           >
-            <span>Continue</span>
+            <span>Continue to {steps[currentStepIndex + 1]?.shortTitle || 'Next Step'}</span>
             <ArrowRight className="w-3.5 h-3.5 text-[#F5A16F]" />
           </button>
         ) : (
           <button
             type="submit"
             disabled={submissionState === 'submitting'}
-            className="nexus-btn-sunset px-8 py-3.5 text-xs sm:text-sm font-bold gap-2 ml-auto shadow-md disabled:opacity-60"
+            className="nexus-btn-sunset px-8 py-3.5 min-h-[48px] text-xs sm:text-sm font-bold gap-2.5 ml-auto shadow-md disabled:opacity-60 cursor-pointer"
           >
             {submissionState === 'submitting' ? (
               <>

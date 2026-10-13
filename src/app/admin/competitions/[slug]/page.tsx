@@ -3,6 +3,7 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import QRCode from 'qrcode';
 import CompetitionArtworkStudio from '@/components/admin/CompetitionArtworkStudio';
 import CoordinatorManager from '@/components/admin/CoordinatorManager';
 import AdminTimeRangePicker from '@/components/admin/AdminTimeRangePicker';
@@ -152,6 +153,8 @@ export default function CompetitionEditorPage({
     minTeamMembers: 1,
     isPaid: false,
     registrationFee: 'Free',
+    qrMode: 'generate' as 'upload' | 'generate',
+    payeeName: 'TELE-ERA YUGANTAR 2026',
     qrCodeUrl: '',
     upiId: '',
     paymentUrl: '',
@@ -164,8 +167,27 @@ export default function CompetitionEditorPage({
 
   const [associatedSpreadsheet, setAssociatedSpreadsheet] = useState<{ id: string; display_name: string; spreadsheet_url: string } | null>(null);
   const [uploadingQr, setUploadingQr] = useState(false);
+  const [generatedQrDataUrl, setGeneratedQrDataUrl] = useState<string>('');
 
   const [festivalDate, setFestivalDate] = useState('19 October 2026');
+
+  // Generate dynamic QR preview whenever generate mode is active
+  useEffect(() => {
+    if (form.qrMode === 'generate' && form.upiId?.trim()) {
+      const cleanFee = form.registrationFee ? form.registrationFee.replace(/[^0-9]/g, '') : '';
+      const payee = form.payeeName || 'TELE-ERA YUGANTAR 2026';
+      const upiUri = `upi://pay?pa=${encodeURIComponent(form.upiId.trim())}&pn=${encodeURIComponent(payee.trim())}${cleanFee ? `&am=${cleanFee}` : ''}&cu=INR`;
+      QRCode.toDataURL(upiUri, {
+        width: 260,
+        margin: 1,
+        color: { dark: '#172B49', light: '#FFFFFF' },
+      })
+        .then(setGeneratedQrDataUrl)
+        .catch(() => setGeneratedQrDataUrl(''));
+    } else {
+      setGeneratedQrDataUrl('');
+    }
+  }, [form.qrMode, form.upiId, form.payeeName, form.registrationFee]);
 
   // Dynamic Lists State
   const [scheduleFlow, setScheduleFlow] = useState<ScheduleItem[]>([]);
@@ -254,6 +276,8 @@ export default function CompetitionEditorPage({
         minTeamMembers: c.min_team_members || 1,
         isPaid: Boolean(c.is_paid),
         registrationFee: c.registration_fee || 'Free',
+        qrMode: c.qr_mode || (c.qr_code_url ? 'upload' : 'generate'),
+        payeeName: c.payee_name || 'TELE-ERA YUGANTAR 2026',
         qrCodeUrl: c.qr_code_url || '',
         upiId: c.upi_id || '',
         paymentUrl: c.payment_url || '',
@@ -378,6 +402,26 @@ export default function CompetitionEditorPage({
     setError(null);
 
     const isPublished = publishState !== undefined ? publishState : form.isPublished;
+
+    // Guard: Prevent publishing paid track with incomplete configuration
+    if (isPublished === 1 && form.isPaid) {
+      const fee = form.registrationFee?.trim();
+      if (!fee || fee.toLowerCase() === 'free') {
+        setError('Cannot publish paid competition without specifying a registration fee.');
+        setSaving(false);
+        return;
+      }
+      if (form.qrMode === 'upload' && !form.qrCodeUrl?.trim()) {
+        setError('Cannot publish paid competition in "Upload QR" mode without uploading a QR image.');
+        setSaving(false);
+        return;
+      }
+      if (form.qrMode === 'generate' && !form.upiId?.trim()) {
+        setError('Cannot publish paid competition in "Generate QR" mode without configuring a valid UPI ID.');
+        setSaving(false);
+        return;
+      }
+    }
 
     try {
       const payload = {
@@ -1080,20 +1124,38 @@ export default function CompetitionEditorPage({
                       </h4>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono text-slate-500">Track Fee Mode:</span>
+                      <span className="text-[11px] font-mono text-slate-500">Registration Mode:</span>
                       <button
                         type="button"
                         onClick={() => updateFormField('isPaid', !form.isPaid)}
-                        className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
                           form.isPaid
                             ? 'bg-[#E07A43] text-white shadow-2xs'
                             : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
                         }`}
                       >
-                        {form.isPaid ? 'Paid Competition' : 'Free Competition'}
+                        {form.isPaid ? '● Paid Competition' : '○ Free Competition'}
                       </button>
                     </div>
                   </div>
+
+                  {/* Actionable Warning if Paid Mode is Active with Incomplete Configuration */}
+                  {form.isPaid && (!form.registrationFee || form.registrationFee === 'Free' || (form.qrMode === 'upload' && !form.qrCodeUrl) || (form.qrMode === 'generate' && !form.upiId)) && (
+                    <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <span className="font-bold block uppercase tracking-wider text-[11px]">Action Required: Incomplete Payment Configuration</span>
+                        <p className="text-[11px] leading-relaxed">
+                          {!form.registrationFee || form.registrationFee === 'Free'
+                            ? 'Please specify the registration fee amount.'
+                            : form.qrMode === 'upload' && !form.qrCodeUrl
+                            ? 'Option 1 (Upload QR) is active, but no QR image has been uploaded or specified.'
+                            : 'Option 2 (Generate QR) is active, but no UPI ID has been configured.'}
+                          {' '}Publication to the live website will be blocked until complete.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {form.isPaid ? (
                     <div className="space-y-4 animate-in fade-in duration-200">
@@ -1106,107 +1168,188 @@ export default function CompetitionEditorPage({
                             type="text"
                             value={form.registrationFee}
                             onChange={(e) => updateFormField('registrationFee', e.target.value)}
-                            placeholder="e.g. ₹200 per team, ₹100 per person"
+                            placeholder="e.g. ₹300 per team, ₹100 per person"
                             className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
                           />
                         </div>
 
                         <div className="space-y-1.5">
                           <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
-                            UPI ID / VPA
+                            Recipient / Payee Name
                           </label>
                           <input
                             type="text"
-                            value={form.upiId}
-                            onChange={(e) => updateFormField('upiId', e.target.value)}
-                            placeholder="e.g. teleera@oksbi or 9876543210@paytm"
-                            className="w-full px-3 py-2 rounded-xl admin-glass-panel font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                            value={form.payeeName}
+                            onChange={(e) => updateFormField('payeeName', e.target.value)}
+                            placeholder="e.g. TELE-ERA YUGANTAR 2026"
+                            className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
                           />
                         </div>
 
                         <div className="space-y-1.5">
                           <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
-                            Payment URL / UPI Deep Link (Optional)
-                          </label>
-                          <input
-                            type="text"
-                            value={form.paymentUrl}
-                            onChange={(e) => updateFormField('paymentUrl', e.target.value)}
-                            placeholder="upi://pay?pa=... or payment portal link"
-                            className="w-full px-3 py-2 rounded-xl admin-glass-panel font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
-                            Payment Instructions
+                            Payment Instructions for Delegates
                           </label>
                           <input
                             type="text"
                             value={form.paymentInstructions}
                             onChange={(e) => updateFormField('paymentInstructions', e.target.value)}
-                            placeholder="e.g. Mention Team Name in payment notes"
+                            placeholder="e.g. Mention Team Name in payment notes / remark"
                             className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
+                            Direct Payment Portal / External URL (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={form.paymentUrl}
+                            onChange={(e) => updateFormField('paymentUrl', e.target.value)}
+                            placeholder="https://... or upi://pay?pa=..."
+                            className="w-full px-3 py-2 rounded-xl admin-glass-panel font-mono text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
                           />
                         </div>
                       </div>
 
-                      {/* QR Code Section */}
-                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-800/60 border border-black/5 dark:border-white/5 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
-                            <QrCode className="w-4 h-4 text-blue-500" />
-                            <span>Payment QR Code</span>
-                          </span>
-                          {form.qrCodeUrl && (
+                      {/* Payment QR Code: 2 Selectable Options */}
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-800/60 border border-black/5 dark:border-white/5 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-black/5 dark:border-white/10">
+                          <div>
+                            <span className="font-bold text-xs text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                              <QrCode className="w-4 h-4 text-blue-500" />
+                              <span>Payment QR Delivery Method</span>
+                            </span>
+                            <span className="text-[11px] text-slate-500 block">
+                              Choose between uploading a custom bank QR code or generating an instant UPI QR code.
+                            </span>
+                          </div>
+
+                          {/* Method Selector Tabs */}
+                          <div className="flex items-center gap-1 bg-black/5 dark:bg-white/10 p-1 rounded-xl">
                             <button
                               type="button"
-                              onClick={() => updateFormField('qrCodeUrl', '')}
-                              className="text-[11px] font-mono text-rose-500 hover:underline flex items-center gap-1"
+                              onClick={() => updateFormField('qrMode', 'upload')}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                                form.qrMode === 'upload'
+                                  ? 'bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-2xs'
+                                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+                              }`}
                             >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Remove QR</span>
+                              Option 1: Upload QR
                             </button>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row items-center gap-4">
-                          {form.qrCodeUrl ? (
-                            <div className="relative w-28 h-28 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white p-1 shrink-0">
-                              <img
-                                src={form.qrCodeUrl}
-                                alt="Payment QR Code preview"
-                                className="w-full h-full object-contain"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-28 h-28 rounded-xl border border-dashed border-slate-300 dark:border-neutral-700 flex flex-col items-center justify-center text-slate-400 shrink-0">
-                              <QrCode className="w-8 h-8 opacity-40 mb-1" />
-                              <span className="text-[10px] font-mono">No QR Image</span>
-                            </div>
-                          )}
-
-                          <div className="flex-1 space-y-2 w-full">
-                            <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-black/10 dark:border-white/10 hover:border-blue-500 cursor-pointer text-xs font-mono font-bold text-slate-700 dark:text-zinc-200 transition">
-                              <Upload className="w-3.5 h-3.5 text-blue-500" />
-                              <span>{uploadingQr ? 'Uploading QR...' : 'Upload QR Image'}</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleQrUpload}
-                                disabled={uploadingQr}
-                                className="hidden"
-                              />
-                            </label>
-                            <input
-                              type="url"
-                              value={form.qrCodeUrl}
-                              onChange={(e) => updateFormField('qrCodeUrl', e.target.value)}
-                              placeholder="Or paste QR Image URL..."
-                              className="w-full px-3 py-1.5 text-xs font-mono rounded-lg admin-glass-panel text-slate-900 dark:text-white"
-                            />
+                            <button
+                              type="button"
+                              onClick={() => updateFormField('qrMode', 'generate')}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                                form.qrMode === 'generate'
+                                  ? 'bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 shadow-2xs'
+                                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+                              }`}
+                            >
+                              Option 2: Generate QR
+                            </button>
                           </div>
                         </div>
+
+                        {/* OPTION 1: Upload QR Image */}
+                        {form.qrMode === 'upload' && (
+                          <div className="space-y-3 animate-in fade-in duration-150">
+                            <div className="flex flex-col sm:flex-row items-center gap-4">
+                              {form.qrCodeUrl ? (
+                                <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white p-1.5 shrink-0 shadow-sm text-center">
+                                  <img
+                                    src={form.qrCodeUrl}
+                                    alt="Payment QR Code preview"
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-32 h-32 rounded-xl border border-dashed border-slate-300 dark:border-neutral-700 flex flex-col items-center justify-center text-slate-400 shrink-0 bg-white dark:bg-neutral-900">
+                                  <QrCode className="w-8 h-8 opacity-40 mb-1" />
+                                  <span className="text-[10px] font-mono">No Image Uploaded</span>
+                                </div>
+                              )}
+
+                              <div className="flex-1 space-y-2.5 w-full">
+                                <div className="flex items-center gap-2">
+                                  <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-black/10 dark:border-white/10 hover:border-blue-500 cursor-pointer text-xs font-mono font-bold text-slate-700 dark:text-zinc-200 transition shadow-2xs">
+                                    <Upload className="w-3.5 h-3.5 text-blue-500" />
+                                    <span>{uploadingQr ? 'Uploading QR...' : 'Upload QR Image'}</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={handleQrUpload}
+                                      disabled={uploadingQr}
+                                      className="hidden"
+                                    />
+                                  </label>
+                                  {form.qrCodeUrl && (
+                                    <button
+                                      type="button"
+                                      onClick={() => updateFormField('qrCodeUrl', '')}
+                                      className="px-3 py-2 rounded-xl text-xs font-mono font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 flex items-center gap-1.5 transition cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span>Remove</span>
+                                    </button>
+                                  )}
+                                </div>
+                                <input
+                                  type="url"
+                                  value={form.qrCodeUrl}
+                                  onChange={(e) => updateFormField('qrCodeUrl', e.target.value)}
+                                  placeholder="Or paste QR Image URL..."
+                                  className="w-full px-3 py-2 text-xs font-mono rounded-xl admin-glass-panel text-slate-900 dark:text-white"
+                                />
+                                <span className="text-[11px] text-slate-500 block">
+                                  This exact uploaded image will be rendered on the participant payment step.
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* OPTION 2: Generate QR Code (Dynamic UPI) */}
+                        {form.qrMode === 'generate' && (
+                          <div className="space-y-3 animate-in fade-in duration-150">
+                            <div className="flex flex-col sm:flex-row items-center gap-4">
+                              {generatedQrDataUrl ? (
+                                <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white p-1.5 shrink-0 shadow-sm text-center">
+                                  <img
+                                    src={generatedQrDataUrl}
+                                    alt="Dynamically Generated UPI QR Code"
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-32 h-32 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/40 flex flex-col items-center justify-center text-amber-600 shrink-0 bg-white dark:bg-neutral-900 p-2 text-center">
+                                  <QrCode className="w-8 h-8 opacity-40 mb-1" />
+                                  <span className="text-[10px] font-mono leading-tight">Enter UPI ID to generate</span>
+                                </div>
+                              )}
+
+                              <div className="flex-1 space-y-2.5 w-full">
+                                <div className="space-y-1">
+                                  <label className="text-xs font-semibold text-slate-800 dark:text-zinc-200 block">
+                                    Official UPI ID / VPA *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={form.upiId}
+                                    onChange={(e) => updateFormField('upiId', e.target.value)}
+                                    placeholder="e.g. teleera@oksbi or studentforum@icici"
+                                    className="w-full px-3 py-2 text-xs font-mono rounded-xl admin-glass-panel text-slate-900 dark:text-white"
+                                  />
+                                </div>
+                                <p className="text-[11px] text-slate-500 leading-relaxed">
+                                  Dynamic QR code is generated securely from recipient name (<code>{form.payeeName || 'TELE-ERA'}</code>), UPI ID, and amount. Delegates scanning with Google Pay, PhonePe, or Paytm will have the exact payee and fee prefilled.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Toggles: UTR & Screenshot */}
@@ -1237,8 +1380,8 @@ export default function CompetitionEditorPage({
                       </div>
                     </div>
                   ) : (
-                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 text-xs text-emerald-800 dark:text-emerald-300">
-                      ✓ Free track configured. Payment step, QR code, UTR, and screenshot fields are completely omitted from the registration form.
+                    <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 text-xs text-emerald-800 dark:text-emerald-300">
+                      ✓ Free track configured. Payment step, QR code, UTR, and screenshot fields are completely omitted from the registration form and public delegate pass.
                     </div>
                   )}
                 </div>

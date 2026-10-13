@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { FAQS as STATIC_FAQS, FESTIVAL_INFO } from '@/data/events';
@@ -9,6 +10,7 @@ import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import {
   HelpCircle,
   ChevronRight,
+  ChevronDown,
   AlertCircle,
   ArrowRight,
   Search,
@@ -20,6 +22,11 @@ export default function FaqPage() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [festivalDate, setFestivalDate] = useState<string>(FESTIVAL_INFO.date);
+  const [openIndexes, setOpenIndexes] = useState<Record<number, boolean>>({ 0: true, 1: true });
+
+  const toggleAccordion = (idx: number) => {
+    setOpenIndexes((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  };
 
   useEffect(() => {
     fetch('/api/faqs')
@@ -63,8 +70,20 @@ export default function FaqPage() {
     <div className="min-h-screen bg-[#F8FAFD] flex flex-col">
       <Navbar />
 
-      {/* Hero Header */}
-      <section className="relative pt-28 sm:pt-36 lg:pt-40 pb-14 sm:pb-16 bg-gradient-to-b from-[#EDF5FC] via-[#F4F9FD] to-[#F8FAFD] border-b border-[#DCE5F2] overflow-hidden">
+      {/* Hero Header with Atmospheric Background */}
+      <section className="relative pt-24 sm:pt-32 lg:pt-36 pb-12 sm:pb-16 bg-gradient-to-b from-[#EDF5FC] via-[#F4F9FD] to-[#F8FAFD] border-b border-[#DCE5F2] overflow-hidden">
+        {/* Supplied Atmospheric Clouds Asset */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-25 sm:opacity-35">
+          <Image
+            src="/images/nexus-city/atmospheric-clouds.webp"
+            alt="YUGANTAR 2026 Atmospheric Sky"
+            fill
+            priority
+            className="object-cover object-top"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/85 via-[#F4F9FD]/90 to-[#F8FAFD]" />
+        </div>
+
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#3B82F6]/10 via-[#9187DE]/8 to-transparent rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -153,29 +172,44 @@ export default function FaqPage() {
             </div>
           </div>
 
-          {/* FAQ Items List */}
-          <div className="space-y-4">
+          {/* FAQ Items List with Accessible Accordion */}
+          <div className="space-y-3.5">
             {filteredFaqs.length > 0 ? (
-              filteredFaqs.map((faq, index) => (
-                <div
-                  key={index}
-                  className="nexus-card p-6 sm:p-7 hover:border-[#4B91E8]/40 transition-all"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#EDF5FC] text-[#4B91E8] border border-[#DCE5F2]">
-                      {faq.category || 'General'}
-                    </span>
+              filteredFaqs.map((faq, index) => {
+                const isOpen = Boolean(openIndexes[index]);
+                return (
+                  <div
+                    key={index}
+                    className="bg-white rounded-2xl border border-[#DCE5F2] overflow-hidden transition-all hover:border-[#B8D5F8] shadow-2xs"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleAccordion(index)}
+                      className="w-full p-5 sm:p-6 text-left flex items-start justify-between gap-4 focus:outline-none"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#EDF5FC] text-[#4B91E8] border border-[#B8D5F8]">
+                            {faq.category || 'General'}
+                          </span>
+                        </div>
+                        <h3 className="text-sm sm:text-base font-display font-bold text-[#172B49]">
+                          {faq.question}
+                        </h3>
+                      </div>
+                      <div className={`p-2 rounded-xl bg-[#F8FAFD] border border-[#E2E8F0] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 bg-[#EDF5FC] text-[#4B91E8]' : 'text-[#8CA0BA]'}`}>
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
+                    </button>
+
+                    {isOpen && (
+                      <div className="px-5 sm:px-6 pb-6 pt-1 text-xs sm:text-sm text-[#60728A] leading-relaxed border-t border-[#F1F5F9] animate-in fade-in duration-150">
+                        {faq.answer}
+                      </div>
+                    )}
                   </div>
-
-                  <h3 className="text-base sm:text-lg font-display font-bold text-[#172B49] mb-3">
-                    {faq.question}
-                  </h3>
-
-                  <p className="text-xs sm:text-sm text-[#60728A] leading-relaxed font-normal">
-                    {faq.answer}
-                  </p>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-[#DCE5F2]">
                 <HelpCircle className="w-8 h-8 text-[#8CA0BA] mx-auto mb-3" />

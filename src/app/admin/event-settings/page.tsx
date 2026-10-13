@@ -13,6 +13,14 @@ import {
   Upload,
   ExternalLink,
   Globe,
+  AlertTriangle,
+  Database,
+  FileSpreadsheet,
+  ShieldAlert,
+  ShieldCheck,
+  Info,
+  MessageCircle,
+  AlertCircle,
 } from 'lucide-react';
 import AdminDatePicker from '@/components/admin/AdminDatePicker';
 
@@ -33,6 +41,7 @@ export default function EventSettingsPage() {
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'identity' | 'venue' | 'assets' | 'registration' | 'footer'>('identity');
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [showCloseWarningModal, setShowCloseWarningModal] = useState(false);
 
   useEffect(() => {
     fetch('/api/admin/settings')
@@ -423,61 +432,297 @@ export default function EventSettingsPage() {
         </div>
       )}
 
-      {/* Tab 4: Global Registration Gateway */}
+      {/* Tab 4: Global Registration Gateway & Data Storage Control */}
       {activeTab === 'registration' && (
-        <div className="admin-glass-panel rounded-2xl p-6 space-y-6 shadow-sm">
-          <div className="flex items-center justify-between p-4 rounded-xl admin-glass-card border border-black/10 dark:border-white/10">
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Global Registration Master Switch
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-zinc-400 mt-0.5">
-                When turned off, registration forms across all competitions are disabled.
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* A. Global Registration Gateway Card */}
+          <div className="admin-glass-panel rounded-2xl p-6 space-y-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl admin-glass-card border border-black/10 dark:border-white/10">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-blue-500" />
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
+                    Global Registration Master Switch
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-zinc-400">
+                  Authoritative festival-wide gateway. When disabled, all new registrations are rejected by the server across every competition.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (editedValues['registration_global_open'] === '1') {
+                    setShowCloseWarningModal(true);
+                  } else {
+                    setEditedValues({
+                      ...editedValues,
+                      registration_global_open: '1',
+                    });
+                  }
+                }}
+                className={`px-4 py-2.5 rounded-xl text-xs font-mono font-bold transition cursor-pointer shadow-sm shrink-0 ${
+                  editedValues['registration_global_open'] === '1'
+                    ? 'bg-emerald-600 text-white shadow-emerald-500/20'
+                    : 'bg-rose-600 text-white shadow-rose-500/20'
+                }`}
+              >
+                {editedValues['registration_global_open'] === '1' ? '● GATEWAY ACTIVE (OPEN)' : '○ GATEWAY CLOSED'}
+              </button>
+            </div>
+
+            {/* Interaction Clarity Notice */}
+            <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-900 dark:text-blue-300 text-xs flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-[11px] leading-relaxed">
+                <span className="font-bold block uppercase tracking-wider">Gateway Precedence &amp; Overrides</span>
+                <p>
+                  • When Global Gateway is <strong>Active (Open)</strong>: individual competitions can still be closed independently via their respective editor without affecting other tracks.
+                </p>
+                <p>
+                  • When Global Gateway is <strong>Closed</strong>: all registrations across the entire festival are immediately blocked and rejected on the server, regardless of individual track status.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+                  Public Closure Announcement Message
+                </label>
+                <input
+                  type="text"
+                  value={editedValues['registration_status_message'] ?? ''}
+                  onChange={(e) =>
+                    setEditedValues({ ...editedValues, registration_status_message: e.target.value })
+                  }
+                  placeholder="e.g. Official registrations are currently closed by festival administration."
+                  className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs"
+                />
+              </div>
+
+              <div>
+                <AdminDatePicker
+                  label="Registration Closure Deadline Date & Time"
+                  value={editedValues['registration_deadline'] ?? ''}
+                  onChange={(displayDate) =>
+                    setEditedValues({ ...editedValues, registration_deadline: displayDate })
+                  }
+                  includeTime={true}
+                  placeholder="Set registration closure deadline..."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* B & C. Database Storage & Retention Control Panel */}
+          <div className="admin-glass-panel rounded-2xl p-6 space-y-5 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-purple-500" />
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
+                  Database Storage &amp; Data-Retention Control Panel
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold border border-purple-500/20">
+                TiDB Storage Governance
+              </span>
+            </div>
+
+            {/* Recommended Configuration Box */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-sky-500/10 border border-emerald-500/20 space-y-1.5">
+              <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs font-mono uppercase tracking-wider">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Recommended Architectural Configuration</span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-zinc-300 leading-relaxed">
+                <strong>Full Responses in TiDB: OFF</strong> · <strong>Minimal Operational Metadata: ON</strong> · <strong>Spreadsheet Submission: ON</strong>.
+                This prevents unnecessary database duplication, ensures maximum participant privacy, and lets Google Sheets handle the official response logs while retaining essential verification tokens.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() =>
-                setEditedValues({
-                  ...editedValues,
-                  registration_global_open: (editedValues['registration_global_open'] === '1' ? '0' : '1'),
-                })
-              }
-              className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition cursor-pointer ${
-                editedValues['registration_global_open'] === '1'
-                  ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                  : 'bg-rose-600 text-white shadow-rose-500/20'
-              }`}
-            >
-              {editedValues['registration_global_open'] === '1' ? 'GATEWAY ACTIVE (OPEN)' : 'GATEWAY CLOSED'}
-            </button>
+
+            {/* 3 Explicit Storage Toggles */}
+            <div className="space-y-4 pt-1">
+              {/* Setting 1: Full Responses in TiDB */}
+              <div className="p-4 rounded-xl admin-glass-card border border-black/10 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1 max-w-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white font-mono">
+                      1. Save Full Form Responses to TiDB
+                    </span>
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-bold ${
+                      editedValues['save_full_responses'] === '1'
+                        ? 'bg-amber-500/10 text-amber-600'
+                        : 'bg-emerald-500/10 text-emerald-600'
+                    }`}>
+                      {editedValues['save_full_responses'] === '1' ? 'ACTIVE (Storing Full JSON)' : 'DISABLED (Recommended)'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">
+                    <strong>Consequence:</strong> When enabled, duplicates the entire form answer JSON payload into the <code>registrations.form_data</code> column in TiDB. When disabled, full answers are omitted from the database to keep TiDB storage clean and preserve privacy.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditedValues({
+                      ...editedValues,
+                      save_full_responses: editedValues['save_full_responses'] === '1' ? '0' : '1',
+                      registration_storage_mode: editedValues['save_full_responses'] === '1' ? 'minimal' : 'full',
+                    })
+                  }
+                  className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition cursor-pointer shrink-0 ${
+                    editedValues['save_full_responses'] === '1'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-slate-200 dark:bg-neutral-800 text-slate-700 dark:text-zinc-300'
+                  }`}
+                >
+                  {editedValues['save_full_responses'] === '1' ? 'FULL STORAGE: ON' : 'FULL STORAGE: OFF'}
+                </button>
+              </div>
+
+              {/* Setting 2: Minimal Operational Metadata */}
+              <div className="p-4 rounded-xl admin-glass-card border border-black/10 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1 max-w-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white font-mono">
+                      2. Save Minimal Operational Metadata to TiDB
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 font-bold">
+                      Essential Core
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">
+                    <strong>Consequence:</strong> Retains only required operational columns (Registration ID, competition slug, team leader name, contact email, payment UTR, payment verification status, and cryptographic verification token). Required for live pass lookup, campus gate QR verification, and duplicate prevention.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditedValues({
+                      ...editedValues,
+                      save_minimal_metadata: editedValues['save_minimal_metadata'] === '0' ? '1' : '0',
+                    })
+                  }
+                  className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition cursor-pointer shrink-0 ${
+                    editedValues['save_minimal_metadata'] !== '0'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-rose-600 text-white'
+                  }`}
+                >
+                  {editedValues['save_minimal_metadata'] !== '0' ? 'MINIMAL METADATA: ON' : 'METADATA: OFF'}
+                </button>
+              </div>
+
+              {/* Setting 3: Spreadsheet Submission Workflow */}
+              <div className="p-4 rounded-xl admin-glass-card border border-black/10 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1 max-w-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white font-mono">
+                      3. Send Detailed Responses to Spreadsheet Workflow
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-600 font-bold">
+                      External Pipeline
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">
+                    <strong>Consequence:</strong> When active, forwards every registration response directly to the official Google Forms endpoint linked to each competition track. All complete questions, team rosters, and uploaded file URLs land directly in Department Google Sheets.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditedValues({
+                      ...editedValues,
+                      send_to_spreadsheet: editedValues['send_to_spreadsheet'] === '0' ? '1' : '0',
+                    })
+                  }
+                  className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition cursor-pointer shrink-0 ${
+                    editedValues['send_to_spreadsheet'] !== '0'
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-slate-200 dark:bg-neutral-800 text-slate-700 dark:text-zinc-300'
+                  }`}
+                >
+                  {editedValues['send_to_spreadsheet'] !== '0' ? 'SHEETS SYNC: ON' : 'SHEETS SYNC: OFF'}
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
-              Public Status Announcement / Notification Message
-            </label>
-            <input
-              type="text"
-              value={editedValues['registration_status_message'] ?? ''}
-              onChange={(e) =>
-                setEditedValues({ ...editedValues, registration_status_message: e.target.value })
-              }
-              className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs"
-            />
+          {/* D. Global WhatsApp Community & Support */}
+          <div className="admin-glass-panel rounded-2xl p-6 space-y-4 shadow-sm">
+            <div className="flex items-center gap-2 pb-2 border-b border-black/10 dark:border-white/10">
+              <MessageCircle className="w-4 h-4 text-emerald-500" />
+              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
+                Global WhatsApp Community Gateway
+              </h3>
+            </div>
+            <div>
+              <label className="text-xs font-mono text-slate-600 dark:text-zinc-400 block mb-1 font-semibold">
+                Global Official WhatsApp Community / Group Link (Fallback)
+              </label>
+              <input
+                type="url"
+                value={editedValues['global_whatsapp_link'] ?? ''}
+                onChange={(e) =>
+                  setEditedValues({ ...editedValues, global_whatsapp_link: e.target.value })
+                }
+                placeholder="https://chat.whatsapp.com/..."
+                className="admin-glass-input w-full px-3.5 py-2.5 rounded-xl text-xs font-mono"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                This community link is presented on the registration confirmation view when an arena does not have an individual WhatsApp group configured.
+              </p>
+            </div>
           </div>
 
-          <div className="pt-2">
-            <AdminDatePicker
-              label="Registration Deadline Date & Time"
-              value={editedValues['registration_deadline'] ?? ''}
-              onChange={(displayDate) =>
-                setEditedValues({ ...editedValues, registration_deadline: displayDate })
-              }
-              includeTime={true}
-              placeholder="Set registration closure deadline..."
-            />
+          {/* E. Configuration Audit Log Stamp */}
+          <div className="p-4 rounded-xl bg-slate-100 dark:bg-neutral-900 border border-black/5 dark:border-white/5 text-[11px] font-mono text-slate-500 flex flex-wrap items-center justify-between gap-2">
+            <span>Governance Policy: Minimal TiDB Storage + Direct Sheets Dispatch</span>
+            <span>Last Inspected: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
           </div>
+
+          {/* Warning Modal when Disabling Global Registration */}
+          {showCloseWarningModal && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-3xl p-6 border border-rose-200 dark:border-rose-900/40 shadow-2xl space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/30 text-rose-600 flex items-center justify-center mx-auto">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <div className="text-center space-y-1.5">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Close Global Registration Gateway?
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+                    Disabling the global registration switch will immediately close registration across <strong>all eight competition tracks</strong>. Any delegate attempting to submit will receive an HTTP 403 response.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCloseWarningModal(false)}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-xs font-mono font-bold bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditedValues({
+                        ...editedValues,
+                        registration_global_open: '0',
+                      });
+                      setShowCloseWarningModal(false);
+                    }}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-xs font-mono font-bold bg-rose-600 hover:bg-rose-700 text-white transition cursor-pointer shadow-sm"
+                  >
+                    Confirm &amp; Disable
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

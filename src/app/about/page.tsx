@@ -95,6 +95,18 @@ async function AboutContent() {
           <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/90 via-[#F8FAFD]/95 to-[#F8FAFD]" />
         </div>
 
+        {/* Desktop-Specific Supplied Architectural Panoramic Background Asset */}
+        <div className="hidden sm:block absolute inset-0 z-0 pointer-events-none opacity-25">
+          <Image
+            src="/images/nexus-city/hero-panoramic-city.webp"
+            alt="YUGANTAR 2026 NEXUS Architecture Panoramic"
+            fill
+            priority
+            className="object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/80 via-[#F8FAFD]/90 to-[#F8FAFD]" />
+        </div>
+
         {/* Ambient atmospheric lighting on desktop */}
         <div className="hidden sm:block absolute -top-32 -right-32 w-96 h-96 bg-[#FFEFE3] rounded-full blur-3xl pointer-events-none opacity-80" />
         <div className="hidden sm:block absolute top-10 left-1/4 w-80 h-80 bg-[#E9F2FF] rounded-full blur-3xl pointer-events-none opacity-60" />

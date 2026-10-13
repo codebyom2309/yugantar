@@ -113,6 +113,33 @@ export async function PUT(request: NextRequest, context: ContextProps) {
       return JSON.stringify(val);
     };
 
+    const willBePaid = body.isPaid !== undefined ? Boolean(body.isPaid) : false;
+    const willBePublished = body.isPublished !== undefined ? Boolean(body.isPublished) : false;
+    if (willBePublished && willBePaid) {
+      const fee = body.registrationFee ? String(body.registrationFee).trim() : '';
+      const qrMode = body.qrMode || 'generate';
+      const upiId = body.upiId ? String(body.upiId).trim() : '';
+      const qrCodeUrl = body.qrCodeUrl ? String(body.qrCodeUrl).trim() : '';
+      if (!fee || fee.toLowerCase() === 'free') {
+        return NextResponse.json(
+          { error: 'Cannot publish paid competition without a valid registration fee.' },
+          { status: 400 }
+        );
+      }
+      if (qrMode === 'upload' && !qrCodeUrl) {
+        return NextResponse.json(
+          { error: 'Cannot publish paid competition with QR Upload mode without uploading a QR image.' },
+          { status: 400 }
+        );
+      }
+      if (qrMode === 'generate' && !upiId) {
+        return NextResponse.json(
+          { error: 'Cannot publish paid competition with QR Generate mode without configuring a valid UPI ID.' },
+          { status: 400 }
+        );
+      }
+    }
+
     await db.execute(
       `UPDATE competitions SET
         name = COALESCE(?, name),
@@ -155,6 +182,8 @@ export async function PUT(request: NextRequest, context: ContextProps) {
         custom_sections = COALESCE(?, custom_sections),
         is_paid = COALESCE(?, is_paid),
         registration_fee = COALESCE(?, registration_fee),
+        qr_mode = CASE WHEN ? = 1 THEN ? ELSE qr_mode END,
+        payee_name = CASE WHEN ? = 1 THEN ? ELSE payee_name END,
         qr_code_url = CASE WHEN ? = 1 THEN ? ELSE qr_code_url END,
         upi_id = CASE WHEN ? = 1 THEN ? ELSE upi_id END,
         payment_url = CASE WHEN ? = 1 THEN ? ELSE payment_url END,
@@ -212,6 +241,10 @@ export async function PUT(request: NextRequest, context: ContextProps) {
         body.customSections ? serializeJson(body.customSections, '[]') : null,
         body.isPaid !== undefined ? (body.isPaid ? 1 : 0) : null,
         body.registrationFee ?? null,
+        body.qrMode !== undefined ? 1 : 0,
+        body.qrMode || 'generate',
+        body.payeeName !== undefined ? 1 : 0,
+        body.payeeName || 'TELE-ERA YUGANTAR 2026',
         body.qrCodeUrl !== undefined ? 1 : 0,
         body.qrCodeUrl || null,
         body.upiId !== undefined ? 1 : 0,

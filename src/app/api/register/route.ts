@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getRegistrationFormBySlug } from '@/data/registrationForms';
 import { randomUUID } from 'crypto';
+import { signPassToken, PassMemberInfo } from '@/lib/passToken';
 
 // ---------------------------------------------------------------------------
 // POST /api/register — Submit registration for a competition
@@ -60,11 +61,14 @@ export async function POST(request: NextRequest) {
     let compWhatsApp: string | null = null;
     let confirmationInstructions: string | null = null;
     let storageMode = 'minimal';
+    let saveMinimalMetadata = true;
+    let saveFullResponses = false;
+    let sendToSpreadsheet = true;
     let globalWhatsApp: string | null = null;
 
     try {
       const siteSettings = await db.query<{ setting_key: string; setting_value: string }>(
-        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('registration_global_open', 'registration_status_message', 'registration_storage_mode', 'global_whatsapp_link')"
+        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('registration_global_open', 'registration_status_message', 'registration_storage_mode', 'save_minimal_metadata', 'save_full_responses', 'send_to_spreadsheet', 'global_whatsapp_link')"
       );
       const settingsMap: Record<string, string> = {};
       siteSettings.forEach((r) => {
@@ -73,6 +77,15 @@ export async function POST(request: NextRequest) {
 
       if (settingsMap.registration_storage_mode) {
         storageMode = settingsMap.registration_storage_mode;
+      }
+      if (settingsMap.save_minimal_metadata !== undefined) {
+        saveMinimalMetadata = settingsMap.save_minimal_metadata !== '0';
+      }
+      if (settingsMap.save_full_responses !== undefined) {
+        saveFullResponses = settingsMap.save_full_responses === '1';
+      }
+      if (settingsMap.send_to_spreadsheet !== undefined) {
+        sendToSpreadsheet = settingsMap.send_to_spreadsheet !== '0';
       }
       if (settingsMap.global_whatsapp_link) {
         globalWhatsApp = settingsMap.global_whatsapp_link;
@@ -271,15 +284,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Generate persistent registration ID and secure verification token
+    // Extract team members for multi-member registrations
+    const members: PassMemberInfo[] = [];
+    for (let i = 2; i <= 4; i++) {
+      const mName = safeFormValues[`member${i}Name`]?.trim();
+      if (mName) {
+        members.push({
+          name: mName,
+          college: safeFormValues[`member${i}College`]?.trim() || leaderCollege || undefined,
+          branch: safeFormValues[`member${i}Branch`]?.trim() || leaderBranch || undefined,
+          semester: safeFormValues[`member${i}Semester`]?.trim() || leaderSemester || undefined,
+        });
+      }
+    }
+
+    // 4. Generate persistent registration ID, secure verification token, and stateless pass token
     const registrationId = randomUUID();
     const verificationToken = 'yug_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
     const initialPaymentStatus = isPaid ? 'pending' : 'free';
     const effectivePaymentId = paymentId || null;
     const effectivePaymentProof = paymentProof || null;
-    const formDataPayload = storageMode === 'full' ? JSON.stringify(formValues) : null;
+    const formDataPayload = (saveFullResponses || storageMode === 'full') ? JSON.stringify(formValues) : null;
 
-    // 5. Initial save to database
+    const passToken = signPassToken({
+      id: registrationId,
+      slug: formConfig.competitionSlug,
+      leaderName,
+      teamName: teamName || null,
+      teamSize,
+      members,
+    });
+
+    // 5. Initial save to database (stores minimal metadata or full form data as configured)
     let dbSaveSuccess = false;
     try {
       await db.execute(
@@ -328,75 +364,80 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Real Google Forms submission via verified formResponseUrl
+    // 6. Google Forms submission via verified formResponseUrl (if spreadsheet sync enabled)
     let googleSubmitSuccess = false;
     let googleSubmitError: string | null = null;
     let confirmationEvidence: string | null = null;
 
-    try {
-      const googleFormData = new URLSearchParams();
+    if (!sendToSpreadsheet) {
+      googleSubmitSuccess = true;
+      confirmationEvidence = 'Spreadsheet workflow bypassed by administrator setting (direct festival registration)';
+    } else {
+      try {
+        const googleFormData = new URLSearchParams();
 
-      for (const field of formConfig.fields) {
-        // Exclude conditionally hidden fields
-        if (field.showWhen) {
-          const depValue = formValues[field.showWhen.field];
-          if (!field.showWhen.values.includes(depValue || '')) {
-            continue;
+        for (const field of formConfig.fields) {
+          // Exclude conditionally hidden fields
+          if (field.showWhen) {
+            const depValue = formValues[field.showWhen.field];
+            if (!field.showWhen.values.includes(depValue || '')) {
+              continue;
+            }
+          }
+
+          let value = formValues[field.key]?.trim() || '';
+          // If free track and payment field is empty, provide valid placeholder so Google Form accepts it
+          if (!isPaid && !value) {
+            if (field.key === 'paymentId') value = 'FREE-TRACK';
+            if (field.key === 'paymentProof') value = 'https://yugantar.pce.ac.in/free-track';
+          }
+
+          if (value) {
+            googleFormData.append(`entry.${field.entryId}`, value);
           }
         }
 
-        let value = formValues[field.key]?.trim() || '';
-        // If free track and payment field is empty, provide valid placeholder so Google Form accepts it
-        if (!isPaid && !value) {
-          if (field.key === 'paymentId') value = 'FREE-TRACK';
-          if (field.key === 'paymentProof') value = 'https://yugantar.pce.ac.in/free-track';
+        // Add rules acknowledgment
+        if (formConfig.acknowledgmentEntryId) {
+          googleFormData.append(
+            `entry.${formConfig.acknowledgmentEntryId}`,
+            'Yes',
+          );
         }
 
-        if (value) {
-          googleFormData.append(`entry.${field.entryId}`, value);
+        // Exact verified formResponseUrl (no runtime guessing)
+        const formResponseUrl = formConfig.formResponseUrl;
+
+        const response = await fetch(formResponseUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+          body: googleFormData.toString(),
+          redirect: 'follow',
+        });
+
+        const responseText = await response.text();
+        const isRecorded =
+          response.status === 200 &&
+          (responseText.includes('response has been recorded') ||
+            responseText.includes('Your response has been recorded') ||
+            responseText.includes('freebirdFormviewerViewResponseConfirmationMessage'));
+
+        if (isRecorded) {
+          googleSubmitSuccess = true;
+          confirmationEvidence = 'Google Forms response recorded confirmation received';
+        } else if (response.status === 200) {
+          googleSubmitError = 'Google Forms returned HTTP 200 but did not confirm response recorded (check required fields).';
+        } else {
+          googleSubmitError = `Google Forms returned HTTP ${response.status}: ${response.statusText}`;
         }
+      } catch (err) {
+        googleSubmitError =
+          err instanceof Error ? err.message : 'Network error during Google Forms submission';
       }
-
-      // Add rules acknowledgment
-      if (formConfig.acknowledgmentEntryId) {
-        googleFormData.append(
-          `entry.${formConfig.acknowledgmentEntryId}`,
-          'Yes',
-        );
-      }
-
-      // Exact verified formResponseUrl (no runtime guessing)
-      const formResponseUrl = formConfig.formResponseUrl;
-
-      const response = await fetch(formResponseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-        body: googleFormData.toString(),
-        redirect: 'follow',
-      });
-
-      const responseText = await response.text();
-      const isRecorded =
-        response.status === 200 &&
-        (responseText.includes('response has been recorded') ||
-          responseText.includes('Your response has been recorded') ||
-          responseText.includes('freebirdFormviewerViewResponseConfirmationMessage'));
-
-      if (isRecorded) {
-        googleSubmitSuccess = true;
-        confirmationEvidence = 'Google Forms response recorded confirmation received';
-      } else if (response.status === 200) {
-        googleSubmitError = 'Google Forms returned HTTP 200 but did not confirm response recorded (check required fields).';
-      } else {
-        googleSubmitError = `Google Forms returned HTTP ${response.status}: ${response.statusText}`;
-      }
-    } catch (err) {
-      googleSubmitError =
-        err instanceof Error ? err.message : 'Network error during Google Forms submission';
     }
 
     // 7. Update status in database
@@ -431,6 +472,7 @@ export async function POST(request: NextRequest) {
       {
         status: finalStatus,
         registrationId,
+        passToken,
         verificationToken,
         paymentStatus: initialPaymentStatus,
         whatsappLink,

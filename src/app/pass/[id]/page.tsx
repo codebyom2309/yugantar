@@ -16,8 +16,11 @@ import {
   Building2,
   GraduationCap,
   Sparkles,
+  Download,
+  Users,
 } from 'lucide-react';
 import type { Metadata } from 'next';
+import { verifyPassToken, PassTokenPayload, PassMemberInfo } from '@/lib/passToken';
 
 export const metadata: Metadata = {
   title: 'Digital Delegate Pass | YUGANTAR 2026',
@@ -26,6 +29,7 @@ export const metadata: Metadata = {
 
 interface PassPageProps {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ token?: string }>;
 }
 
 interface RegistrationPassRecord {
@@ -39,6 +43,7 @@ interface RegistrationPassRecord {
   leader_semester: string;
   team_name: string | null;
   team_size: number;
+  form_data?: string | null;
   payment_id: string | null;
   payment_status: string | null;
   submission_status: string;
@@ -55,17 +60,24 @@ function PassSkeleton() {
   );
 }
 
-export default function PassPage({ params }: PassPageProps) {
+export default function PassPage({ params, searchParams }: PassPageProps) {
   return (
     <Suspense fallback={<PassSkeleton />}>
-      <PassContent params={params} />
+      <PassContent params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function PassContent({ params }: PassPageProps) {
+async function PassContent({ params, searchParams }: PassPageProps) {
   await connection();
   const { id } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const token = resolvedSearchParams.token;
+
+  let tokenPayload: PassTokenPayload | null = null;
+  if (token) {
+    tokenPayload = verifyPassToken(token, id);
+  }
 
   let reg: RegistrationPassRecord | null = null;
 
@@ -73,7 +85,7 @@ async function PassContent({ params }: PassPageProps) {
     const rows = await db.query<RegistrationPassRecord>(
       `SELECT id, competition_slug, leader_name, leader_email, leader_phone,
               leader_college, leader_branch, leader_semester, team_name, team_size,
-              payment_id, payment_status, submission_status, created_at,
+              form_data, payment_id, payment_status, submission_status, created_at,
               verification_token, pass_issued_at 
        FROM registrations WHERE id = ? OR verification_token = ? LIMIT 1`,
       [id, id]
@@ -126,6 +138,27 @@ async function PassContent({ params }: PassPageProps) {
     console.warn('Failed to fetch full competition metadata for pass:', compErr);
   }
 
+  // Decode multi-member roster from stateless HMAC token or stored form data
+  let rosterMembers: PassMemberInfo[] = [];
+  if (tokenPayload && tokenPayload.members && tokenPayload.members.length > 0) {
+    rosterMembers = tokenPayload.members;
+  } else if (reg.form_data) {
+    try {
+      const parsed = JSON.parse(reg.form_data);
+      for (let i = 2; i <= 4; i++) {
+        const mName = parsed[`member${i}Name`] || parsed[`player${i}Name`];
+        if (mName) {
+          rosterMembers.push({
+            name: mName,
+            college: parsed[`member${i}College`] || parsed[`player${i}College`] || reg.leader_college,
+            branch: parsed[`member${i}Branch`] || parsed[`player${i}Branch`] || reg.leader_branch,
+            semester: parsed[`member${i}Semester`] || parsed[`player${i}Semester`] || reg.leader_semester,
+          });
+        }
+      }
+    } catch {}
+  }
+
   const isFree = reg.payment_status === 'free';
   const isPaymentVerified = reg.payment_status === 'confirmed' || reg.payment_status === 'verified';
   const isConfirmed = isFree || isPaymentVerified || reg.submission_status === 'confirmed';
@@ -173,13 +206,21 @@ async function PassContent({ params }: PassPageProps) {
             <ExternalLink className="w-3.5 h-3.5" />
             <span>Verify Live</span>
           </Link>
+          <a
+            href={`/api/pass/${reg.id}/pdf${token ? `?token=${token}` : ''}`}
+            download={`YUGANTAR-2026-PASS-${reg.id.substring(0, 8)}.pdf`}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#172B49] text-white text-xs font-mono font-bold hover:bg-[#233C63] transition shadow-xs cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5 text-[#F5A16F]" />
+            <span>Download PDF</span>
+          </a>
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#172B49] text-white text-xs font-mono font-bold hover:bg-[#233C63] transition shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[#DCE5F2] text-[#172B49] text-xs font-mono font-bold hover:bg-[#EDF5FC] transition shadow-xs cursor-pointer"
             data-print-trigger
           >
-            <Printer className="w-3.5 h-3.5 text-[#F5A16F]" />
-            <span>Print / Save PDF</span>
+            <Printer className="w-3.5 h-3.5 text-[#4B91E8]" />
+            <span className="hidden sm:inline">Print</span>
           </button>
         </div>
       </div>
@@ -343,6 +384,57 @@ async function PassContent({ params }: PassPageProps) {
               </div>
             </div>
           </div>
+
+          {/* Multi-member Team Delegation Roster */}
+          {rosterMembers.length > 0 && (
+            <div className="p-4 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-3">
+              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-[#172B49]">
+                  <Users className="w-4 h-4 text-[#4B91E8]" />
+                  <span>TEAM DELEGATION ROSTER</span>
+                </div>
+                <span className="text-[10px] font-mono text-[#8CA0BA]">
+                  {rosterMembers.length + 1} Registered Delegates
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Team Leader Card */}
+                <div className="p-3 rounded-xl bg-white border border-[#DCE5F2] flex items-center justify-between text-xs shadow-2xs">
+                  <div>
+                    <span className="text-[10px] font-mono font-bold uppercase text-[#4B91E8] block">
+                      Delegate 1 • Team Leader
+                    </span>
+                    <span className="font-bold text-[#172B49] block">{reg.leader_name}</span>
+                    <span className="text-[11px] text-[#60728A] block">
+                      {reg.leader_college} ({reg.leader_branch})
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                    Lead
+                  </span>
+                </div>
+
+                {/* Team Members */}
+                {rosterMembers.map((m, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-white border border-[#DCE5F2] flex items-center justify-between text-xs shadow-2xs">
+                    <div>
+                      <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                        Delegate {idx + 2} • Team Member
+                      </span>
+                      <span className="font-bold text-[#172B49] block">{m.name}</span>
+                      <span className="text-[11px] text-[#60728A] block">
+                        {m.college || reg.leader_college} {m.branch ? `(${m.branch})` : ''}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-[#4B91E8] bg-[#EDF5FC] border border-[#B8D5F8] px-2 py-0.5 rounded-full font-semibold">
+                      Member
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* QR Code and Check-in Verification Block */}
           <div className="pt-4 border-t border-[#DCE5F2] flex items-center justify-between gap-4">

@@ -76,7 +76,7 @@ async function RegistrationContent({ params }: PageProps) {
       <Navbar />
 
       {/* Hero Header */}
-      <section className="relative pt-24 sm:pt-32 lg:pt-36 pb-8 sm:pb-12 bg-gradient-to-b from-[#EDF5FC] via-[#F8FAFD] to-[#F8FAFD] border-b border-[#DCE5F2] overflow-hidden">
+      <section className="relative pt-28 sm:pt-36 pb-8 sm:pb-12 bg-gradient-to-b from-[#EDF5FC] via-[#F8FAFD] to-[#F8FAFD] border-b border-[#DCE5F2] overflow-hidden">
         <div
           className="absolute -top-24 -right-24 w-80 h-80 rounded-full blur-3xl opacity-15 pointer-events-none"
           style={{ backgroundColor: competition.accentColor }}
@@ -100,22 +100,31 @@ async function RegistrationContent({ params }: PageProps) {
           </nav>
 
           {/* Title & Metadata Block */}
-          <div className="flex flex-wrap items-center gap-2 mb-2.5">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             <span
               style={{
                 backgroundColor: competition.accentBg,
                 color: competition.accentColor,
                 borderColor: competition.accentColor,
               }}
-              className="px-3 py-0.5 rounded-full text-xs font-mono font-bold uppercase tracking-wider border shadow-2xs"
+              className="px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider border shadow-2xs"
             >
               ARENA 0{competition.districtIndex + 1}
             </span>
-            <span className="text-xs font-mono text-[#60728A] px-3 py-0.5 rounded-full bg-white border border-[#DCE5F2]">
+            <span className="text-xs font-mono text-[#60728A] px-3 py-1 rounded-full bg-white border border-[#DCE5F2]">
               {competition.category}
             </span>
+            {competition.isPaid ? (
+              <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-[#EDF5FC] text-[#1E5FA8] border border-[#B8D5F8]">
+                ENTRY FEE: {competition.registrationFee || '₹300'}
+              </span>
+            ) : (
+              <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                100% FREE ENTRY
+              </span>
+            )}
             <span
-              className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 border ${
+              className={`text-xs font-mono font-bold px-3 py-1 rounded-full inline-flex items-center gap-1 border ${
                 isRegistrationOpen
                   ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                   : 'text-rose-700 bg-rose-50 border-rose-200'
@@ -126,21 +135,21 @@ async function RegistrationContent({ params }: PageProps) {
             </span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-display font-extrabold tracking-tight text-[#172B49] mb-2">
+          <h1 className="text-2xl sm:text-4xl font-display font-extrabold tracking-tight text-[#172B49] mb-2.5">
             Register for {competition.name}
           </h1>
 
-          <p className="text-xs sm:text-sm text-[#60728A] leading-relaxed mb-4 max-w-2xl font-normal">
-            Complete the guided registration dossier below. Submissions are stored locally in our database and forwarded to the official Department Google Sheet.
+          <p className="text-xs sm:text-sm text-[#60728A] leading-relaxed mb-5 max-w-2xl font-normal">
+            Complete the official registration dossier below. Submissions are securely recorded in the festival system and synced directly to the Department Google Sheet. Once submitted, download your official YUGANTAR 2026 Delegate Pass.
           </p>
 
           {/* Quick metadata chips */}
           <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono text-[#172B49]">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-[#DCE5F2] shadow-2xs">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#DCE5F2] shadow-2xs">
               <Calendar className="w-3.5 h-3.5 text-[#4B91E8]" />
               <span>{eventDateDisplay}</span>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-[#DCE5F2] shadow-2xs">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#DCE5F2] shadow-2xs">
               <MapPin className="w-3.5 h-3.5 text-[#9187DE]" />
               <span>{competition.venue || 'PCE Campus, Nagpur'}</span>
             </div>

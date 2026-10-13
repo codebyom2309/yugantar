@@ -47,6 +47,16 @@ export interface Competition {
   accentBg: string;
   themeVibe: 'circuit' | 'arena' | 'research' | 'innovation' | 'pitch' | 'career' | 'creative' | 'culture';
   faqs: { question: string; answer: string }[];
+  // Registration & Payment Settings
+  isPaid?: boolean;
+  registrationFee?: string;
+  upiId?: string;
+  payeeName?: string;
+  qrMode?: 'upload' | 'generate';
+  qrCodeUrl?: string;
+  requireUtr?: boolean;
+  requireScreenshot?: boolean;
+  whatsappLink?: string;
   // Backwards compatibility helpers
   eligibilityPlaceholder: string;
   teamRequirementsPlaceholder: string;
@@ -96,6 +106,13 @@ export const COMPETITIONS: Competition[] = [
     eligibility: "VII Semester Students Only",
     teamSizeLimit: "Maximum 4 members per team",
     maxTeamMembers: 4,
+    isPaid: true,
+    registrationFee: "₹300 per team",
+    upiId: "teleera@oksbi",
+    payeeName: "TELE-ERA YUGANTAR 2026",
+    qrMode: "generate",
+    requireUtr: true,
+    requireScreenshot: true,
     approvedDomains: ["DSD", "WSN", "ES", "DSP", "MWR"],
     shortDescription: "Demonstrate operational hardware models, embedded systems, and applied engineering prototypes solving practical challenges.",
     fullDescription: "A premier platform for VII semester engineers to exhibit live working prototypes, hardware solutions, and applied electronic systems before an expert panel.",
@@ -178,6 +195,13 @@ export const COMPETITIONS: Competition[] = [
     eligibility: "VII Semester Students Only",
     teamSizeLimit: "Maximum 4 members per team",
     maxTeamMembers: 4,
+    isPaid: true,
+    registrationFee: "₹200 per team",
+    upiId: "teleera@oksbi",
+    payeeName: "TELE-ERA YUGANTAR 2026",
+    qrMode: "generate",
+    requireUtr: true,
+    requireScreenshot: true,
     shortDescription: "Present structured technical research papers and emerging technological breakthroughs with analytical clarity.",
     fullDescription: "An intellectual forum for VII semester students to present original research, technological surveys, and advanced engineering concepts before a distinguished panel.",
     about: "The PPT Presentation Competition provides an authentic academic symposium environment. Students present comprehensive technical studies, research frameworks, and engineering methodologies in the Meeting Room.",
@@ -257,6 +281,13 @@ export const COMPETITIONS: Competition[] = [
     eligibility: "V Semester Students Only",
     teamSizeLimit: "Maximum 2 members per team",
     maxTeamMembers: 2,
+    isPaid: true,
+    registrationFee: "₹100 per person / ₹150 team",
+    upiId: "teleera@oksbi",
+    payeeName: "TELE-ERA YUGANTAR 2026",
+    qrMode: "generate",
+    requireUtr: true,
+    requireScreenshot: true,
     shortDescription: "Test schematic interpretation, circuit design on paper, and rapid practical breadboard implementation.",
     fullDescription: "A two-round hands-on circuit challenge in EW's Lab. Teams qualify through a paper circuit design test, then wire a working functional circuit on breadboard.",
     about: "Bread Board Competition tests core practical electronics craftsmanship. Participants decipher problem statements, draft circuit schematics under timed conditions, and construct functional circuits with discrete components in EW's Lab.",
@@ -325,6 +356,13 @@ export const COMPETITIONS: Competition[] = [
     eligibility: "All Semesters",
     teamSizeLimit: "Maximum 4 members per team",
     maxTeamMembers: 4,
+    isPaid: true,
+    registrationFee: "₹200 per team",
+    upiId: "teleera@oksbi",
+    payeeName: "TELE-ERA YUGANTAR 2026",
+    qrMode: "generate",
+    requireUtr: true,
+    requireScreenshot: true,
     shortDescription: "Tackle on-the-spot problem statements, develop innovative solutions, clear mentor filtering, and pitch to judges.",
     fullDescription: "A high-intensity innovation challenge in Room 303. Teams receive unannounced problem statements, brainstorm viable technical solutions, undergo mentor review, and deliver formal final presentations.",
     about: "Ideathon gathers multidisciplinary thinkers to solve authentic engineering and societal challenges. Themes are revealed on the spot. Teams brainstorm, refine their solutions with visiting mentors, and defend their pitch before the jury.",
@@ -397,6 +435,13 @@ export const COMPETITIONS: Competition[] = [
     teamSizeLimit: "Strictly Individual (1 person)",
     maxTeamMembers: 1,
     isIndividualOnly: true,
+    isPaid: true,
+    registrationFee: "₹100 per candidate",
+    upiId: "teleera@oksbi",
+    payeeName: "TELE-ERA YUGANTAR 2026",
+    qrMode: "generate",
+    requireUtr: true,
+    requireScreenshot: true,
     shortDescription: "Experience authentic corporate recruitment with round-one Group Discussions and round-two Technical & HR interviews.",
     fullDescription: "A two-round corporate hiring simulation for V semester students in Room 306. Candidates participate in timed group discussions followed by one-on-one personal interviews.",
     about: "Mock Placement Drive bridges collegiate learning and corporate selection. Participants face real-world hiring scrutiny: defending logic during group discussions, followed by in-depth technical and behavioral interviews with experienced evaluators.",
@@ -466,6 +511,13 @@ export const COMPETITIONS: Competition[] = [
     eligibility: "All Semesters",
     teamSizeLimit: "Maximum 2 members per team",
     maxTeamMembers: 2,
+    isPaid: true,
+    registrationFee: "₹100 per person / ₹150 team",
+    upiId: "teleera@oksbi",
+    payeeName: "TELE-ERA YUGANTAR 2026",
+    qrMode: "generate",
+    requireUtr: true,
+    requireScreenshot: true,
     shortDescription: "Display and defend technical research posters centered exclusively on the theme of 'E-Scrap' (electronic waste).",
     fullDescription: "A scientific visual exhibition in Room 301. Teams present hand-drawn or digitally printed posters revolving around electronic waste solutions, sustainability, and green engineering.",
     about: "Poster Competition combines artistic clarity and scientific rigor. Centered strictly around the official theme 'E-Scrap', participants exhibit creative solutions to electronic waste and defend their concepts before the judging panel.",
@@ -535,6 +587,13 @@ export const COMPETITIONS: Competition[] = [
     teamSizeLimit: "Squad of 4 members per team",
     maxTeamMembers: 4,
     isFixedSquad: true,
+    isPaid: true,
+    registrationFee: "₹200 per squad",
+    upiId: "teleera@oksbi",
+    payeeName: "TELE-ERA YUGANTAR 2026",
+    qrMode: "generate",
+    requireUtr: true,
+    requireScreenshot: true,
     shortDescription: "Squad battle royale esports tournament featuring custom room matches in Free Fire and BGMI on mobile smartphones.",
     fullDescription: "High-octane collegiate esports matches hosted in Rooms 307 and 302. Squads of 4 compete in custom room lobbies under strict fair-play and native touch control rules.",
     about: "Esports Arena hosts battle royale tournament play in Free Fire and BGMI. Teams of 4 test tactical coordination, map rotation, and reflexes across custom lobbies with real-time room administration.",
@@ -606,6 +665,13 @@ export const COMPETITIONS: Competition[] = [
     teamSizeLimit: "Individual (Solo Performer)",
     maxTeamMembers: 1,
     isIndividualOnly: true,
+    isPaid: true,
+    registrationFee: "₹100 per performer",
+    upiId: "teleera@oksbi",
+    payeeName: "TELE-ERA YUGANTAR 2026",
+    qrMode: "generate",
+    requireUtr: true,
+    requireScreenshot: true,
     shortDescription: "Showcase solo creative talent—singing, poetry, comedy, or beatboxing—on a live acoustic stage under time limits.",
     fullDescription: "A vibrant solo cultural performance stage in Room 303. Individual performers take the stage for 4-5 minutes across music, poetry, standup comedy, or beatboxing.",
     about: "Open Mic celebrates stage poise, creative delivery, and artistic expression. Performers present original spoken word, acoustic singing, or comedy under a warm spotlight with live sound reinforcement.",

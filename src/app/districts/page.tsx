@@ -126,7 +126,7 @@ export default function DistrictsPage() {
       <section className="relative pt-20 sm:pt-24 lg:pt-28 pb-10 sm:pb-14 bg-gradient-to-b from-[#EDF5FC] via-[#F4F8FD] to-[#F8FAFD] overflow-hidden border-b border-[#DCE5F2]">
         
         {/* Supplied Background Asset for both Mobile and Desktop */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-20 sm:opacity-25">
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-35 sm:opacity-45">
           <Image
             src="/images/nexus-city/districts-hero-bg.webp"
             alt="NEXUS CITY Districts Map"
@@ -134,7 +134,7 @@ export default function DistrictsPage() {
             priority
             className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/90 via-[#F8FAFD]/95 to-[#F8FAFD]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/75 via-[#F8FAFD]/80 to-[#F8FAFD]/95" />
         </div>
 
         {/* Ambient atmospheric glows */}
