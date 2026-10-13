@@ -84,7 +84,7 @@ async function AboutContent() {
       <section className="relative pt-20 sm:pt-24 lg:pt-28 pb-10 sm:pb-14 bg-gradient-to-b from-[#EDF5FC] via-[#F4F8FD] to-[#F8FAFD] overflow-hidden border-b border-[#DCE5F2]">
         
         {/* Mobile-Specific Supplied Background Asset */}
-        <div className="sm:hidden absolute inset-0 z-0 pointer-events-none opacity-25">
+        <div className="sm:hidden absolute inset-0 z-0 pointer-events-none opacity-70">
           <Image
             src="/images/nexus-city/about-hero-mobile.webp"
             alt="YUGANTAR 2026 NEXUS Architecture"
@@ -92,11 +92,11 @@ async function AboutContent() {
             priority
             className="object-cover object-top"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/90 via-[#F8FAFD]/95 to-[#F8FAFD]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/40 via-[#F8FAFD]/70 to-[#F8FAFD]" />
         </div>
 
         {/* Desktop-Specific Supplied Architectural Panoramic Background Asset */}
-        <div className="hidden sm:block absolute inset-0 z-0 pointer-events-none opacity-25">
+        <div className="hidden sm:block absolute inset-0 z-0 pointer-events-none opacity-75">
           <Image
             src="/images/nexus-city/hero-panoramic-city.webp"
             alt="YUGANTAR 2026 NEXUS Architecture Panoramic"
@@ -104,12 +104,12 @@ async function AboutContent() {
             priority
             className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/80 via-[#F8FAFD]/90 to-[#F8FAFD]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/35 via-[#F8FAFD]/65 to-[#F8FAFD]" />
         </div>
 
-        {/* Ambient atmospheric lighting on desktop */}
-        <div className="hidden sm:block absolute -top-32 -right-32 w-96 h-96 bg-[#FFEFE3] rounded-full blur-3xl pointer-events-none opacity-80" />
-        <div className="hidden sm:block absolute top-10 left-1/4 w-80 h-80 bg-[#E9F2FF] rounded-full blur-3xl pointer-events-none opacity-60" />
+        {/* Ambient atmospheric lighting on desktop (cool pale-blue and subtle electric-blue) */}
+        <div className="hidden sm:block absolute -top-32 -right-32 w-96 h-96 bg-[#E9F2FF] rounded-full blur-3xl pointer-events-none opacity-70" />
+        <div className="hidden sm:block absolute top-10 left-1/4 w-80 h-80 bg-[#3978F6]/10 rounded-full blur-3xl pointer-events-none opacity-50" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           

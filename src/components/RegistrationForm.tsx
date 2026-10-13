@@ -677,13 +677,14 @@ export default function RegistrationForm({
       const isGenerateMode = competition.qrMode === 'generate' || !competition.qrCodeUrl;
       if (isGenerateMode) {
         const feeDigits = (competition.registrationFee || '').replace(/[^0-9]/g, '');
-        const payee = competition.payeeName || 'TELE-ERA YUGANTAR 2026';
-        const upiUri = `upi://pay?pa=${competition.upiId}&pn=${encodeURIComponent(payee)}${feeDigits ? `&am=${feeDigits}` : ''}&cu=INR`;
+        const payee = (competition.payeeName || 'TELE-ERA YUGANTAR 2026').trim();
+        const cleanUpiId = competition.upiId.trim();
+        const upiUri = `upi://pay?pa=${encodeURIComponent(cleanUpiId)}&pn=${encodeURIComponent(payee)}${feeDigits ? `&am=${feeDigits}` : ''}&cu=INR`;
         QRCode.toDataURL(upiUri, {
           width: 256,
           margin: 2,
           color: {
-            dark: '#172B49',
+            dark: '#10264A',
             light: '#FFFFFF',
           },
         })
@@ -1519,14 +1520,14 @@ export default function RegistrationForm({
                 {/* QR and UPI ID Details */}
                 <div className="flex flex-col sm:flex-row items-center gap-4 pt-1">
                   {(competition?.qrCodeUrl || dynamicQrUrl) ? (
-                    <div className="p-3 bg-white rounded-2xl border border-[#FFE0CE] shrink-0 text-center shadow-xs">
+                    <div className="p-3 bg-white rounded-2xl border border-[#DCE5F2] shrink-0 text-center shadow-xs">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={competition?.qrMode === 'upload' && competition.qrCodeUrl ? competition.qrCodeUrl : (dynamicQrUrl || competition?.qrCodeUrl)}
                         alt="Payment QR Code"
                         className="w-32 h-32 object-contain mx-auto rounded-xl"
                       />
-                      <span className="text-[10px] font-mono text-[#8CA0BA] block mt-1.5 font-bold">
+                      <span className="text-[10px] font-mono text-[#536781] block mt-1.5 font-bold">
                         {competition?.qrMode === 'upload' ? 'Official Department QR' : 'Dynamic UPI QR'}
                       </span>
                     </div>
@@ -1539,37 +1540,37 @@ export default function RegistrationForm({
 
                   <div className="space-y-2.5 flex-1 w-full text-left">
                     {competition?.payeeName && (
-                      <div className="p-3 rounded-xl bg-white border border-[#FFE0CE]">
-                        <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                      <div className="p-3 rounded-xl bg-white border border-[#DCE5F2]">
+                        <span className="text-[10px] font-mono uppercase text-[#7E93AC] block">
                           Official Payee Name
                         </span>
-                        <span className="text-xs font-bold text-[#172B49]">
+                        <span className="text-xs font-bold text-[#10264A]">
                           {competition.payeeName}
                         </span>
                       </div>
                     )}
 
                     {competition?.upiId && (
-                      <div className="p-3 rounded-xl bg-white border border-[#FFE0CE] space-y-1">
-                        <span className="text-[10px] font-mono uppercase text-[#8CA0BA] block">
+                      <div className="p-3 rounded-xl bg-white border border-[#DCE5F2] space-y-1">
+                        <span className="text-[10px] font-mono uppercase text-[#7E93AC] block">
                           Official UPI ID
                         </span>
                         <div className="flex items-center justify-between gap-2">
-                          <code className="text-xs font-mono font-bold text-[#172B49] select-all">
+                          <code className="text-xs font-mono font-bold text-[#10264A] select-all">
                             {competition.upiId}
                           </code>
                           <button
                             type="button"
                             onClick={() => {
                               if (competition?.upiId) {
-                                navigator.clipboard.writeText(competition.upiId);
+                                navigator.clipboard.writeText(competition.upiId.trim());
                                 setCopiedId(true);
                                 setTimeout(() => setCopiedId(false), 2000);
                               }
                             }}
-                            className="p-1.5 px-2.5 rounded-lg bg-[#FFF8F2] border border-[#FFE0CE] text-[#E07A43] hover:bg-[#FFE0CE] text-xs font-mono font-bold transition flex items-center gap-1 cursor-pointer"
+                            className="p-1.5 px-2.5 rounded-lg bg-[#F8FAFD] border border-[#DCE5F2] hover:bg-[#E9F2FF] text-[#10264A] text-xs font-mono font-bold transition flex items-center gap-1 cursor-pointer"
                           >
-                            {copiedId ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            {copiedId ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-[#3978F6]" />}
                             <span>{copiedId ? 'Copied' : 'Copy'}</span>
                           </button>
                         </div>
@@ -1578,10 +1579,10 @@ export default function RegistrationForm({
 
                     {competition?.upiId && (
                       <a
-                        href={`upi://pay?pa=${competition.upiId}&pn=${encodeURIComponent(competition?.payeeName || 'YUGANTAR 2026')}${(competition.registrationFee || '').replace(/[^0-9]/g, '') ? `&am=${(competition.registrationFee || '').replace(/[^0-9]/g, '')}` : ''}&cu=INR`}
-                        className="inline-flex items-center justify-center gap-2 min-h-[44px] w-full px-4 py-2 rounded-xl bg-[#E07A43] text-white text-xs font-mono font-bold hover:bg-[#C96835] transition shadow-2xs"
+                        href={`upi://pay?pa=${encodeURIComponent(competition.upiId.trim())}&pn=${encodeURIComponent((competition?.payeeName || 'TELE-ERA YUGANTAR 2026').trim())}${(competition.registrationFee || '').replace(/[^0-9]/g, '') ? `&am=${(competition.registrationFee || '').replace(/[^0-9]/g, '')}` : ''}&cu=INR`}
+                        className="inline-flex items-center justify-center gap-2 min-h-[44px] w-full px-4 py-2 rounded-xl bg-[#10264A] hover:bg-[#1A386B] text-white text-xs font-mono font-bold transition shadow-2xs cursor-pointer"
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink className="w-3.5 h-3.5 text-[#3978F6]" />
                         <span>Pay directly via UPI App (Mobile)</span>
                       </a>
                     )}

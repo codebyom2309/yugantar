@@ -32,7 +32,7 @@ function RegistrationSkeleton() {
   return (
     <div className="min-h-screen bg-[#F8FAFD] flex flex-col animate-pulse">
       <Navbar />
-      <div className="pt-24 sm:pt-32 pb-14 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
+      <div className="pt-24 sm:pt-28 pb-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
         <div className="h-4 w-48 bg-[#E2E8F0] rounded mb-5" />
         <div className="h-6 w-32 bg-[#E2E8F0] rounded-full mb-3" />
         <div className="h-10 w-80 bg-[#E2E8F0] rounded-xl mb-3" />
@@ -75,8 +75,8 @@ async function RegistrationContent({ params }: PageProps) {
     <div className="min-h-screen bg-[#F8FAFD] flex flex-col">
       <Navbar />
 
-      {/* Hero Header */}
-      <section className="relative pt-28 sm:pt-36 pb-8 sm:pb-12 bg-gradient-to-b from-[#EDF5FC] via-[#F8FAFD] to-[#F8FAFD] border-b border-[#DCE5F2] overflow-hidden">
+      {/* Hero Header with refined navbar clearance */}
+      <section className="relative pt-24 sm:pt-28 pb-6 sm:pb-8 bg-gradient-to-b from-[#EDF5FC] via-[#F8FAFD] to-[#F8FAFD] border-b border-[#DCE5F2] overflow-hidden">
         <div
           className="absolute -top-24 -right-24 w-80 h-80 rounded-full blur-3xl opacity-15 pointer-events-none"
           style={{ backgroundColor: competition.accentColor }}

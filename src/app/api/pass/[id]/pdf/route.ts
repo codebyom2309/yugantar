@@ -135,22 +135,51 @@ export async function GET(
     const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const qrImage = await pdfDoc.embedPng(qrPngBuffer);
 
-    // Color definitions
-    const navyDark = rgb(0.09, 0.17, 0.29); // #172B49
-    const electricBlue = rgb(0.23, 0.47, 0.91); // #3B82F6
-    const mutedSlate = rgb(0.40, 0.48, 0.58); // #667A94
-    const borderGray = rgb(0.86, 0.90, 0.95); // #DCE5F2
-    const bgLight = rgb(0.97, 0.98, 0.99); // #F8FAFD
-    const accentOrange = rgb(0.94, 0.47, 0.24); // #F0783D
-    const successGreen = rgb(0.06, 0.65, 0.42); // Emerald
+    // Approved YUGANTAR 2026 Brand Color Palette
+    const navyDark = rgb(16 / 255, 38 / 255, 74 / 255); // #10264A
+    const electricBlue = rgb(57 / 255, 120 / 255, 246 / 255); // #3978F6
+    const paleBlue = rgb(233 / 255, 242 / 255, 255 / 255); // #E9F2FF
+    const cloudWhite = rgb(248 / 255, 250 / 255, 252 / 255); // #F8FAFC
+    const pureWhite = rgb(1, 1, 1);
+    const restrainedOrange = rgb(255 / 255, 120 / 255, 62 / 255); // #FF783E
+    const mutedSlate = rgb(83 / 255, 103 / 255, 129 / 255); // #536781
+    const subtleSlate = rgb(126 / 255, 147 / 255, 172 / 255); // #7E93AC
+    const borderGray = rgb(220 / 255, 229 / 255, 242 / 255); // #DCE5F2
+    const successGreen = rgb(16 / 255, 185 / 255, 129 / 255); // #10B981
+    const lightSuccess = rgb(236 / 255, 253 / 255, 245 / 255); // #ECFDF5
+    const pendingAmber = rgb(217 / 255, 119 / 255, 6 / 255); // #D97706
+    const lightPending = rgb(255 / 255, 251 / 255, 235 / 255); // #FFFBEB
 
-    // Background fill
+    const safeText = (text: string | null | undefined): string => {
+      if (!text) return '';
+      return String(text)
+        .replace(/₹/g, 'INR ')
+        .replace(/•/g, '|')
+        .replace(/·/g, '|')
+        .replace(/—/g, '-')
+        .replace(/–/g, '-')
+        .replace(/[^\x20-\x7E\xA0-\xFF]/g, '');
+    };
+
+    const truncate = (text: string | null | undefined, maxChars: number): string => {
+      const clean = safeText(text);
+      if (!clean) return '-';
+      const trimmed = clean.trim();
+      return trimmed.length > maxChars ? `${trimmed.substring(0, maxChars - 2)}...` : trimmed;
+    };
+
+    const origDrawText = page.drawText.bind(page);
+    (page as any).drawText = (text: string, options?: any) => {
+      origDrawText(safeText(text), options);
+    };
+
+    // Background fill (Cloud White)
     page.drawRectangle({
       x: 0,
       y: 0,
       width,
       height,
-      color: bgLight,
+      color: cloudWhite,
     });
 
     // Outer Credential Card Frame
@@ -165,87 +194,128 @@ export async function GET(
       y: cardY,
       width: cardWidth,
       height: cardHeight,
-      color: rgb(1, 1, 1),
+      color: pureWhite,
       borderColor: borderGray,
       borderWidth: 1.5,
     });
 
-    // Top Header Banner Box
-    const headerHeight = 96;
+    // =========================================================================
+    // SECTION 1: TOP BRANDING & INSTITUTIONAL HEADER
+    // =========================================================================
+    const headerHeight = 98;
     const headerY = cardY + cardHeight - headerHeight;
+
     page.drawRectangle({
       x: cardX,
       y: headerY,
       width: cardWidth,
       height: headerHeight,
-      color: rgb(0.93, 0.96, 0.99), // Soft blue tint
+      color: cloudWhite,
       borderColor: borderGray,
       borderWidth: 1,
     });
 
-    // Institution & Event Branding
-    page.drawText('TELE-ERA FORUM • PCE NAGPUR', {
-      x: cardX + 20,
-      y: headerY + 70,
-      size: 9,
+    // Electric-blue top illuminated accent line
+    page.drawRectangle({
+      x: cardX,
+      y: headerY + headerHeight - 4,
+      width: cardWidth,
+      height: 4,
+      color: electricBlue,
+    });
+
+    // Restrained orange accent pip
+    page.drawRectangle({
+      x: cardX + cardWidth - 28,
+      y: headerY + headerHeight - 4,
+      width: 28,
+      height: 4,
+      color: restrainedOrange,
+    });
+
+    // Institution & Department Identifiers
+    page.drawText('PRIYADARSHINI COLLEGE OF ENGINEERING • NAGPUR', {
+      x: cardX + 22,
+      y: headerY + 76,
+      size: 8.5,
       font: fontBold,
       color: electricBlue,
     });
 
-    page.drawText('YUGANTAR 2026', {
-      x: cardX + 20,
-      y: headerY + 44,
-      size: 22,
+    page.drawText('Department of Electronics & Telecommunication Engineering • TELE-ERA Forum', {
+      x: cardX + 22,
+      y: headerY + 62,
+      size: 8.5,
+      font: fontRegular,
+      color: mutedSlate,
+    });
+
+    // Title: YUGANTAR 2026 DELEGATE PASS
+    page.drawText('YUGANTAR 2026 DELEGATE PASS', {
+      x: cardX + 22,
+      y: headerY + 36,
+      size: 19,
       font: fontBold,
       color: navyDark,
     });
 
-    page.drawText('Department of Electronics & Telecommunication Engineering', {
-      x: cardX + 20,
-      y: headerY + 28,
-      size: 9.5,
+    page.drawText('National Technical Symposium • Futuristic NEXUS CITY Arena Credential', {
+      x: cardX + 22,
+      y: headerY + 20,
+      size: 8.5,
       font: fontRegular,
-      color: mutedSlate,
-    });
-
-    page.drawText('Priyadarshini College of Engineering, Nagpur', {
-      x: cardX + 20,
-      y: headerY + 14,
-      size: 9,
-      font: fontRegular,
-      color: mutedSlate,
+      color: subtleSlate,
     });
 
     // Pass Reference Badge on Top Right
     const passRef = `YUG-26-${reg.id.substring(0, 8).toUpperCase()}`;
-    const badgeWidth = 140;
+    const badgeWidth = 150;
+    const badgeHeight = 52;
     const badgeX = cardX + cardWidth - badgeWidth - 20;
+    const badgeY = headerY + 22;
 
     page.drawRectangle({
       x: badgeX,
-      y: headerY + 44,
+      y: badgeY,
       width: badgeWidth,
-      height: 26,
-      color: navyDark,
+      height: badgeHeight,
+      color: paleBlue,
+      borderColor: borderGray,
+      borderWidth: 1,
     });
 
-    page.drawText('DELEGATE PASS', {
-      x: badgeX + 24,
-      y: headerY + 53,
-      size: 10,
+    page.drawText('OFFICIAL CREDENTIAL ID', {
+      x: badgeX + 12,
+      y: badgeY + 36,
+      size: 7.5,
       font: fontBold,
-      color: rgb(1, 1, 1),
+      color: electricBlue,
     });
 
     page.drawText(passRef, {
-      x: badgeX + 28,
-      y: headerY + 28,
-      size: 9,
+      x: badgeX + 12,
+      y: badgeY + 20,
+      size: 10,
       font: fontBold,
+      color: navyDark,
+    });
+
+    const issueDateStr = new Date(reg.created_at || Date.now()).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    page.drawText(`Issued: ${issueDateStr}`, {
+      x: badgeX + 12,
+      y: badgeY + 7,
+      size: 7.5,
+      font: fontRegular,
       color: mutedSlate,
     });
 
-    // Status Ribbon
+    // =========================================================================
+    // SECTION 2: STATUS ACCREDITATION RIBBON
+    // =========================================================================
     const ribbonHeight = 26;
     const ribbonY = headerY - ribbonHeight;
     const isFree = reg.payment_status === 'free';
@@ -256,313 +326,558 @@ export async function GET(
       y: ribbonY,
       width: cardWidth,
       height: ribbonHeight,
-      color: isConfirmed ? rgb(0.92, 0.98, 0.94) : rgb(0.99, 0.96, 0.91),
-      borderColor: isConfirmed ? rgb(0.70, 0.92, 0.78) : rgb(0.98, 0.85, 0.65),
+      color: isConfirmed ? lightSuccess : lightPending,
+      borderColor: isConfirmed ? rgb(167 / 255, 243 / 255, 208 / 255) : rgb(254 / 255, 215 / 255, 170 / 255),
       borderWidth: 1,
     });
 
     const statusText = isConfirmed
-      ? (isFree ? 'ENTRY AUTHORIZED • FREE REGISTRATION TRACK' : 'ENTRY AUTHORIZED • PAYMENT VERIFIED')
+      ? (isFree ? 'ENTRY AUTHORIZED • 100% FREE PARTICIPATION TRACK' : 'ENTRY AUTHORIZED • PAYMENT VERIFIED')
       : 'REGISTRATION SUBMITTED • AWAITING UTR AUDIT';
 
     page.drawText(statusText, {
-      x: cardX + 20,
+      x: cardX + 22,
       y: ribbonY + 8,
-      size: 9,
+      size: 8.5,
       font: fontBold,
-      color: isConfirmed ? successGreen : accentOrange,
+      color: isConfirmed ? successGreen : pendingAmber,
     });
 
-    page.drawText('OFFICIAL CREDENTIAL', {
-      x: cardX + cardWidth - 130,
+    page.drawText('VALIDATED SYSTEM CREDENTIAL', {
+      x: cardX + cardWidth - 165,
       y: ribbonY + 8,
       size: 8,
       font: fontBold,
       color: mutedSlate,
     });
 
-    // Competition Highlight Box
-    let currentY = ribbonY - 20;
-    const compBoxHeight = 56;
-    currentY -= compBoxHeight;
+    // =========================================================================
+    // SECTION 3: COMPETITION ARENA CARD
+    // =========================================================================
+    let cursorY = ribbonY - 14;
+    const compBoxHeight = 60;
+    cursorY -= compBoxHeight;
 
     page.drawRectangle({
       x: cardX + 20,
-      y: currentY,
+      y: cursorY,
       width: cardWidth - 40,
       height: compBoxHeight,
-      color: rgb(0.97, 0.98, 0.99),
+      color: pureWhite,
       borderColor: borderGray,
       borderWidth: 1,
     });
 
-    page.drawText('COMPETITION ARENA', {
-      x: cardX + 32,
-      y: currentY + 38,
-      size: 8,
-      font: fontBold,
-      color: mutedSlate,
-    });
-
-    page.drawText(compName, {
-      x: cardX + 32,
-      y: currentY + 20,
-      size: 14,
-      font: fontBold,
-      color: navyDark,
-    });
-
-    page.drawText(`Category: ${compCategory}  |  Date: ${compDate}  |  Venue: ${compVenue}`, {
-      x: cardX + 32,
-      y: currentY + 7,
-      size: 8.5,
-      font: fontRegular,
-      color: mutedSlate,
-    });
-
-    // Participant Credentials (2 Columns)
-    currentY -= 20;
-    const colWidth = (cardWidth - 52) / 2;
-    const credBoxHeight = 90;
-    currentY -= credBoxHeight;
-
-    // Col 1: Lead Participant
+    // Subtle left electric-blue vertical accent
     page.drawRectangle({
       x: cardX + 20,
-      y: currentY,
-      width: colWidth,
-      height: credBoxHeight,
-      color: rgb(1, 1, 1),
-      borderColor: borderGray,
-      borderWidth: 1,
-    });
-
-    page.drawText(reg.team_name ? 'TEAM LEADER / REPRESENTATIVE' : 'REGISTERED PARTICIPANT', {
-      x: cardX + 30,
-      y: currentY + credBoxHeight - 18,
-      size: 8,
-      font: fontBold,
-      color: mutedSlate,
-    });
-
-    page.drawText(reg.leader_name || 'Participant', {
-      x: cardX + 30,
-      y: currentY + credBoxHeight - 34,
-      size: 12,
-      font: fontBold,
-      color: navyDark,
-    });
-
-    page.drawText(`Institution: ${reg.leader_college || 'PCE Nagpur'}`, {
-      x: cardX + 30,
-      y: currentY + credBoxHeight - 50,
-      size: 8.5,
-      font: fontRegular,
-      color: navyDark,
-    });
-
-    page.drawText(`Branch: ${reg.leader_branch || 'ETC'}  |  Semester: ${reg.leader_semester || 'VII'}`, {
-      x: cardX + 30,
-      y: currentY + credBoxHeight - 65,
-      size: 8.5,
-      font: fontRegular,
-      color: mutedSlate,
-    });
-
-    page.drawText(`Registration ID: ${reg.id.substring(0, 18)}...`, {
-      x: cardX + 30,
-      y: currentY + credBoxHeight - 80,
-      size: 8,
-      font: fontRegular,
+      y: cursorY,
+      width: 4,
+      height: compBoxHeight,
       color: electricBlue,
     });
 
-    // Col 2: Delegation / Team
+    const arenaIdx = staticComp?.districtIndex !== undefined ? `ARENA 0${staticComp.districtIndex + 1}` : 'ARENA';
+    page.drawText(`${arenaIdx} • ${compCategory.toUpperCase()}`, {
+      x: cardX + 34,
+      y: cursorY + compBoxHeight - 16,
+      size: 7.5,
+      font: fontBold,
+      color: electricBlue,
+    });
+
+    page.drawText(truncate(compName, 42), {
+      x: cardX + 34,
+      y: cursorY + compBoxHeight - 34,
+      size: 13.5,
+      font: fontBold,
+      color: navyDark,
+    });
+
+    page.drawText(`Date: ${compDate}   |   Venue: ${compVenue}`, {
+      x: cardX + 34,
+      y: cursorY + 10,
+      size: 8.5,
+      font: fontRegular,
+      color: mutedSlate,
+    });
+
+    // Right-hand fee badge
+    const feeBadgeText = isFree
+      ? '100% FREE ENTRY'
+      : `FEE: ${staticComp?.registrationFee || '₹300'}`;
+    const feeBadgeWidth = 130;
+    const feeBadgeX = cardX + cardWidth - 40 - feeBadgeWidth - 10;
+    const feeBadgeY = cursorY + 12;
+
     page.drawRectangle({
-      x: cardX + 20 + colWidth + 12,
-      y: currentY,
-      width: colWidth,
-      height: credBoxHeight,
-      color: rgb(1, 1, 1),
+      x: feeBadgeX,
+      y: feeBadgeY,
+      width: feeBadgeWidth,
+      height: 36,
+      color: cloudWhite,
       borderColor: borderGray,
       borderWidth: 1,
     });
 
-    page.drawText('TEAM / SQUAD DELEGATION', {
-      x: cardX + 32 + colWidth + 12,
-      y: currentY + credBoxHeight - 18,
-      size: 8,
-      font: fontBold,
-      color: mutedSlate,
-    });
-
-    page.drawText(reg.team_name || 'Solo Participant Track', {
-      x: cardX + 32 + colWidth + 12,
-      y: currentY + credBoxHeight - 34,
-      size: 12,
-      font: fontBold,
-      color: navyDark,
-    });
-
-    page.drawText(`Squad Size: ${reg.team_size} ${reg.team_size === 1 ? 'Member' : 'Members'}`, {
-      x: cardX + 32 + colWidth + 12,
-      y: currentY + credBoxHeight - 50,
+    page.drawText(feeBadgeText, {
+      x: feeBadgeX + 10,
+      y: feeBadgeY + 21,
       size: 8.5,
-      font: fontRegular,
-      color: navyDark,
+      font: fontBold,
+      color: isFree ? successGreen : electricBlue,
     });
 
-    if (reg.payment_id && reg.payment_id !== 'FREE-TRACK') {
-      page.drawText(`Payment UTR: ${reg.payment_id}`, {
-        x: cardX + 32 + colWidth + 12,
-        y: currentY + credBoxHeight - 65,
-        size: 8.5,
-        font: fontBold,
-        color: electricBlue,
-      });
-    } else {
-      page.drawText('Fee Status: Free Participation Track', {
-        x: cardX + 32 + colWidth + 12,
-        y: currentY + credBoxHeight - 65,
-        size: 8.5,
+    page.drawText(
+      reg.payment_id && reg.payment_id !== 'FREE-TRACK'
+        ? `UTR: ${truncate(reg.payment_id, 14)}`
+        : 'NO FEE REQUIRED',
+      {
+        x: feeBadgeX + 10,
+        y: feeBadgeY + 8,
+        size: 7.5,
         font: fontRegular,
-        color: successGreen,
-      });
-    }
+        color: subtleSlate,
+      }
+    );
 
-    page.drawText(`Issue Date: ${new Date(reg.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, {
-      x: cardX + 32 + colWidth + 12,
-      y: currentY + credBoxHeight - 80,
-      size: 8,
-      font: fontRegular,
-      color: mutedSlate,
-    });
+    // =========================================================================
+    // SECTION 4: PARTICIPANT / TEAM ROSTER LAYOUT (CRITICAL)
+    // =========================================================================
+    cursorY -= 16;
 
-    // Section: Team Members Roster (For multi-member registrations)
     if (reg.team_size > 1) {
-      currentY -= 20;
-      page.drawText('OFFICIAL TEAM ROSTER & MEMBERS', {
+      // -----------------------------------------------------------------------
+      // CASE A: TEAM COMPETITION — Structured Roster Table
+      // -----------------------------------------------------------------------
+      const allRoster = [
+        {
+          role: 'Team Lead',
+          name: reg.leader_name || 'Team Leader',
+          college: reg.leader_college || 'PCE Nagpur',
+          branch: reg.leader_branch || 'ETC',
+          semester: reg.leader_semester || '—',
+        },
+        ...teamMembers.map((m, idx) => ({
+          role: `Member ${idx + 2}`,
+          name: m.name,
+          college: m.college || reg.leader_college || 'PCE Nagpur',
+          branch: m.branch || reg.leader_branch || 'ETC',
+          semester: m.semester || reg.leader_semester || '—',
+        })),
+      ];
+
+      // Ensure at least placeholders if team_size > members parsed
+      while (allRoster.length < reg.team_size && allRoster.length < 4) {
+        const nextIdx = allRoster.length + 1;
+        allRoster.push({
+          role: `Member ${nextIdx}`,
+          name: `Registered Member ${nextIdx}`,
+          college: reg.leader_college || 'PCE Nagpur',
+          branch: reg.leader_branch || 'ETC',
+          semester: reg.leader_semester || '—',
+        });
+      }
+
+      // Section Header
+      page.drawText('OFFICIAL TEAM ROSTER & ACCREDITED MEMBERS', {
         x: cardX + 22,
-        y: currentY,
-        size: 8.5,
+        y: cursorY,
+        size: 9,
         font: fontBold,
         color: navyDark,
       });
 
-      currentY -= 10;
-      const memberCount = Math.max(reg.team_size - 1, teamMembers.length);
-      const teamBoxHeight = Math.max(memberCount * 28 + 14, 42);
-      currentY -= teamBoxHeight;
+      const teamNameDisplay = reg.team_name ? `Team: "${reg.team_name}"` : 'Team Delegation';
+      page.drawText(`${teamNameDisplay} • ${allRoster.length} Registered Delegates`, {
+        x: cardX + cardWidth - 260,
+        y: cursorY,
+        size: 8.5,
+        font: fontRegular,
+        color: mutedSlate,
+      });
 
+      cursorY -= 10;
+
+      // Table Sizing
+      const rowHeight = 32;
+      const tableHeaderHeight = 22;
+      const tableTotalHeight = tableHeaderHeight + allRoster.length * rowHeight;
+      cursorY -= tableTotalHeight;
+
+      // Table Container
       page.drawRectangle({
         x: cardX + 20,
-        y: currentY,
+        y: cursorY,
         width: cardWidth - 40,
-        height: teamBoxHeight,
-        color: rgb(1, 1, 1),
+        height: tableTotalHeight,
+        color: pureWhite,
         borderColor: borderGray,
         borderWidth: 1,
       });
 
-      if (teamMembers.length > 0) {
-        teamMembers.forEach((m, idx) => {
-          const rowY = currentY + teamBoxHeight - 20 - idx * 28;
-          page.drawText(`Member ${idx + 2}:`, {
-            x: cardX + 30,
-            y: rowY,
-            size: 8.5,
-            font: fontBold,
-            color: electricBlue,
-          });
+      // Table Header Row
+      const tableHeaderY = cursorY + tableTotalHeight - tableHeaderHeight;
+      page.drawRectangle({
+        x: cardX + 20,
+        y: tableHeaderY,
+        width: cardWidth - 40,
+        height: tableHeaderHeight,
+        color: paleBlue,
+        borderColor: borderGray,
+        borderWidth: 0.5,
+      });
 
-          page.drawText(m.name, {
-            x: cardX + 90,
-            y: rowY,
-            size: 9.5,
-            font: fontBold,
-            color: navyDark,
-          });
+      // Table Column Positions
+      const colRoleX = cardX + 32;
+      const colNameX = cardX + 115;
+      const colCollegeX = cardX + 265;
+      const colBranchX = cardX + 440;
 
-          const metaText = `${m.college || reg.leader_college || ''}  |  ${m.branch || reg.leader_branch || ''}  |  Sem ${m.semester || reg.leader_semester || ''}`;
-          page.drawText(metaText, {
-            x: cardX + 260,
-            y: rowY,
-            size: 8.5,
-            font: fontRegular,
-            color: mutedSlate,
+      page.drawText('ROLE', {
+        x: colRoleX,
+        y: tableHeaderY + 7,
+        size: 7.5,
+        font: fontBold,
+        color: electricBlue,
+      });
+      page.drawText('DELEGATE NAME', {
+        x: colNameX,
+        y: tableHeaderY + 7,
+        size: 7.5,
+        font: fontBold,
+        color: navyDark,
+      });
+      page.drawText('COLLEGE / INSTITUTION', {
+        x: colCollegeX,
+        y: tableHeaderY + 7,
+        size: 7.5,
+        font: fontBold,
+        color: navyDark,
+      });
+      page.drawText('BRANCH & SEM', {
+        x: colBranchX,
+        y: tableHeaderY + 7,
+        size: 7.5,
+        font: fontBold,
+        color: navyDark,
+      });
+
+      // Table Data Rows
+      allRoster.forEach((member, idx) => {
+        const rowY = tableHeaderY - (idx + 1) * rowHeight;
+
+        // Alternate subtle background row
+        if (idx % 2 === 1) {
+          page.drawRectangle({
+            x: cardX + 21,
+            y: rowY + 1,
+            width: cardWidth - 42,
+            height: rowHeight - 2,
+            color: cloudWhite,
           });
+        }
+
+        // Row Divider
+        if (idx > 0) {
+          page.drawLine({
+            start: { x: cardX + 20, y: rowY + rowHeight },
+            end: { x: cardX + cardWidth - 20, y: rowY + rowHeight },
+            color: borderGray,
+            thickness: 0.5,
+          });
+        }
+
+        // Member Details
+        const isLead = idx === 0;
+        page.drawText(member.role, {
+          x: colRoleX,
+          y: rowY + 12,
+          size: 8,
+          font: fontBold,
+          color: isLead ? restrainedOrange : electricBlue,
         });
-      } else {
-        // Fallback for minimal DB mode when token is absent on direct URL load
-        page.drawText(`Team delegation: ${reg.team_size} members registered under Team Leader ${reg.leader_name}.`, {
-          x: cardX + 30,
-          y: currentY + teamBoxHeight - 24,
+
+        page.drawText(truncate(member.name, 22), {
+          x: colNameX,
+          y: rowY + 12,
           size: 9,
+          font: fontBold,
+          color: navyDark,
+        });
+
+        page.drawText(truncate(member.college, 26), {
+          x: colCollegeX,
+          y: rowY + 12,
+          size: 8.5,
           font: fontRegular,
           color: mutedSlate,
         });
-        page.drawText('Individual member credentials authenticated via registration confirmation token.', {
-          x: cardX + 30,
-          y: currentY + teamBoxHeight - 38,
+
+        const branchSemStr = `${truncate(member.branch, 10)} · Sem ${member.semester || '—'}`;
+        page.drawText(branchSemStr, {
+          x: colBranchX,
+          y: rowY + 12,
           size: 8,
           font: fontRegular,
-          color: electricBlue,
+          color: subtleSlate,
         });
-      }
+      });
+
+      // Team Lead Contact Strip beneath table
+      cursorY -= 8;
+      const contactStripHeight = 24;
+      cursorY -= contactStripHeight;
+
+      page.drawRectangle({
+        x: cardX + 20,
+        y: cursorY,
+        width: cardWidth - 40,
+        height: contactStripHeight,
+        color: cloudWhite,
+        borderColor: borderGray,
+        borderWidth: 0.5,
+      });
+
+      page.drawText(`Team Representative: ${truncate(reg.leader_email, 28)}   |   Contact: ${reg.leader_phone || '—'}`, {
+        x: cardX + 32,
+        y: cursorY + 8,
+        size: 7.5,
+        font: fontRegular,
+        color: mutedSlate,
+      });
+    } else {
+      // -----------------------------------------------------------------------
+      // CASE B: SOLO REGISTRATION — Clean Single-Participant Dossier
+      // -----------------------------------------------------------------------
+      page.drawText('REGISTERED DELEGATE DOSSIER', {
+        x: cardX + 22,
+        y: cursorY,
+        size: 9,
+        font: fontBold,
+        color: navyDark,
+      });
+
+      cursorY -= 10;
+      const soloCardHeight = 150;
+      cursorY -= soloCardHeight;
+
+      page.drawRectangle({
+        x: cardX + 20,
+        y: cursorY,
+        width: cardWidth - 40,
+        height: soloCardHeight,
+        color: pureWhite,
+        borderColor: borderGray,
+        borderWidth: 1,
+      });
+
+      const col1X = cardX + 36;
+      const col2X = cardX + 280;
+
+      // Col 1: Candidate Identity
+      page.drawText('PARTICIPANT NAME', {
+        x: col1X,
+        y: cursorY + soloCardHeight - 24,
+        size: 7.5,
+        font: fontBold,
+        color: electricBlue,
+      });
+      page.drawText(truncate(reg.leader_name || 'Participant', 28), {
+        x: col1X,
+        y: cursorY + soloCardHeight - 42,
+        size: 13,
+        font: fontBold,
+        color: navyDark,
+      });
+
+      page.drawText('COLLEGE / INSTITUTION', {
+        x: col1X,
+        y: cursorY + soloCardHeight - 64,
+        size: 7.5,
+        font: fontBold,
+        color: subtleSlate,
+      });
+      page.drawText(truncate(reg.leader_college || 'PCE Nagpur', 34), {
+        x: col1X,
+        y: cursorY + soloCardHeight - 80,
+        size: 9.5,
+        font: fontRegular,
+        color: navyDark,
+      });
+
+      page.drawText('ACADEMIC DEPARTMENT & SEMESTER', {
+        x: col1X,
+        y: cursorY + soloCardHeight - 102,
+        size: 7.5,
+        font: fontBold,
+        color: subtleSlate,
+      });
+      page.drawText(`${reg.leader_branch || 'ETC'} · Semester ${reg.leader_semester || 'VII'}`, {
+        x: col1X,
+        y: cursorY + soloCardHeight - 118,
+        size: 9,
+        font: fontRegular,
+        color: navyDark,
+      });
+
+      page.drawText('PARTICIPATION STATUS', {
+        x: col1X,
+        y: cursorY + soloCardHeight - 138,
+        size: 7.5,
+        font: fontBold,
+        color: subtleSlate,
+      });
+      page.drawText('Individual Contestant · Solo Track Delegate', {
+        x: col1X,
+        y: cursorY + 12,
+        size: 8.5,
+        font: fontBold,
+        color: electricBlue,
+      });
+
+      // Vertical divider in solo card
+      page.drawLine({
+        start: { x: col2X - 20, y: cursorY + 16 },
+        end: { x: col2X - 20, y: cursorY + soloCardHeight - 16 },
+        color: borderGray,
+        thickness: 1,
+      });
+
+      // Col 2: Contact & Authentication
+      page.drawText('REGISTERED CONTACT EMAIL', {
+        x: col2X,
+        y: cursorY + soloCardHeight - 24,
+        size: 7.5,
+        font: fontBold,
+        color: subtleSlate,
+      });
+      page.drawText(truncate(reg.leader_email, 32), {
+        x: col2X,
+        y: cursorY + soloCardHeight - 40,
+        size: 9.5,
+        font: fontRegular,
+        color: navyDark,
+      });
+
+      page.drawText('CONTACT PHONE NUMBER', {
+        x: col2X,
+        y: cursorY + soloCardHeight - 64,
+        size: 7.5,
+        font: fontBold,
+        color: subtleSlate,
+      });
+      page.drawText(reg.leader_phone || '—', {
+        x: col2X,
+        y: cursorY + soloCardHeight - 80,
+        size: 9.5,
+        font: fontRegular,
+        color: navyDark,
+      });
+
+      page.drawText('REGISTRATION CREDENTIAL ID', {
+        x: col2X,
+        y: cursorY + soloCardHeight - 102,
+        size: 7.5,
+        font: fontBold,
+        color: subtleSlate,
+      });
+      page.drawText(truncate(reg.id, 28), {
+        x: col2X,
+        y: cursorY + soloCardHeight - 118,
+        size: 8.5,
+        font: fontBold,
+        color: electricBlue,
+      });
+
+      page.drawText('TRANSACTION / PAYMENT RECORD', {
+        x: col2X,
+        y: cursorY + soloCardHeight - 138,
+        size: 7.5,
+        font: fontBold,
+        color: subtleSlate,
+      });
+      page.drawText(
+        reg.payment_id && reg.payment_id !== 'FREE-TRACK'
+          ? `UTR: ${reg.payment_id}`
+          : '100% Free Participation — No Fee Required',
+        {
+          x: col2X,
+          y: cursorY + 12,
+          size: 8.5,
+          font: fontBold,
+          color: isFree ? successGreen : navyDark,
+        }
+      );
     }
 
-    // QR Verification & Validation Section (Bottom)
-    const qrSectionHeight = 115;
-    const qrSectionY = cardY + 45;
+    // =========================================================================
+    // SECTION 5: QR VERIFICATION & ADMISSION CARD (BOTTOM)
+    // =========================================================================
+    const qrSectionHeight = 110;
+    const qrSectionY = cardY + 36;
 
     page.drawRectangle({
       x: cardX + 20,
       y: qrSectionY,
       width: cardWidth - 40,
       height: qrSectionHeight,
-      color: rgb(0.97, 0.98, 0.99),
+      color: cloudWhite,
       borderColor: borderGray,
       borderWidth: 1,
     });
 
-    // Embed QR Graphic
-    const qrDim = 95;
+    // Embed QR Graphic with white boundary card
+    const qrDim = 90;
+    const qrX = cardX + cardWidth - 40 - qrDim - 10;
+    const qrY = qrSectionY + 10;
+
+    page.drawRectangle({
+      x: qrX - 4,
+      y: qrY - 4,
+      width: qrDim + 8,
+      height: qrDim + 8,
+      color: pureWhite,
+      borderColor: borderGray,
+      borderWidth: 1,
+    });
+
     page.drawImage(qrImage, {
-      x: cardX + cardWidth - 40 - qrDim - 10,
-      y: qrSectionY + 10,
+      x: qrX,
+      y: qrY,
       width: qrDim,
       height: qrDim,
     });
 
-    // Instructions alongside QR
-    const infoX = cardX + 32;
-    page.drawText('DIGITAL ENTRY & ADMISSION CREDENTIAL', {
+    // Security Instructions text on left of QR
+    const infoX = cardX + 34;
+    page.drawText('DIGITAL ENTRY & ADMISSION VERIFICATION', {
       x: infoX,
-      y: qrSectionY + 95,
-      size: 8.5,
+      y: qrSectionY + 90,
+      size: 8,
       font: fontBold,
       color: electricBlue,
     });
 
     page.drawText(passRef, {
       x: infoX,
-      y: qrSectionY + 78,
-      size: 13,
+      y: qrSectionY + 74,
+      size: 11,
       font: fontBold,
       color: navyDark,
     });
 
-    const lines = [
-      'Present this official credential at the college entry gate and registration desk.',
-      'The QR code provides real-time cryptographic verification on the festival system.',
-      'All team delegates must carry a valid collegiate student identity card for entry.',
-      'For assistance, contact the TELE-ERA Student Forum desk at PCE Campus, Nagpur.',
+    const instructions = [
+      'Present this pass along with your collegiate photo identity card at the campus gate.',
+      'The QR code provides real-time cryptographic verification on the festival database.',
+      'All registered delegates must report at the ETC Central Concourse for badge issuance.',
+      'Inquiries: TELE-ERA Student Forum, Department of ETC, Priyadarshini College of Engineering.',
     ];
 
-    lines.forEach((line, i) => {
+    instructions.forEach((line, i) => {
       page.drawText(`• ${line}`, {
         x: infoX,
-        y: qrSectionY + 58 - i * 13,
+        y: qrSectionY + 54 - i * 13,
         size: 7.5,
         font: fontRegular,
         color: mutedSlate,
@@ -570,17 +885,17 @@ export async function GET(
     });
 
     // Bottom Footer Security Stamp
-    const footerY = cardY + 12;
+    const footerY = cardY + 14;
     page.drawText('YUGANTAR 2026 • TELE-ERA FORUM • DEPARTMENT OF ETC • PCE NAGPUR', {
       x: cardX + 20,
       y: footerY,
       size: 7.5,
       font: fontBold,
-      color: mutedSlate,
+      color: subtleSlate,
     });
 
     page.drawText('OFFICIAL AUTONOMOUS CREDENTIAL #PCE-ETC-2026', {
-      x: cardX + cardWidth - 210,
+      x: cardX + cardWidth - 215,
       y: footerY,
       size: 7.5,
       font: fontBold,

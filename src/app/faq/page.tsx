@@ -71,9 +71,9 @@ export default function FaqPage() {
       <Navbar />
 
       {/* Hero Header with Atmospheric Background */}
-      <section className="relative pt-24 sm:pt-32 lg:pt-36 pb-12 sm:pb-16 bg-gradient-to-b from-[#EDF5FC] via-[#F4F9FD] to-[#F8FAFD] border-b border-[#DCE5F2] overflow-hidden">
+      <section className="relative pt-20 sm:pt-24 lg:pt-28 pb-10 sm:pb-14 bg-gradient-to-b from-[#EDF5FC] via-[#F4F9FD] to-[#F8FAFD] border-b border-[#DCE5F2] overflow-hidden">
         {/* Supplied Atmospheric Clouds Asset */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-25 sm:opacity-35">
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-70 sm:opacity-80">
           <Image
             src="/images/nexus-city/atmospheric-clouds.webp"
             alt="YUGANTAR 2026 Atmospheric Sky"
@@ -81,34 +81,34 @@ export default function FaqPage() {
             priority
             className="object-cover object-top"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/85 via-[#F4F9FD]/90 to-[#F8FAFD]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/40 via-[#F4F9FD]/65 to-[#F8FAFD]" />
         </div>
 
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#3B82F6]/10 via-[#9187DE]/8 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#3978F6]/12 via-[#E9F2FF]/40 to-transparent rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs font-mono text-[#536781] mb-5">
-            <Link href="/" className="hover:text-[#15294A] transition-colors">Home</Link>
+          <div className="flex items-center gap-2 text-xs font-mono text-[#536781] mb-3 sm:mb-4">
+            <Link href="/" className="hover:text-[#10264A] transition-colors">Home</Link>
             <ChevronRight className="w-3.5 h-3.5 text-[#7E93AC]" />
-            <span className="text-[#3B82F6] font-bold">FAQ & Clarifications</span>
+            <span className="text-[#3978F6] font-bold">FAQ &amp; Clarifications</span>
           </div>
 
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 backdrop-blur-md border border-[#DCE5F2] text-xs font-mono font-bold text-[#3B82F6] uppercase tracking-wider mb-4 shadow-2xs">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[#DCE5F2] text-xs font-mono font-bold text-[#3978F6] uppercase tracking-wider mb-3 shadow-2xs">
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>OFFICIAL CLARIFICATIONS & GUIDANCE</span>
+              <span>OFFICIAL CLARIFICATIONS &amp; GUIDANCE</span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-[#15294A] mb-4 sm:mb-6 text-balance">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-[#10264A] mb-3 sm:mb-4 text-balance">
               Frequently Asked <br />
               <span className="font-editorial text-sunset-glow font-normal tracking-normal">
-                Questions & Rules.
+                Questions &amp; Rules.
               </span>
             </h1>
 
-            <p className="text-sm sm:text-base lg:text-lg text-[#536781] leading-relaxed mb-6 font-normal">
+            <p className="text-xs sm:text-sm lg:text-base text-[#536781] leading-relaxed mb-4 font-normal">
               Find verified answers regarding festival venue logistics, collegiate eligibility, equipment rules, and the upcoming registration architecture.
             </p>
           </div>
@@ -117,7 +117,7 @@ export default function FaqPage() {
       </section>
 
       {/* Filter & Search Controls (Natural Flow, NOT Sticky) */}
-      <section className="py-5 sm:py-6 bg-[#F5F6FA] border-b border-[#DCE5F2]">
+      <section className="py-5 sm:py-6 bg-[#F8FAFC] border-b border-[#DCE5F2]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             
@@ -128,10 +128,10 @@ export default function FaqPage() {
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
                   type="button"
-                  className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
                     activeCategory === cat
-                      ? 'bg-[#4B91E8] text-white shadow-xs'
-                      : 'bg-[#F8FAFD] text-[#60728A] border border-[#DCE5F2]/80 hover:bg-[#EDF5FC] hover:text-[#172B49]'
+                      ? 'bg-[#10264A] text-white shadow-xs'
+                      : 'bg-[#F8FAFD] text-[#536781] border border-[#DCE5F2] hover:bg-[#E9F2FF] hover:text-[#10264A]'
                   }`}
                 >
                   {cat}
@@ -180,30 +180,30 @@ export default function FaqPage() {
                 return (
                   <div
                     key={index}
-                    className="bg-white rounded-2xl border border-[#DCE5F2] overflow-hidden transition-all hover:border-[#B8D5F8] shadow-2xs"
+                    className="bg-white rounded-2xl border border-[#DCE5F2] overflow-hidden transition-all hover:border-[#3978F6]/40 shadow-2xs"
                   >
                     <button
                       type="button"
                       onClick={() => toggleAccordion(index)}
-                      className="w-full p-5 sm:p-6 text-left flex items-start justify-between gap-4 focus:outline-none"
+                      className="w-full p-5 sm:p-6 text-left flex items-start justify-between gap-4 focus:outline-none cursor-pointer"
                     >
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#EDF5FC] text-[#4B91E8] border border-[#B8D5F8]">
+                          <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#E9F2FF] text-[#3978F6] border border-[#D2E4FF]">
                             {faq.category || 'General'}
                           </span>
                         </div>
-                        <h3 className="text-sm sm:text-base font-display font-bold text-[#172B49]">
+                        <h3 className="text-sm sm:text-base font-display font-bold text-[#10264A]">
                           {faq.question}
                         </h3>
                       </div>
-                      <div className={`p-2 rounded-xl bg-[#F8FAFD] border border-[#E2E8F0] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 bg-[#EDF5FC] text-[#4B91E8]' : 'text-[#8CA0BA]'}`}>
+                      <div className={`p-2 rounded-xl bg-[#F8FAFD] border border-[#E2E8F0] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 bg-[#E9F2FF] text-[#3978F6]' : 'text-[#7E93AC]'}`}>
                         <ChevronDown className="w-4 h-4" />
                       </div>
                     </button>
 
                     {isOpen && (
-                      <div className="px-5 sm:px-6 pb-6 pt-1 text-xs sm:text-sm text-[#60728A] leading-relaxed border-t border-[#F1F5F9] animate-in fade-in duration-150">
+                      <div className="px-5 sm:px-6 pb-6 pt-1 text-xs sm:text-sm text-[#536781] leading-relaxed border-t border-[#F1F5F9] animate-in fade-in duration-150">
                         {faq.answer}
                       </div>
                     )}

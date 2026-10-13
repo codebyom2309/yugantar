@@ -152,9 +152,9 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
         />
 
         {/* Soft luminance veil for pristine text contrast on narrow phones */}
-        <div className="absolute inset-y-0 left-0 w-[88%] max-w-md bg-gradient-to-r from-[#F5F6FA]/92 via-[#F5F6FA]/65 to-transparent" />
-        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-[#F5F6FA]/75 via-[#F5F6FA]/25 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#F5F6FA] to-transparent" />
+        <div className="absolute inset-y-0 left-0 w-[82%] max-w-sm bg-gradient-to-r from-[#F8FAFC]/85 via-[#F8FAFC]/45 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#F8FAFC]/60 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#F8FAFC] to-transparent" />
       </div>
 
       {/* 2. DESKTOP HERO BACKGROUND (>= 1024px) with subtle depth transform */}
@@ -171,14 +171,14 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
           sizes="100vw"
         />
 
-        {/* Desktop atmospheric gradient blend on the left for maximum typographic readability */}
-        <div className="absolute inset-y-0 left-0 w-[54%] xl:w-[48%] bg-gradient-to-r from-[#F5F6FA]/95 via-[#F5F6FA]/70 to-transparent backdrop-blur-[0.5px]" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#F5F6FA] to-transparent" />
+        {/* Desktop atmospheric gradient blend on the left for maximum typographic readability while keeping the city artwork crisp */}
+        <div className="absolute inset-y-0 left-0 w-[46%] xl:w-[40%] bg-gradient-to-r from-[#F8FAFC]/88 via-[#F8FAFC]/45 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#F8FAFC] to-transparent" />
       </motion.div>
 
-      {/* Atmospheric ambient glows complementing the architecture */}
-      <div className="absolute top-16 left-12 w-96 h-96 rounded-full bg-gradient-to-br from-[#FFF0E3] to-[#B8D9F5]/30 blur-3xl opacity-70 pointer-events-none z-0" />
-      <div className="absolute -bottom-10 right-20 w-80 h-80 rounded-full bg-[#FFD1B5]/40 blur-3xl opacity-60 pointer-events-none z-0" />
+      {/* Atmospheric ambient glows complementing the architecture (cool pale-blue and subtle electric blue) */}
+      <div className="absolute top-16 left-12 w-96 h-96 rounded-full bg-gradient-to-br from-[#E9F2FF] to-[#3978F6]/15 blur-3xl opacity-60 pointer-events-none z-0" />
+      <div className="absolute -bottom-10 right-20 w-80 h-80 rounded-full bg-[#E9F2FF]/50 blur-3xl opacity-50 pointer-events-none z-0" />
 
       {/* =========================================================================
           MAIN HERO CONTENT CONTAINER

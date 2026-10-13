@@ -226,11 +226,11 @@
 }
 
 .nexus-btn-secondary:hover {
-  background: #FAF6F0;
-  border-color: #E07A43;
-  color: #172B49;
+  background: #E9F2FF;
+  border-color: #3978F6;
+  color: #10264A;
   transform: translateY(-1.5px);
-  box-shadow: 0 4px 14px rgba(224, 122, 67, 0.12);
+  box-shadow: 0 4px 14px rgba(57, 120, 246, 0.15);
 }
 
 .nexus-btn-secondary:active {
