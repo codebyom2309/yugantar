@@ -85,6 +85,7 @@ export interface FestivalSettings {
   footerGithub?: string;
   footerCollegeUrl?: string;
   footerCustomLinks?: Array<{ label: string; url: string }>;
+  showOrganizerOrder?: boolean;
 }
 
 export interface DbOrganizerMember {
@@ -244,6 +245,7 @@ export async function fetchFestivalSettingsRaw(): Promise<FestivalSettings> {
             return undefined;
           }
         })(),
+        showOrganizerOrder: map.show_organizer_order === '1',
       };
     }
   } catch (err) {
@@ -253,6 +255,7 @@ export async function fetchFestivalSettingsRaw(): Promise<FestivalSettings> {
   return {
     ...FESTIVAL_INFO,
     registrationGlobalOpen: true,
+    showOrganizerOrder: false,
     heroArtwork: FESTIVAL_ASSETS.heroArtwork,
     heroArtworkMobile: FESTIVAL_ASSETS.heroArtworkMobile,
     logoEmblem: FESTIVAL_ASSETS.logoEmblem,

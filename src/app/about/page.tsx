@@ -3,7 +3,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { db } from '@/lib/db';
 import TurboBitsObserver from '@/components/organizers/TurboBitsObserver';
 import {
   getPublicOrganizers,
@@ -59,15 +58,12 @@ export default function AboutPage() {
 }
 
 async function AboutContent() {
-  const [organizers, members, festival, showOrderRows] = await Promise.all([
+  const [organizers, members, festival] = await Promise.all([
     getPublicOrganizers(),
     getPublicOrganizerMembers(),
     getFestivalSettings(),
-    db.query<{ setting_value: string }>(
-      "SELECT setting_value FROM site_settings WHERE setting_key = 'show_organizer_order' LIMIT 1"
-    ).catch(() => []),
   ]);
-  const showOrganizerOrder = showOrderRows?.[0]?.setting_value === '1';
+  const showOrganizerOrder = Boolean(festival.showOrganizerOrder);
 
   const turboBitsTeam = members.filter((m) => m.category === 'turbo_bits');
   const facultyLeads = members.filter((m) => m.category === 'faculty');
