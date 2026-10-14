@@ -207,8 +207,8 @@ async function PassContent({ params, searchParams }: PassPageProps) {
             <span>Verify Live</span>
           </Link>
           <a
-            href={`/api/pass/${reg.id}/pdf${token ? `?token=${token}` : ''}`}
-            download={`YUGANTAR-2026-PASS-${reg.id.substring(0, 8)}.pdf`}
+            href={`/api/pass/${reg.id}/pdf?download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`}
+            download={`YUGANTAR-2026-PASS-${reg.id.substring(0, 8).toUpperCase()}.pdf`}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#172B49] text-white text-xs font-mono font-bold hover:bg-[#233C63] transition shadow-xs cursor-pointer"
           >
             <Download className="w-3.5 h-3.5 text-[#F5A16F]" />

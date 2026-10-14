@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getRegistrationFormBySlug } from '@/data/registrationForms';
+import { COMPETITIONS } from '@/data/events';
 import { randomUUID } from 'crypto';
 import { signPassToken, PassMemberInfo } from '@/lib/passToken';
 
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    const canonicalSlug = formConfig.competitionSlug;
 
     // 2. Idempotency check — prevent duplicate submissions
     if (idempotencyKey) {
@@ -107,19 +109,23 @@ export async function POST(request: NextRequest) {
         registration_open: number;
         registration_deadline: string | null;
         is_paid: number;
+        registration_fee: string | null;
         require_utr: number;
         require_screenshot: number;
         whatsapp_link: string | null;
         confirmation_instructions: string | null;
       }>(
-        'SELECT registration_open, registration_deadline, is_paid, require_utr, require_screenshot, whatsapp_link, confirmation_instructions FROM competitions WHERE slug = ? LIMIT 1',
-        [competitionSlug]
+        'SELECT registration_open, registration_deadline, is_paid, registration_fee, require_utr, require_screenshot, whatsapp_link, confirmation_instructions FROM competitions WHERE slug = ? OR slug = ? LIMIT 1',
+        [canonicalSlug, competitionSlug]
       );
       if (compRows.length > 0) {
         const comp = compRows[0];
-        isPaid = Boolean(comp.is_paid);
-        requireUtr = Boolean(comp.require_utr);
-        requireScreenshot = Boolean(comp.require_screenshot);
+        const feeStr = (comp.registration_fee || '').trim().toLowerCase();
+        const hasFee = feeStr !== '' && feeStr !== 'free' && feeStr !== '₹0' && feeStr !== '0';
+        // A paid competition must NOT silently become free if its payment configuration is missing
+        isPaid = comp.is_paid === 1 || hasFee;
+        requireUtr = isPaid ? Boolean(comp.require_utr) : false;
+        requireScreenshot = isPaid ? Boolean(comp.require_screenshot) : false;
         compWhatsApp = comp.whatsapp_link;
         confirmationInstructions = comp.confirmation_instructions;
 
@@ -143,6 +149,15 @@ export async function POST(request: NextRequest) {
               { status: 403 }
             );
           }
+        }
+      } else {
+        // Fallback to static COMPETITIONS configuration to prevent accidental free status
+        const staticComp = COMPETITIONS.find((c) => c.slug === canonicalSlug || c.slug === competitionSlug);
+        if (staticComp) {
+          isPaid = Boolean(staticComp.isPaid || (staticComp.registrationFee && staticComp.registrationFee.toLowerCase() !== 'free'));
+          requireUtr = isPaid ? (staticComp.requireUtr !== false) : false;
+          requireScreenshot = isPaid ? (staticComp.requireScreenshot !== false) : false;
+          compWhatsApp = staticComp.whatsappLink || null;
         }
       }
     } catch (gateErr) {

@@ -70,9 +70,24 @@ export default function OrganizersPage() {
     avatarUrl: '',
     githubUrl: '',
     linkedinUrl: '',
+    forumDesignation: '',
+    cropData: '',
     displayOrder: 0,
     isPublished: 1,
   });
+
+  // Public Order display toggle state
+  const [showOrganizerOrder, setShowOrganizerOrder] = useState(false);
+  const [togglingOrder, setTogglingOrder] = useState(false);
+
+  // Crop Editor Modal State
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropX, setCropX] = useState(0);
+  const [cropY, setCropY] = useState(0);
+  const [cropShape, setCropShape] = useState<'circle' | 'square' | 'rounded'>('circle');
+  const [isDraggingCrop, setIsDraggingCrop] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   // Upload & Drive State
   const [activePhotoTab, setActivePhotoTab] = useState<'upload' | 'drive'>('upload');
@@ -94,11 +109,75 @@ export default function OrganizersPage() {
 
       setOrganizers(orgData.organizers || []);
       setMembers(memData.members || []);
+      if (orgData.showOrganizerOrder !== undefined) {
+        setShowOrganizerOrder(Boolean(orgData.showOrganizerOrder));
+      }
     } catch (err) {
       console.error('Failed to fetch organizers or members:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleToggleShowOrder = async (newValue: boolean) => {
+    setTogglingOrder(true);
+    setShowOrganizerOrder(newValue);
+    try {
+      await fetch('/api/admin/organizers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ showOrganizerOrder: newValue }),
+      });
+    } catch (err) {
+      console.error('Failed to update showOrganizerOrder:', err);
+    } finally {
+      setTogglingOrder(false);
+    }
+  };
+
+  const openCropModal = () => {
+    if (!memberForm.avatarUrl) return;
+    if (memberForm.cropData) {
+      try {
+        const c = typeof memberForm.cropData === 'string' ? JSON.parse(memberForm.cropData) : memberForm.cropData;
+        setCropZoom(c.zoom ?? 1);
+        setCropX(c.x ?? 0);
+        setCropY(c.y ?? 0);
+        setCropShape(c.shape ?? 'circle');
+      } catch {
+        setCropZoom(1);
+        setCropX(0);
+        setCropY(0);
+        setCropShape('circle');
+      }
+    } else {
+      setCropZoom(1);
+      setCropX(0);
+      setCropY(0);
+      setCropShape('circle');
+    }
+    setShowCropModal(true);
+  };
+
+  const handleApplyCrop = () => {
+    const data = {
+      zoom: Number(cropZoom.toFixed(2)),
+      x: Math.round(cropX),
+      y: Math.round(cropY),
+      shape: cropShape,
+    };
+    setMemberForm((prev) => ({
+      ...prev,
+      cropData: JSON.stringify(data),
+    }));
+    setShowCropModal(false);
+  };
+
+  const handleResetCrop = () => {
+    setCropZoom(1);
+    setCropX(0);
+    setCropY(0);
+    setCropShape('circle');
   };
 
   useEffect(() => {
@@ -195,6 +274,8 @@ export default function OrganizersPage() {
       avatarUrl: '',
       githubUrl: '',
       linkedinUrl: '',
+      forumDesignation: '',
+      cropData: '',
       displayOrder: members.filter((m) => m.category === defaultCategory).length,
       isPublished: 1,
     });
@@ -214,6 +295,8 @@ export default function OrganizersPage() {
       avatarUrl: member.avatar_url || '',
       githubUrl: member.github_url || member.githubUrl || '',
       linkedinUrl: member.linkedin_url || member.linkedinUrl || '',
+      forumDesignation: (member as any).forum_designation || (member as any).forumDesignation || '',
+      cropData: (member as any).crop_data || (member as any).cropData || '',
       displayOrder: member.display_order,
       isPublished: Number(member.is_published) ? 1 : 0,
     });
@@ -388,6 +471,28 @@ export default function OrganizersPage() {
             <GraduationCap className="w-3.5 h-3.5 text-emerald-500" />
             <span>Faculty Leadership ({facultyList.length})</span>
           </button>
+        </div>
+
+        {/* Public Order Display Setting Toggle */}
+        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl admin-glass-panel border border-black/10 dark:border-white/10 text-xs">
+          <span className="text-slate-600 dark:text-zinc-300 font-medium">Public Order Labels (Order #):</span>
+          <button
+            type="button"
+            disabled={togglingOrder}
+            onClick={() => handleToggleShowOrder(!showOrganizerOrder)}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              showOrganizerOrder ? 'bg-blue-600' : 'bg-slate-300 dark:bg-zinc-700'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                showOrganizerOrder ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </button>
+          <span className="font-mono font-bold text-[11px] text-slate-700 dark:text-zinc-300">
+            {showOrganizerOrder ? 'Shown on About' : 'Hidden from About'}
+          </span>
         </div>
 
         {/* Action Button */}
@@ -599,13 +704,29 @@ export default function OrganizersPage() {
                     {/* Circular Portrait */}
                     <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-slate-300 dark:border-white/20 bg-black/5 dark:bg-white/5 flex items-center justify-center mt-2 shadow-xs">
                       {member.avatar_url ? (
-                        <Image
-                          src={member.avatar_url}
-                          alt={member.name}
-                          fill
-                          className="object-cover"
-                          unoptimized={member.avatar_url.startsWith('/api/') || member.avatar_url.includes('google')}
-                        />
+                        (() => {
+                          let listCropStyle: React.CSSProperties = { objectFit: 'cover' };
+                          if ((member as any).crop_data) {
+                            try {
+                              const c = typeof (member as any).crop_data === 'string' ? JSON.parse((member as any).crop_data) : (member as any).crop_data;
+                              if (c.zoom || c.x !== undefined || c.y !== undefined) {
+                                listCropStyle = {
+                                  objectFit: 'cover',
+                                  transform: `scale(${c.zoom || 1}) translate(${c.x || 0}px, ${c.y || 0}px)`,
+                                  transformOrigin: 'center center',
+                                };
+                              }
+                            } catch {}
+                          }
+                          return (
+                            <img
+                              src={member.avatar_url}
+                              alt={member.name}
+                              style={listCropStyle}
+                              className="w-full h-full object-cover"
+                            />
+                          );
+                        })()
                       ) : (
                         <span className="text-base font-bold font-display text-blue-500">
                           {member.name
@@ -618,15 +739,20 @@ export default function OrganizersPage() {
                       )}
                     </div>
 
-                    <div className="w-full">
+                    <div className="w-full space-y-0.5">
                       <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                         {member.name}
                       </h4>
-                      <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-semibold block truncate mt-0.5">
+                      <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-semibold block truncate">
                         {member.role}
                       </span>
+                      {(member as any).forum_designation && (
+                        <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 inline-block truncate max-w-full">
+                          {(member as any).forum_designation}
+                        </span>
+                      )}
                       {member.department && (
-                        <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5">
+                        <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate">
                           {member.department}
                         </span>
                       )}
@@ -1053,6 +1179,19 @@ export default function OrganizersPage() {
 
               <div className="space-y-1">
                 <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
+                  TELE-ERA Student Forum Designation (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={memberForm.forumDesignation}
+                  onChange={(e) => setMemberForm({ ...memberForm, forumDesignation: e.target.value })}
+                  placeholder="e.g. TELE-ERA Student Forum Secretary / Tech Head"
+                  className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
                   Short Bio / Responsibility Scope (Optional)
                 </label>
                 <textarea
@@ -1104,13 +1243,29 @@ export default function OrganizersPage() {
                 <div className="flex items-center gap-3">
                   <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-slate-300 dark:border-white/20 bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
                     {memberForm.avatarUrl ? (
-                      <Image
-                        src={memberForm.avatarUrl}
-                        alt="Avatar"
-                        fill
-                        className="object-cover"
-                        unoptimized={memberForm.avatarUrl.startsWith('/api/') || memberForm.avatarUrl.includes('google')}
-                      />
+                      (() => {
+                        let cropStyle: React.CSSProperties = { objectFit: 'cover' };
+                        if (memberForm.cropData) {
+                          try {
+                            const c = typeof memberForm.cropData === 'string' ? JSON.parse(memberForm.cropData) : memberForm.cropData;
+                            if (c.zoom || c.x !== undefined || c.y !== undefined) {
+                              cropStyle = {
+                                objectFit: 'cover',
+                                transform: `scale(${c.zoom || 1}) translate(${c.x || 0}px, ${c.y || 0}px)`,
+                                transformOrigin: 'center center',
+                              };
+                            }
+                          } catch {}
+                        }
+                        return (
+                          <img
+                            src={memberForm.avatarUrl}
+                            alt="Avatar"
+                            style={cropStyle}
+                            className="w-full h-full object-cover"
+                          />
+                        );
+                      })()
                     ) : (
                       <span className="text-sm font-bold font-display text-blue-500">
                         {(memberForm.name || 'TB')
@@ -1139,13 +1294,23 @@ export default function OrganizersPage() {
                         />
                       </label>
                       {memberForm.avatarUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setMemberForm({ ...memberForm, avatarUrl: '' })}
-                          className="text-rose-500 hover:text-rose-600 text-xs font-semibold cursor-pointer"
-                        >
-                          Remove
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={openCropModal}
+                            className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Crop / Framing</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMemberForm({ ...memberForm, avatarUrl: '', cropData: '' })}
+                            className="text-rose-500 hover:text-rose-600 text-xs font-semibold cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </>
                       )}
                     </div>
                     <input
@@ -1214,6 +1379,183 @@ export default function OrganizersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: INTERACTIVE PHOTO CROP & FRAMING EDITOR
+          ========================================================================= */}
+      {showCropModal && memberForm.avatarUrl && (
+        <div className="fixed inset-0 z-60 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="admin-glass-panel bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl border border-black/10 dark:border-white/10">
+            <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-blue-500" />
+                  <span>Photo Crop &amp; Framing Editor</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                  Drag to pan, adjust zoom, and choose mask framing.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCropModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Mask Shape Selector */}
+            <div className="flex items-center justify-center gap-2">
+              {[
+                { id: 'circle', label: 'Circle Mask' },
+                { id: 'rounded', label: 'Rounded Rect' },
+                { id: 'square', label: 'Square' },
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setCropShape(s.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                    cropShape === s.id
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-zinc-400 hover:bg-black/10'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Interactive Viewport Canvas */}
+            <div className="flex items-center justify-center py-2">
+              <div
+                className={`relative w-48 h-48 bg-slate-950 overflow-hidden border-4 border-blue-500/80 shadow-2xl cursor-grab active:cursor-grabbing select-none ${
+                  cropShape === 'circle'
+                    ? 'rounded-full'
+                    : cropShape === 'rounded'
+                    ? 'rounded-3xl'
+                    : 'rounded-none'
+                }`}
+                onMouseDown={(e) => {
+                  setIsDraggingCrop(true);
+                  setDragStart({ x: e.clientX - cropX, y: e.clientY - cropY });
+                }}
+                onMouseMove={(e) => {
+                  if (!isDraggingCrop) return;
+                  setCropX(e.clientX - dragStart.x);
+                  setCropY(e.clientY - dragStart.y);
+                }}
+                onMouseUp={() => setIsDraggingCrop(false)}
+                onMouseLeave={() => setIsDraggingCrop(false)}
+                onTouchStart={(e) => {
+                  const touch = e.touches[0];
+                  setIsDraggingCrop(true);
+                  setDragStart({ x: touch.clientX - cropX, y: touch.clientY - cropY });
+                }}
+                onTouchMove={(e) => {
+                  if (!isDraggingCrop) return;
+                  const touch = e.touches[0];
+                  setCropX(touch.clientX - dragStart.x);
+                  setCropY(touch.clientY - dragStart.y);
+                }}
+                onTouchEnd={() => setIsDraggingCrop(false)}
+              >
+                <img
+                  src={memberForm.avatarUrl}
+                  alt="Portrait crop"
+                  draggable={false}
+                  className="w-full h-full object-cover pointer-events-none transition-none"
+                  style={{
+                    transform: `scale(${cropZoom}) translate(${cropX}px, ${cropY}px)`,
+                    transformOrigin: 'center center',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Control Sliders */}
+            <div className="space-y-3 bg-black/5 dark:bg-white/5 p-3.5 rounded-2xl text-xs">
+              <div>
+                <div className="flex items-center justify-between text-slate-700 dark:text-zinc-300 font-semibold mb-1">
+                  <span>Zoom Scale</span>
+                  <span className="font-mono text-blue-600 dark:text-blue-400">{cropZoom.toFixed(2)}x</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="3"
+                  step="0.05"
+                  value={cropZoom}
+                  onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <div className="flex items-center justify-between text-slate-700 dark:text-zinc-300 font-semibold mb-1">
+                    <span>Pan Horizontal</span>
+                    <span className="font-mono text-slate-500">{Math.round(cropX)}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-80"
+                    max="80"
+                    step="1"
+                    value={cropX}
+                    onChange={(e) => setCropX(parseInt(e.target.value))}
+                    className="w-full accent-blue-600 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-slate-700 dark:text-zinc-300 font-semibold mb-1">
+                    <span>Pan Vertical</span>
+                    <span className="font-mono text-slate-500">{Math.round(cropY)}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-80"
+                    max="80"
+                    step="1"
+                    value={cropY}
+                    onChange={(e) => setCropY(parseInt(e.target.value))}
+                    className="w-full accent-blue-600 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between pt-2 border-t border-black/10 dark:border-white/10">
+              <button
+                type="button"
+                onClick={handleResetCrop}
+                className="px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 text-slate-600 dark:text-zinc-400 text-xs font-semibold cursor-pointer"
+              >
+                Reset Framing
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCropModal(false)}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyCrop}
+                  className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Apply Framing</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

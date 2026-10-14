@@ -32,6 +32,8 @@ export interface DbCompetition extends Competition {
   paymentInstructions?: string;
   requireUtr?: boolean;
   requireScreenshot?: boolean;
+  isFeeFixed?: boolean;
+  showPaymentQr?: boolean;
   whatsappLink?: string;
   confirmationInstructions?: string;
   sectionVisibility?: Record<string, boolean>;
@@ -98,6 +100,8 @@ export interface DbOrganizerMember {
   linkedin_url?: string | null;
   display_order: number;
   is_published: number;
+  crop_data?: string | null;
+  forum_designation?: string | null;
 }
 
 // -----------------------------------------------------------------------------
@@ -518,6 +522,8 @@ function mapDbRowToCompetition(r: Record<string, unknown>): DbCompetition {
     paymentInstructions: r.payment_instructions ? String(r.payment_instructions) : undefined,
     requireUtr: r.require_utr !== undefined && r.require_utr !== null ? Boolean(r.require_utr) : Boolean(COMPETITIONS.find((c) => c.slug === r.slug)?.requireUtr),
     requireScreenshot: r.require_screenshot !== undefined && r.require_screenshot !== null ? Boolean(r.require_screenshot) : Boolean(COMPETITIONS.find((c) => c.slug === r.slug)?.requireScreenshot),
+    isFeeFixed: r.is_fee_fixed !== undefined && r.is_fee_fixed !== null ? Boolean(r.is_fee_fixed) : true,
+    showPaymentQr: r.show_payment_qr !== undefined && r.show_payment_qr !== null ? Boolean(r.show_payment_qr) : true,
     whatsappLink: r.whatsapp_link ? String(r.whatsapp_link) : COMPETITIONS.find((c) => c.slug === r.slug)?.whatsappLink,
     confirmationInstructions: r.confirmation_instructions ? String(r.confirmation_instructions) : undefined,
   };

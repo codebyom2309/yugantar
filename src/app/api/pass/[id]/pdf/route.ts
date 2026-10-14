@@ -4,6 +4,8 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import QRCode from 'qrcode';
 import { verifyPassToken, PassMemberInfo } from '@/lib/passToken';
 import { COMPETITIONS } from '@/data/events';
+import { resolveActiveTemplate, extractRegistrationTokenMap } from '@/lib/studioService';
+import { renderTemplateToPdfBuffer } from '@/lib/studioPdfRenderer';
 
 interface RegistrationRecord {
   id: string;
@@ -111,7 +113,44 @@ export async function GET(
       // Use fallback
     }
 
-    // 4. Generate verification QR Code PNG buffer
+    // 4. Check for active Pass Studio Template (Phase 7 resolution order)
+    try {
+      const activeTemplate = await resolveActiveTemplate(reg.competition_slug, 'registration_pass');
+      if (activeTemplate && activeTemplate.elements && activeTemplate.elements.length > 0) {
+        const tokenMap = extractRegistrationTokenMap(
+          reg,
+          {
+            name: compName,
+            category: compCategory,
+            venue: compVenue,
+            event_date: compDate,
+          },
+          teamMembers
+        );
+        const verifyToken = reg.verification_token || reg.id;
+        const pdfBytes = await renderTemplateToPdfBuffer(activeTemplate, tokenMap, {
+          passToken: verifyToken,
+        });
+
+        const isInline = url.searchParams.get('inline') === '1';
+        const filename = `YUGANTAR-2026-PASS-${reg.id.slice(0, 8).toUpperCase()}.pdf`;
+        const disposition = isInline ? `inline; filename="${filename}"` : `attachment; filename="${filename}"`;
+
+        return new NextResponse(pdfBytes as any, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': disposition,
+            'Content-Length': String(pdfBytes.byteLength),
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+          },
+        });
+      }
+    } catch (templateErr) {
+      console.warn('Could not render pass via active studio template, using hardcoded fallback:', templateErr);
+    }
+
+    // 5. Generate verification QR Code PNG buffer (Hardcoded Fallback)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yugantar2026.pce.ac.in';
     const verifyToken = reg.verification_token || reg.id;
     const verifyUrl = `${appUrl}/verify/${verifyToken}`;

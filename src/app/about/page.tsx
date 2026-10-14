@@ -3,6 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { db } from '@/lib/db';
+import TurboBitsObserver from '@/components/organizers/TurboBitsObserver';
 import {
   getPublicOrganizers,
   getPublicOrganizerMembers,
@@ -57,11 +59,15 @@ export default function AboutPage() {
 }
 
 async function AboutContent() {
-  const [organizers, members, festival] = await Promise.all([
+  const [organizers, members, festival, showOrderRows] = await Promise.all([
     getPublicOrganizers(),
     getPublicOrganizerMembers(),
     getFestivalSettings(),
+    db.query<{ setting_value: string }>(
+      "SELECT setting_value FROM site_settings WHERE setting_key = 'show_organizer_order' LIMIT 1"
+    ).catch(() => []),
   ]);
+  const showOrganizerOrder = showOrderRows?.[0]?.setting_value === '1';
 
   const turboBitsTeam = members.filter((m) => m.category === 'turbo_bits');
   const facultyLeads = members.filter((m) => m.category === 'faculty');
@@ -387,15 +393,15 @@ async function AboutContent() {
           {turboBitsTeam.length > 0 && (
             <section id="turbo-bits-team" className="space-y-6 sm:space-y-8">
               <div className="max-w-3xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFEFE3] border border-[#FFD9C2] text-xs font-mono font-bold text-[#FF783E] uppercase tracking-wider mb-2.5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF2FF] border border-[#BFDBFE] text-xs font-mono font-bold text-[#2563EB] uppercase tracking-wider mb-2.5">
                   <Code2 className="w-3.5 h-3.5" />
-                  <span>CORE STUDENT STEERING COMMITTEE</span>
+                  <span>STUDENT TECHNICAL &amp; OPERATIONS TEAM</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-[#10264A] tracking-tight">
                   TurboBits Student Organizing Team
                 </h2>
-                <p className="text-xs sm:text-sm text-[#536781] mt-1 leading-relaxed">
-                  The designated student engineering committee driving challenge logistics, software infrastructure, hardware laboratory bench setups, jury liaison, and participant operations for YUGANTAR 2026.
+                <p className="text-xs sm:text-sm text-[#536781] mt-1.5 leading-relaxed">
+                  Hosted by the Department of Electronics &amp; Telecommunication Engineering at Priyadarshini College of Engineering (PCE) in association with the TELE-ERA Student Forum. The TurboBits team is the dedicated student engineering, design, and operations unit building the digital systems, laboratory infrastructure, and live event coordination for YUGANTAR 2026.
                 </p>
               </div>
 
@@ -404,22 +410,40 @@ async function AboutContent() {
                 {turboBitsTeam.map((member: DbOrganizerMember, idx: number) => {
                   const hasGithub = member.github_url && member.github_url.trim().length > 0;
                   const hasLinkedin = member.linkedin_url && member.linkedin_url.trim().length > 0;
+                  const roleLower = (member.role || '').toLowerCase();
+                  const isLead = roleLower.includes('lead') || roleLower.includes('head');
+
+                  // Optional crop style
+                  let cropStyle: React.CSSProperties = { objectFit: 'cover' };
+                  if (member.crop_data) {
+                    try {
+                      const c = typeof member.crop_data === 'string' ? JSON.parse(member.crop_data) : member.crop_data;
+                      if (c.zoom || c.x !== undefined || c.y !== undefined) {
+                        cropStyle = {
+                          objectFit: 'cover',
+                          transform: `scale(${c.zoom || 1}) translate(${c.x || 0}%, ${c.y || 0}%)`,
+                          transformOrigin: 'center center',
+                        };
+                      }
+                    } catch {}
+                  }
 
                   return (
                     <div
                       key={member.id ? `${member.id}-${idx}` : `tb-${idx}`}
-                      className="p-5 sm:p-6 rounded-3xl bg-white border border-[#DCE5F2] shadow-xs flex flex-col justify-between hover:border-[#3978F6]/40 transition-all group"
+                      className="turbobits-card p-5 sm:p-6 rounded-3xl bg-white border border-[#DCE5F2] shadow-xs flex flex-col justify-between hover:border-[#3978F6] hover:shadow-[0_0_30px_-6px_rgba(57,120,246,0.35)] hover:-translate-y-1 transition-all duration-300 group"
                     >
                       <div className="space-y-3.5">
                         {/* Member Header with Avatar, Name, and Role */}
                         <div className="flex items-start gap-4">
-                          <div className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-2xl overflow-hidden border-2 border-[#DCE5F2] bg-[#E9F2FF] flex items-center justify-center shadow-2xs shrink-0 group-hover:border-[#3978F6]/50 transition-colors">
+                          <div className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-2xl overflow-hidden border-2 border-[#DCE5F2] bg-[#E9F2FF] flex items-center justify-center shadow-2xs shrink-0 group-hover:border-[#3978F6]/70 transition-colors">
                             {member.avatar_url ? (
                               <Image
                                 src={member.avatar_url}
                                 alt={member.name}
                                 fill
-                                className="object-cover"
+                                style={cropStyle}
+                                className="transition-transform duration-300 group-hover:scale-105"
                                 unoptimized={member.avatar_url.startsWith('/api/') || member.avatar_url.includes('google')}
                               />
                             ) : (
@@ -435,9 +459,22 @@ async function AboutContent() {
                           </div>
 
                           <div className="min-w-0 flex-1 space-y-1">
-                            <span className="inline-block px-2 py-0.5 rounded-md bg-[#FFEFE3] text-[#FF783E] text-[10px] font-mono font-bold uppercase tracking-wider">
-                              TurboBits Lead
-                            </span>
+                            {isLead ? (
+                              <span className="inline-block px-2 py-0.5 rounded-md bg-[#FFEFE3] text-[#FF783E] text-[10px] font-mono font-bold uppercase tracking-wider">
+                                TurboBits Lead
+                              </span>
+                            ) : (
+                              <span className="inline-block px-2 py-0.5 rounded-md bg-[#EBF2FF] text-[#2563EB] text-[10px] font-mono font-bold uppercase tracking-wider">
+                                {member.role || 'TurboBits Member'}
+                              </span>
+                            )}
+
+                            {member.forum_designation && (
+                              <div className="text-[10px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60 inline-flex items-center gap-1">
+                                <span>{member.forum_designation}</span>
+                              </div>
+                            )}
+
                             <h3 className="text-base sm:text-lg font-display font-extrabold text-[#10264A] leading-snug break-words">
                               {member.name}
                             </h3>
@@ -465,11 +502,17 @@ async function AboutContent() {
 
                       {/* Footer: Social Links (Only rendered when configured) */}
                       <div className="pt-4 mt-4 border-t border-[#DCE5F2] flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-[#7E93AC] font-semibold">
-                          Order #{member.display_order + 1}
-                        </span>
+                        {showOrganizerOrder ? (
+                          <span className="text-[10px] font-mono text-[#7E93AC] font-semibold">
+                            Order #{member.display_order + 1}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-mono text-[#7E93AC]/60">
+                            PCE · ETC
+                          </span>
+                        )}
 
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 ml-auto">
                           {hasGithub && (
                             <a
                               href={member.github_url!}
@@ -483,7 +526,6 @@ async function AboutContent() {
                               <span className="text-[10px]">GitHub</span>
                             </a>
                           )}
-
                           {hasLinkedin && (
                             <a
                               href={member.linkedin_url!}
@@ -497,7 +539,6 @@ async function AboutContent() {
                               <span className="text-[10px]">LinkedIn</span>
                             </a>
                           )}
-
                           {!hasGithub && !hasLinkedin && (
                             <span className="text-[10px] font-mono text-[#7E93AC]">
                               Verified Student Coordinator
@@ -505,11 +546,13 @@ async function AboutContent() {
                           )}
                         </div>
                       </div>
-
                     </div>
                   );
                 })}
               </div>
+
+              {/* Mobile center-focus highlight observer */}
+              <TurboBitsObserver />
             </section>
           )}
 

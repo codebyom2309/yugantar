@@ -46,7 +46,11 @@ import {
   CreditCard,
   MessageCircle,
   FileSpreadsheet,
+  Download,
+  Copy,
+  Check,
 } from 'lucide-react';
+import { buildUpiPaymentUri, extractNumericFee, isValidUpiId } from '@/lib/upiPayment';
 
 interface Coordinator {
   id: string;
@@ -161,6 +165,8 @@ export default function CompetitionEditorPage({
     paymentInstructions: '',
     requireUtr: false,
     requireScreenshot: false,
+    isFeeFixed: true,
+    showPaymentQr: true,
     whatsappLink: '',
     confirmationInstructions: '',
   });
@@ -168,17 +174,35 @@ export default function CompetitionEditorPage({
   const [associatedSpreadsheet, setAssociatedSpreadsheet] = useState<{ id: string; display_name: string; spreadsheet_url: string } | null>(null);
   const [uploadingQr, setUploadingQr] = useState(false);
   const [generatedQrDataUrl, setGeneratedQrDataUrl] = useState<string>('');
+  const [previewParticipantFlow, setPreviewParticipantFlow] = useState(false);
+  const [adminCopiedId, setAdminCopiedId] = useState(false);
 
   const [festivalDate, setFestivalDate] = useState('19 October 2026');
 
+  const handleDownloadQrPng = () => {
+    const dataUrl = form.qrMode === 'upload' ? form.qrCodeUrl : generatedQrDataUrl;
+    if (!dataUrl) return;
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `YUGANTAR-2026-QR-${slug.toUpperCase()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Generate dynamic QR preview whenever generate mode is active
   useEffect(() => {
-    if (form.qrMode === 'generate' && form.upiId?.trim()) {
-      const cleanFee = form.registrationFee ? form.registrationFee.replace(/[^0-9]/g, '') : '';
-      const payee = form.payeeName || 'TELE-ERA YUGANTAR 2026';
-      const upiUri = `upi://pay?pa=${encodeURIComponent(form.upiId.trim())}&pn=${encodeURIComponent(payee.trim())}${cleanFee ? `&am=${cleanFee}` : ''}&cu=INR`;
+    if (form.qrMode === 'generate' && form.upiId?.trim() && isValidUpiId(form.upiId.trim())) {
+      const cleanFee = form.isFeeFixed !== false ? extractNumericFee(form.registrationFee) : undefined;
+      const payee = form.payeeName?.trim() || 'TELE-ERA YUGANTAR 2026';
+      const upiUri = buildUpiPaymentUri({
+        upiId: form.upiId.trim(),
+        payeeName: payee,
+        amount: cleanFee,
+        transactionNote: `${form.name || slug} Registration Fee`,
+      });
       QRCode.toDataURL(upiUri, {
-        width: 260,
+        width: 280,
         margin: 1,
         color: { dark: '#172B49', light: '#FFFFFF' },
       })
@@ -187,7 +211,7 @@ export default function CompetitionEditorPage({
     } else {
       setGeneratedQrDataUrl('');
     }
-  }, [form.qrMode, form.upiId, form.payeeName, form.registrationFee]);
+  }, [form.qrMode, form.upiId, form.payeeName, form.registrationFee, form.isFeeFixed, form.name, slug]);
 
   // Dynamic Lists State
   const [scheduleFlow, setScheduleFlow] = useState<ScheduleItem[]>([]);
@@ -284,6 +308,8 @@ export default function CompetitionEditorPage({
         paymentInstructions: c.payment_instructions || '',
         requireUtr: Boolean(c.require_utr),
         requireScreenshot: Boolean(c.require_screenshot),
+        isFeeFixed: c.is_fee_fixed !== undefined && c.is_fee_fixed !== null ? Boolean(c.is_fee_fixed) : true,
+        showPaymentQr: c.show_payment_qr !== undefined && c.show_payment_qr !== null ? Boolean(c.show_payment_qr) : true,
         whatsappLink: c.whatsapp_link || '',
         confirmationInstructions: c.confirmation_instructions || '',
       });
@@ -1124,7 +1150,14 @@ export default function CompetitionEditorPage({
                       </h4>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono text-slate-500">Registration Mode:</span>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewParticipantFlow(!previewParticipantFlow)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 hover:bg-blue-100 transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>{previewParticipantFlow ? 'Hide Participant Preview' : 'Live Participant Flow Preview'}</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => updateFormField('isPaid', !form.isPaid)}
@@ -1140,7 +1173,7 @@ export default function CompetitionEditorPage({
                   </div>
 
                   {/* Actionable Warning if Paid Mode is Active with Incomplete Configuration */}
-                  {form.isPaid && (!form.registrationFee || form.registrationFee === 'Free' || (form.qrMode === 'upload' && !form.qrCodeUrl) || (form.qrMode === 'generate' && !form.upiId)) && (
+                  {form.isPaid && (!form.registrationFee || form.registrationFee === 'Free' || (form.qrMode === 'upload' && !form.qrCodeUrl) || (form.qrMode === 'generate' && !form.upiId) || (form.qrMode === 'generate' && form.upiId && !isValidUpiId(form.upiId.trim()))) && (
                     <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
                       <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                       <div className="space-y-0.5">
@@ -1150,7 +1183,9 @@ export default function CompetitionEditorPage({
                             ? 'Please specify the registration fee amount.'
                             : form.qrMode === 'upload' && !form.qrCodeUrl
                             ? 'Option 1 (Upload QR) is active, but no QR image has been uploaded or specified.'
-                            : 'Option 2 (Generate QR) is active, but no UPI ID has been configured.'}
+                            : !form.upiId
+                            ? 'Option 2 (Generate QR) is active, but no UPI ID has been configured.'
+                            : 'Option 2 (Generate QR) has an invalid UPI ID format. Expected standard handle like username@bank.'}
                           {' '}Publication to the live website will be blocked until complete.
                         </p>
                       </div>
@@ -1161,8 +1196,8 @@ export default function CompetitionEditorPage({
                     <div className="space-y-4 animate-in fade-in duration-200">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
-                            Registration Fee Display *
+                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block text-xs">
+                            Registration Fee Display (INR) *
                           </label>
                           <input
                             type="text"
@@ -1174,8 +1209,8 @@ export default function CompetitionEditorPage({
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
-                            Recipient / Payee Name
+                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block text-xs">
+                            Recipient / Official Payee Name *
                           </label>
                           <input
                             type="text"
@@ -1187,7 +1222,7 @@ export default function CompetitionEditorPage({
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
+                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block text-xs">
                             Payment Instructions for Delegates
                           </label>
                           <input
@@ -1200,7 +1235,7 @@ export default function CompetitionEditorPage({
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
+                          <label className="font-semibold text-slate-800 dark:text-zinc-200 block text-xs">
                             Direct Payment Portal / External URL (Optional)
                           </label>
                           <input
@@ -1258,15 +1293,25 @@ export default function CompetitionEditorPage({
                           <div className="space-y-3 animate-in fade-in duration-150">
                             <div className="flex flex-col sm:flex-row items-center gap-4">
                               {form.qrCodeUrl ? (
-                                <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white p-1.5 shrink-0 shadow-sm text-center">
-                                  <img
-                                    src={form.qrCodeUrl}
-                                    alt="Payment QR Code preview"
-                                    className="w-full h-full object-contain"
-                                  />
+                                <div className="space-y-2 shrink-0 text-center">
+                                  <div className="relative w-36 h-36 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white p-2 shadow-sm text-center">
+                                    <img
+                                      src={form.qrCodeUrl}
+                                      alt="Payment QR Code preview"
+                                      className="w-full h-full object-contain"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={handleDownloadQrPng}
+                                    className="w-full px-2.5 py-1.5 rounded-lg bg-[#10264A] text-white text-[11px] font-mono font-bold flex items-center justify-center gap-1 hover:bg-[#1A386B] transition shadow-2xs cursor-pointer"
+                                  >
+                                    <Download className="w-3 h-3 text-blue-400" />
+                                    <span>Download QR (PNG)</span>
+                                  </button>
                                 </div>
                               ) : (
-                                <div className="w-32 h-32 rounded-xl border border-dashed border-slate-300 dark:border-neutral-700 flex flex-col items-center justify-center text-slate-400 shrink-0 bg-white dark:bg-neutral-900">
+                                <div className="w-36 h-36 rounded-xl border border-dashed border-slate-300 dark:border-neutral-700 flex flex-col items-center justify-center text-slate-400 shrink-0 bg-white dark:bg-neutral-900">
                                   <QrCode className="w-8 h-8 opacity-40 mb-1" />
                                   <span className="text-[10px] font-mono">No Image Uploaded</span>
                                 </div>
@@ -1313,24 +1358,43 @@ export default function CompetitionEditorPage({
 
                         {/* OPTION 2: Generate QR Code (Dynamic UPI) */}
                         {form.qrMode === 'generate' && (
-                          <div className="space-y-3 animate-in fade-in duration-150">
+                          <div className="space-y-4 animate-in fade-in duration-150">
                             <div className="flex flex-col sm:flex-row items-center gap-4">
                               {generatedQrDataUrl ? (
-                                <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white p-1.5 shrink-0 shadow-sm text-center">
-                                  <img
-                                    src={generatedQrDataUrl}
-                                    alt="Dynamically Generated UPI QR Code"
-                                    className="w-full h-full object-contain"
-                                  />
+                                <div className="space-y-2 shrink-0 text-center">
+                                  <div className="relative w-36 h-36 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white p-2 shadow-sm text-center">
+                                    <img
+                                      src={generatedQrDataUrl}
+                                      alt="Dynamically Generated UPI QR Code"
+                                      className="w-full h-full object-contain"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-zinc-300 block">
+                                      {form.isFeeFixed !== false ? `₹${extractNumericFee(form.registrationFee) || '0.00'}` : 'Custom Fee'} • {form.upiId}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={handleDownloadQrPng}
+                                      className="w-full px-2.5 py-1.5 rounded-lg bg-[#10264A] text-white text-[11px] font-mono font-bold flex items-center justify-center gap-1 hover:bg-[#1A386B] transition shadow-2xs cursor-pointer"
+                                    >
+                                      <Download className="w-3 h-3 text-blue-400" />
+                                      <span>Download QR (PNG)</span>
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
-                                <div className="w-32 h-32 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/40 flex flex-col items-center justify-center text-amber-600 shrink-0 bg-white dark:bg-neutral-900 p-2 text-center">
+                                <div className="w-36 h-36 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/40 flex flex-col items-center justify-center text-amber-600 shrink-0 bg-white dark:bg-neutral-900 p-2 text-center">
                                   <QrCode className="w-8 h-8 opacity-40 mb-1" />
-                                  <span className="text-[10px] font-mono leading-tight">Enter UPI ID to generate</span>
+                                  <span className="text-[10px] font-mono leading-tight">
+                                    {form.upiId && !isValidUpiId(form.upiId.trim())
+                                      ? 'Invalid UPI format'
+                                      : 'Enter UPI ID to generate'}
+                                  </span>
                                 </div>
                               )}
 
-                              <div className="flex-1 space-y-2.5 w-full">
+                              <div className="flex-1 space-y-3 w-full">
                                 <div className="space-y-1">
                                   <label className="text-xs font-semibold text-slate-800 dark:text-zinc-200 block">
                                     Official UPI ID / VPA *
@@ -1340,11 +1404,56 @@ export default function CompetitionEditorPage({
                                     value={form.upiId}
                                     onChange={(e) => updateFormField('upiId', e.target.value)}
                                     placeholder="e.g. teleera@oksbi or studentforum@icici"
-                                    className="w-full px-3 py-2 text-xs font-mono rounded-xl admin-glass-panel text-slate-900 dark:text-white"
+                                    className={`w-full px-3 py-2 text-xs font-mono rounded-xl admin-glass-panel text-slate-900 dark:text-white ${
+                                      form.upiId && !isValidUpiId(form.upiId.trim())
+                                        ? 'border-red-400 focus:border-red-500'
+                                        : 'focus:border-blue-500'
+                                    }`}
                                   />
+                                  {form.upiId && !isValidUpiId(form.upiId.trim()) && (
+                                    <p className="text-[11px] text-red-500 font-medium pt-0.5">
+                                      ⚠️ Invalid UPI ID format. Expected standard handle like username@bank (e.g. teleera@oksbi).
+                                    </p>
+                                  )}
                                 </div>
+
+                                <div className="space-y-1.5">
+                                  <label className="font-semibold text-slate-800 dark:text-zinc-200 block text-xs">
+                                    Fee Amount Mode in UPI QR
+                                  </label>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateFormField('isFeeFixed', true)}
+                                      className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition cursor-pointer ${
+                                        form.isFeeFixed !== false
+                                          ? 'bg-blue-600 text-white shadow-2xs'
+                                          : 'bg-black/5 dark:bg-white/10 text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+                                      }`}
+                                    >
+                                      Fixed Amount (₹{extractNumericFee(form.registrationFee) || '0.00'})
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateFormField('isFeeFixed', false)}
+                                      className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition cursor-pointer ${
+                                        form.isFeeFixed === false
+                                          ? 'bg-blue-600 text-white shadow-2xs'
+                                          : 'bg-black/5 dark:bg-white/10 text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+                                      }`}
+                                    >
+                                      Editable (Payer enters amount)
+                                    </button>
+                                  </div>
+                                  <span className="text-[10px] text-slate-500 block">
+                                    {form.isFeeFixed !== false
+                                      ? 'Fixed mode locks the exact fee in UPI apps when scanned.'
+                                      : 'Editable mode allows custom fee entry in UPI apps.'}
+                                  </span>
+                                </div>
+
                                 <p className="text-[11px] text-slate-500 leading-relaxed">
-                                  Dynamic QR code is generated securely from recipient name (<code>{form.payeeName || 'TELE-ERA'}</code>), UPI ID, and amount. Delegates scanning with Google Pay, PhonePe, or Paytm will have the exact payee and fee prefilled.
+                                  Dynamic QR code is generated securely from recipient name (<code>{form.payeeName || 'TELE-ERA YUGANTAR 2026'}</code>), UPI ID, and amount. Delegates scanning with Google Pay, PhonePe, or Paytm will have the exact payee and fee prefilled.
                                 </p>
                               </div>
                             </div>
@@ -1352,8 +1461,8 @@ export default function CompetitionEditorPage({
                         )}
                       </div>
 
-                      {/* Toggles: UTR & Screenshot */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {/* Toggles: UTR, Screenshot, and QR Visibility */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                         <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-neutral-800/40 border border-black/5 dark:border-white/5 cursor-pointer">
                           <input
                             type="checkbox"
@@ -1374,10 +1483,131 @@ export default function CompetitionEditorPage({
                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                           />
                           <span className="text-xs text-slate-800 dark:text-zinc-200 font-medium">
-                            Require Payment Screenshot Upload
+                            Require Screenshot Upload
+                          </span>
+                        </label>
+
+                        <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-neutral-800/40 border border-black/5 dark:border-white/5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.showPaymentQr !== false}
+                            onChange={(e) => updateFormField('showPaymentQr', e.target.checked)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-xs text-slate-800 dark:text-zinc-200 font-medium">
+                            Show Payment QR on Form
                           </span>
                         </label>
                       </div>
+
+                      {/* Live Participant-Facing Payment Preview Drawer */}
+                      {previewParticipantFlow && (
+                        <div className="mt-4 p-4 sm:p-6 rounded-2xl bg-[#FFF8F2] dark:bg-neutral-900 border-2 border-[#FFE0CE] dark:border-amber-900/40 space-y-4 animate-in fade-in duration-200">
+                          <div className="flex items-center justify-between pb-3 border-b border-[#FFE0CE] dark:border-neutral-800">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded-md bg-[#E07A43] text-white text-[10px] font-mono font-bold">
+                                PARTICIPANT LIVE PREVIEW
+                              </span>
+                              <h4 className="text-xs font-mono font-bold text-[#172B49] dark:text-white uppercase tracking-wider">
+                                Participant Payment Section Preview (5-Step Sequence)
+                              </h4>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewParticipantFlow(false)}
+                              className="text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
+                            >
+                              ✕ Close
+                            </button>
+                          </div>
+
+                          <div className="space-y-4 text-left">
+                            {/* Step 1 Preview */}
+                            <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-800 border border-[#DCE5F2] dark:border-neutral-700 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-[#172B49] dark:text-white flex items-center gap-1.5">
+                                  <span className="w-5 h-5 rounded-md bg-[#E07A43] text-white flex items-center justify-center text-[10px]">1</span>
+                                  Step 1: Payment Summary
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#E07A43] text-white">
+                                  {form.registrationFee || '₹300'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-[#60728A] dark:text-zinc-400">
+                                {form.paymentInstructions || 'Scan official QR code or transfer via UPI ID. Enter UTR reference and screenshot.'}
+                              </p>
+                            </div>
+
+                            {/* Step 2 Preview */}
+                            {form.showPaymentQr !== false && (
+                              <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-800 border border-[#DCE5F2] dark:border-neutral-700 space-y-3">
+                                <span className="text-xs font-bold text-[#172B49] dark:text-white flex items-center gap-1.5">
+                                  <span className="w-5 h-5 rounded-md bg-[#10264A] text-white flex items-center justify-center text-[10px]">2</span>
+                                  Step 2: Payment QR &amp; UPI
+                                </span>
+                                <div className="flex flex-col sm:flex-row items-center gap-4">
+                                  <div className="w-28 h-28 p-1 bg-white rounded-xl border border-[#DCE5F2] shrink-0 text-center">
+                                    {(generatedQrDataUrl || form.qrCodeUrl) ? (
+                                      <img
+                                        src={form.qrMode === 'upload' && form.qrCodeUrl ? form.qrCodeUrl : generatedQrDataUrl}
+                                        alt="Preview QR"
+                                        className="w-full h-full object-contain"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">QR Code</div>
+                                    )}
+                                  </div>
+                                  <div className="space-y-1.5 flex-1 w-full text-xs">
+                                    <div className="font-bold text-[#172B49] dark:text-white">{form.payeeName || 'TELE-ERA YUGANTAR 2026'}</div>
+                                    <code className="text-[11px] font-mono text-[#3978F6] block">{form.upiId || 'teleera@oksbi'}</code>
+                                    <div className="text-[10px] text-[#60728A] dark:text-zinc-400">
+                                      Mode: {form.isFeeFixed !== false ? `Fixed (₹${extractNumericFee(form.registrationFee) || '0.00'})` : 'Editable Amount'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Step 3 Preview */}
+                            {form.requireUtr && (
+                              <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-800 border border-[#DCE5F2] dark:border-neutral-700 space-y-1.5">
+                                <span className="text-xs font-bold text-[#172B49] dark:text-white flex items-center gap-1.5">
+                                  <span className="w-5 h-5 rounded-md bg-[#3978F6] text-white flex items-center justify-center text-[10px]">3</span>
+                                  Step 3: UTR / Transaction Reference (12 Digits)
+                                </span>
+                                <div className="p-2 rounded-lg bg-slate-100 dark:bg-neutral-900 text-[11px] text-slate-500 font-mono">
+                                  [Participant enters 12-digit UPI Transaction Ref ID]
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Step 4 Preview */}
+                            {form.requireScreenshot && (
+                              <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-800 border border-[#DCE5F2] dark:border-neutral-700 space-y-1.5">
+                                <span className="text-xs font-bold text-[#172B49] dark:text-white flex items-center gap-1.5">
+                                  <span className="w-5 h-5 rounded-md bg-[#9187DE] text-white flex items-center justify-center text-[10px]">4</span>
+                                  Step 4: Payment Screenshot Upload Control
+                                </span>
+                                <div className="p-3 rounded-lg border border-dashed border-slate-300 dark:border-neutral-700 text-center text-[11px] text-slate-500 font-mono">
+                                  [Drag &amp; drop or tap to select screenshot image (Max 8MB)]
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Step 5 Preview */}
+                            <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-800 border border-[#DCE5F2] dark:border-neutral-700 space-y-1.5">
+                              <span className="text-xs font-bold text-[#172B49] dark:text-white flex items-center gap-1.5">
+                                <span className="w-5 h-5 rounded-md bg-[#10B981] text-white flex items-center justify-center text-[10px]">5</span>
+                                Step 5: Review Dossier &amp; Submit Registration
+                              </span>
+                              <div className="text-[11px] text-slate-500 space-y-1">
+                                <p>• Participant info cards, track specifics, and team roster summary.</p>
+                                <p>• Audit status: <em>Awaiting coordinator banking audit before credential check-in.</em></p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 text-xs text-emerald-800 dark:text-emerald-300">

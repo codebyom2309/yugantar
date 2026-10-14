@@ -50,6 +50,8 @@ export interface Competition {
   // Registration & Payment Settings
   isPaid?: boolean;
   registrationFee?: string;
+  isFeeFixed?: boolean;
+  showPaymentQr?: boolean;
   upiId?: string;
   payeeName?: string;
   qrMode?: 'upload' | 'generate';

@@ -76,10 +76,12 @@ export async function POST(request: NextRequest) {
     const id = randomUUID();
     const githubUrl = (body.githubUrl || body.github_url || '').trim() || null;
     const linkedinUrl = (body.linkedinUrl || body.linkedin_url || '').trim() || null;
+    const forumDesignation = (body.forumDesignation || body.forum_designation || '').trim() || null;
+    const cropData = body.cropData ? (typeof body.cropData === 'string' ? body.cropData : JSON.stringify(body.cropData)) : null;
 
     await db.execute(
-      `INSERT INTO organizer_members (id, name, role, category, organization_id, department, bio, avatar_url, github_url, linkedin_url, display_order, is_published)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO organizer_members (id, name, role, category, organization_id, department, bio, avatar_url, github_url, linkedin_url, display_order, is_published, crop_data, forum_designation)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         body.name,
@@ -93,6 +95,8 @@ export async function POST(request: NextRequest) {
         linkedinUrl,
         body.displayOrder !== undefined ? Number(body.displayOrder) : 0,
         body.isPublished !== undefined ? (body.isPublished ? 1 : 0) : 1,
+        cropData,
+        forumDesignation,
       ]
     );
 
@@ -131,6 +135,14 @@ export async function PUT(request: NextRequest) {
       ? ((body.linkedinUrl || '').trim() || null)
       : (body.linkedin_url !== undefined ? ((body.linkedin_url || '').trim() || null) : undefined);
 
+    const forumDesignation = body.forumDesignation !== undefined
+      ? ((body.forumDesignation || '').trim() || null)
+      : (body.forum_designation !== undefined ? ((body.forum_designation || '').trim() || null) : undefined);
+
+    const cropData = body.cropData !== undefined
+      ? (body.cropData ? (typeof body.cropData === 'string' ? body.cropData : JSON.stringify(body.cropData)) : null)
+      : (body.crop_data !== undefined ? (body.crop_data ? (typeof body.crop_data === 'string' ? body.crop_data : JSON.stringify(body.crop_data)) : null) : undefined);
+
     await db.execute(
       `UPDATE organizer_members SET
         name = COALESCE(?, name),
@@ -143,7 +155,9 @@ export async function PUT(request: NextRequest) {
         github_url = COALESCE(?, github_url),
         linkedin_url = COALESCE(?, linkedin_url),
         display_order = COALESCE(?, display_order),
-        is_published = COALESCE(?, is_published)
+        is_published = COALESCE(?, is_published),
+        crop_data = COALESCE(?, crop_data),
+        forum_designation = COALESCE(?, forum_designation)
        WHERE id = ?`,
       [
         body.name ?? null,
@@ -157,6 +171,8 @@ export async function PUT(request: NextRequest) {
         linkedinUrl !== undefined ? linkedinUrl : null,
         body.displayOrder !== undefined ? Number(body.displayOrder) : null,
         body.isPublished !== undefined ? (body.isPublished ? 1 : 0) : null,
+        cropData !== undefined ? cropData : null,
+        forumDesignation !== undefined ? forumDesignation : null,
         body.id,
       ]
     );

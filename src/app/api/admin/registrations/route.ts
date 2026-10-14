@@ -80,11 +80,12 @@ export async function GET(request: NextRequest) {
         payment_proof_url: string | null; submission_status: string; submission_error: string | null;
         submitted_at: string | null; created_at: string; verification_token: string | null;
         payment_status: string | null; verified_by: string | null; verified_at: string | null;
+        form_data: string | null;
       }>(
         `SELECT id, competition_slug, leader_name, leader_email, leader_phone, leader_college,
                 leader_branch, leader_semester, team_name, team_size, payment_id, payment_proof_url,
                 submission_status, submission_error, submitted_at, created_at, verification_token,
-                payment_status, verified_by, verified_at
+                payment_status, verified_by, verified_at, form_data
          FROM registrations ${where} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
         params
       ),

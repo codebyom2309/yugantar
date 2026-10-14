@@ -24,10 +24,15 @@ export async function GET() {
   const { error, status } = await requireAdmin();
   if (error) return NextResponse.json({ error }, { status });
 
-  const organizers = await db.query<{
-    id: string; name: string; role: string; department: string; description: string;
-    badge: string; leadership_note: string; logo_url: string | null; display_order: number; is_published: number;
-  }>('SELECT * FROM organizers ORDER BY display_order ASC');
+  const [organizers, settingRows] = await Promise.all([
+    db.query<{
+      id: string; name: string; role: string; department: string; description: string;
+      badge: string; leadership_note: string; logo_url: string | null; display_order: number; is_published: number;
+    }>('SELECT * FROM organizers ORDER BY display_order ASC'),
+    db.query<{ setting_value: string }>(
+      "SELECT setting_value FROM site_settings WHERE setting_key = 'show_organizer_order' LIMIT 1"
+    ),
+  ]);
 
   const seen = new Set<string>();
   const uniqueOrganizers = (organizers || []).filter((o) => {
@@ -37,13 +42,40 @@ export async function GET() {
   });
 
   return NextResponse.json(
-    { organizers: uniqueOrganizers },
+    {
+      organizers: uniqueOrganizers,
+      showOrganizerOrder: settingRows?.[0]?.setting_value === '1',
+    },
     {
       headers: {
         'Cache-Control': 'private, no-store, no-cache, must-revalidate',
       },
     }
   );
+}
+
+// PATCH — update site settings such as show_organizer_order
+export async function PATCH(request: NextRequest) {
+  const { error, status, session } = await requireAdmin(['super_admin', 'content_admin']);
+  if (error) return NextResponse.json({ error }, { status });
+
+  const body = await request.json();
+  if (body.showOrganizerOrder !== undefined) {
+    const val = body.showOrganizerOrder ? '1' : '0';
+    await db.execute(
+      `INSERT INTO site_settings (setting_key, setting_value, setting_group, label, field_type)
+       VALUES ('show_organizer_order', ?, 'general', 'Show Organizer Order Numbers on Website', 'boolean')
+       ON DUPLICATE KEY UPDATE setting_value = ?`,
+      [val, val]
+    );
+    await logAudit(session!.user.id, session!.user.email, 'update_setting', 'site_setting', 'show_organizer_order', {
+      showOrganizerOrder: val,
+    });
+    invalidatePublicCache('organizers');
+    return NextResponse.json({ success: true, showOrganizerOrder: val === '1' });
+  }
+
+  return NextResponse.json({ error: 'Unsupported action' }, { status: 400 });
 }
 
 // POST — create organizer

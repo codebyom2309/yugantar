@@ -113,6 +113,17 @@ export async function PUT(request: NextRequest, context: ContextProps) {
       return JSON.stringify(val);
     };
 
+    // Strict UPI validation whenever upiId is modified/provided
+    if (body.upiId !== undefined && body.upiId !== null && String(body.upiId).trim() !== '') {
+      const upiId = String(body.upiId).trim();
+      if (!/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId)) {
+        return NextResponse.json(
+          { error: 'Invalid UPI ID format. Expected standard handle like username@bank (e.g. teleera@oksbi).' },
+          { status: 400 }
+        );
+      }
+    }
+
     const willBePaid = body.isPaid !== undefined ? Boolean(body.isPaid) : false;
     const willBePublished = body.isPublished !== undefined ? Boolean(body.isPublished) : false;
     if (willBePublished && willBePaid) {
@@ -190,6 +201,8 @@ export async function PUT(request: NextRequest, context: ContextProps) {
         payment_instructions = CASE WHEN ? = 1 THEN ? ELSE payment_instructions END,
         require_utr = COALESCE(?, require_utr),
         require_screenshot = COALESCE(?, require_screenshot),
+        is_fee_fixed = COALESCE(?, is_fee_fixed),
+        show_payment_qr = COALESCE(?, show_payment_qr),
         whatsapp_link = CASE WHEN ? = 1 THEN ? ELSE whatsapp_link END,
         confirmation_instructions = CASE WHEN ? = 1 THEN ? ELSE confirmation_instructions END,
         event_date = CASE WHEN ? = 1 THEN ? ELSE event_date END,
@@ -255,6 +268,8 @@ export async function PUT(request: NextRequest, context: ContextProps) {
         body.paymentInstructions || null,
         body.requireUtr !== undefined ? (body.requireUtr ? 1 : 0) : null,
         body.requireScreenshot !== undefined ? (body.requireScreenshot ? 1 : 0) : null,
+        body.isFeeFixed !== undefined ? (body.isFeeFixed ? 1 : 0) : null,
+        body.showPaymentQr !== undefined ? (body.showPaymentQr ? 1 : 0) : null,
         body.whatsappLink !== undefined ? 1 : 0,
         body.whatsappLink || null,
         body.confirmationInstructions !== undefined ? 1 : 0,

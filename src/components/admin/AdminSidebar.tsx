@@ -27,6 +27,7 @@ import {
   Moon,
   Shield,
   Sparkles,
+  Ticket,
 } from 'lucide-react';
 
 interface NavGroup {
@@ -63,6 +64,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Operations',
     items: [
       { href: '/admin/registrations', label: 'Registrations', icon: ClipboardList },
+      { href: '/admin/studio', label: 'Pass & Certificate Studio', icon: Ticket, badge: 'Studio' },
       { href: '/admin/spreadsheets', label: 'Spreadsheet Manager', icon: FileSpreadsheet },
     ],
   },

@@ -32,6 +32,10 @@ export interface PublicMember {
   linkedinUrl?: string | null;
   display_order: number;
   is_published: number | boolean;
+  crop_data?: string | null;
+  cropData?: string | null;
+  forum_designation?: string | null;
+  forumDesignation?: string | null;
 }
 
 export default function PublicOrganizersPreview({
@@ -217,13 +221,30 @@ export default function PublicOrganizersPreview({
                 {/* Circular Portrait Image */}
                 <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-[#DCE5F2] bg-[#EDF5FC] flex items-center justify-center shadow-2xs">
                   {member.avatar_url ? (
-                    <Image
-                      src={member.avatar_url}
-                      alt={member.name}
-                      fill
-                      className="object-cover"
-                      unoptimized={member.avatar_url.startsWith('/api/') || member.avatar_url.includes('google')}
-                    />
+                    (() => {
+                      let pCropStyle: React.CSSProperties = { objectFit: 'cover' };
+                      const crop = member.crop_data || member.cropData;
+                      if (crop) {
+                        try {
+                          const c = typeof crop === 'string' ? JSON.parse(crop) : crop;
+                          if (c.zoom || c.x !== undefined || c.y !== undefined) {
+                            pCropStyle = {
+                              objectFit: 'cover',
+                              transform: `scale(${c.zoom || 1}) translate(${c.x || 0}px, ${c.y || 0}px)`,
+                              transformOrigin: 'center center',
+                            };
+                          }
+                        } catch {}
+                      }
+                      return (
+                        <img
+                          src={member.avatar_url}
+                          alt={member.name}
+                          style={pCropStyle}
+                          className="w-full h-full object-cover"
+                        />
+                      );
+                    })()
                   ) : (
                     <span className="text-sm font-bold font-display text-[#4B91E8]">
                       {(member.name || 'TB')
@@ -236,15 +257,20 @@ export default function PublicOrganizersPreview({
                   )}
                 </div>
 
-                <div className="w-full">
+                <div className="w-full space-y-0.5">
                   <h4 className="text-xs font-bold text-[#172B49] truncate leading-tight">
                     {member.name || 'Team Member'}
                   </h4>
-                  <span className="text-[10px] font-mono text-[#E07A43] font-semibold block truncate mt-0.5">
+                  <span className="text-[10px] font-mono text-[#E07A43] font-semibold block truncate">
                     {member.role || 'Student Lead'}
                   </span>
+                  {(member.forum_designation || member.forumDesignation) && (
+                    <span className="text-[8.5px] font-mono font-semibold text-[#2F855A] bg-[#2F855A]/10 px-1 py-0.5 rounded block truncate">
+                      {member.forum_designation || member.forumDesignation}
+                    </span>
+                  )}
                   {member.department && (
-                    <span className="text-[9px] text-[#8CA0BA] block truncate mt-0.5">
+                    <span className="text-[9px] text-[#8CA0BA] block truncate">
                       {member.department}
                     </span>
                   )}
