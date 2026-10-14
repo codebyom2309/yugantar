@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import DetailHeroBannerImage from '@/components/competitions/DetailHeroBannerImage';
+
 import {
   COMPETITIONS,
   getAllCompetitionSlugs,
@@ -249,21 +251,12 @@ async function CompetitionDetailContent({ params }: PageProps) {
 
             {/* Dedicated 16:9 Banner Preview in Hero */}
             <div className="lg:col-span-4 w-full">
-              <div className="relative aspect-video rounded-3xl overflow-hidden border-2 border-white shadow-md bg-[#EDF5FC]">
-                <Image
-                  src={competition.bannerImage}
-                  alt={`${competition.name} official artwork`}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 33vw"
-                  className="object-cover object-center"
-                  priority
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#102344]/80 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-[11px] font-mono">
-                  <span className="font-bold">{competition.district}</span>
-                  <span className="text-white/80">16:9 Official Artwork</span>
-                </div>
-              </div>
+              <DetailHeroBannerImage
+                src={competition.bannerImage}
+                alt={`${competition.name} official artwork`}
+                fallbackSrc={`/images/competitions/${competition.slug}.webp`}
+                district={competition.district}
+              />
             </div>
           </div>
         </div>

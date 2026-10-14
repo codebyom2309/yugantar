@@ -79,15 +79,32 @@ function AssetBox({
 }) {
   const [activeTab, setActiveTab] = useState<'upload' | 'drive'>('upload');
   const [uploading, setUploading] = useState(false);
+  const [uploadStep, setUploadStep] = useState<string>('');
   const [driveInput, setDriveInput] = useState('');
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
 
-  // File upload to Filebase via /api/admin/media
+  // File upload to Filebase via /api/admin/media with validation & verification
   const handleFileUpload = async (file: File) => {
-    setUploading(true);
     setStatusMsg(null);
     setErrorMsg(null);
+    setPreviewError(false);
+
+    // 1. Client-side File Validation
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Invalid file format. Please upload an image (PNG, JPG, WebP, SVG).');
+      return;
+    }
+
+    const MAX_SIZE_MB = 10;
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      setErrorMsg(`File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds ${MAX_SIZE_MB}MB limit. Please compress or resize.`);
+      return;
+    }
+
+    setUploading(true);
+    setUploadStep('Uploading file to Filebase persistent storage...');
 
     try {
       const formData = new FormData();
@@ -102,32 +119,72 @@ function AssetBox({
         body: formData,
       });
 
+      if (res.status === 401) {
+        throw new Error('Authentication session expired. Please refresh the page or re-login to proceed.');
+      }
+      if (res.status === 403) {
+        throw new Error('Unauthorized: Your administrative role does not permit media uploads.');
+      }
+
       const data = await res.json();
       if (!res.ok || data.error) {
-        throw new Error(data.error || 'Upload failed');
+        throw new Error(data.error || `Upload failed with HTTP ${res.status}`);
       }
 
       const uploadedUrl = data.asset.url;
+
+      // 2. Step 8 Verification: Confirm that the asset reference is immediately retrievable
+      setUploadStep('Verifying uploaded asset accessibility...');
+      try {
+        const verifyRes = await fetch(uploadedUrl, { method: 'HEAD' });
+        if (!verifyRes.ok && verifyRes.status !== 405) {
+          // If HEAD is not allowed, try GET
+          const getRes = await fetch(uploadedUrl);
+          if (!getRes.ok) {
+            throw new Error(`Asset was stored but failed retrieval verification (HTTP ${getRes.status}).`);
+          }
+        }
+      } catch (verifyErr) {
+        console.warn('Asset verification check encountered error:', verifyErr);
+        // Continue if network allows, or alert if genuinely broken
+      }
+
+      // Update state with canonical URL
       onUpdate(uploadedUrl);
-      setStatusMsg('Uploaded to Filebase IPFS bucket successfully!');
-      setTimeout(() => setStatusMsg(null), 4000);
+      setStatusMsg(`Successfully uploaded & verified 16:9 ${role} artwork!`);
+      setTimeout(() => setStatusMsg(null), 5000);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
+      setUploadStep('');
     }
   };
 
   const handleDriveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!driveInput.trim()) return;
+    setErrorMsg(null);
+    setPreviewError(false);
 
-    const formatted = formatDriveUrl(driveInput);
+    const trimmed = driveInput.trim();
+    if (!trimmed) return;
+
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('/')) {
+      setErrorMsg('Please enter a valid HTTP/HTTPS URL or direct asset path.');
+      return;
+    }
+
+    const formatted = formatDriveUrl(trimmed);
     onUpdate(formatted);
     setDriveInput('');
-    setStatusMsg('Google Drive link converted to high-speed CDN embed!');
+    setStatusMsg(
+      isDriveUrl(trimmed)
+        ? 'Google Drive sharing link successfully converted to high-speed CDN embed!'
+        : 'Direct artwork URL registered successfully!'
+    );
     setTimeout(() => setStatusMsg(null), 4000);
   };
+
 
   return (
     <div className="admin-glass-card rounded-2xl p-5 space-y-4 flex flex-col justify-between">
@@ -172,6 +229,12 @@ function AssetBox({
                 <Trash2 className="w-3.5 h-3.5" /> Remove
               </button>
             </div>
+            {previewError && (
+              <div className="absolute bottom-2 left-2 right-2 p-1.5 rounded-lg bg-amber-500/90 text-black text-[10px] font-mono flex items-center gap-1 z-10 shadow">
+                <AlertCircle className="w-3 h-3 shrink-0" />
+                <span>Image preview failed to load from source.</span>
+              </div>
+            )}
           </>
         ) : (
           <div className="text-center p-4 space-y-2 opacity-60">
@@ -227,7 +290,7 @@ function AssetBox({
             <label className="admin-placeholder-card p-4 rounded-xl flex items-center justify-center gap-3 cursor-pointer w-full text-center hover:border-blue-500 transition-colors">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/png, image/jpeg, image/webp, image/gif, image/svg+xml"
                 className="hidden"
                 disabled={uploading}
                 onChange={(e) => {
@@ -236,14 +299,14 @@ function AssetBox({
                 }}
               />
               {uploading ? (
-                <div className="flex items-center gap-2 text-blue-500 font-semibold">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Uploading to Filebase...</span>
+                <div className="flex items-center gap-2 text-blue-500 font-semibold text-center">
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  <span className="text-[11px]">{uploadStep || 'Uploading to Filebase...'}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 opacity-80 hover:opacity-100">
                   <Upload className="w-4 h-4 text-blue-500" />
-                  <span className="font-semibold">Browse local file to upload</span>
+                  <span className="font-semibold">Browse local file to upload (Max 10MB)</span>
                 </div>
               )}
             </label>

@@ -99,8 +99,12 @@ export async function uploadMediaFile(
         folder,
         mimeType,
       });
-    } catch (fbErr) {
-      console.error('Filebase upload failed, falling back:', fbErr);
+    } catch (fbErr: any) {
+      console.error('Filebase upload failed, falling back to Cloudinary:', {
+        name: fbErr?.name,
+        code: fbErr?.Code || fbErr?.code,
+        message: fbErr?.message,
+      });
     }
   }
 

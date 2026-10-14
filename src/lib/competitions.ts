@@ -378,50 +378,46 @@ export async function fetchPublicFaqsRaw(competitionSlug?: string) {
 const getCachedPublicCompetitions = unstable_cache(
   async () => fetchPublicCompetitionsRaw(),
   ['public-competitions-list'],
-  { revalidate: 300, tags: ['competitions'] }
+  { revalidate: 60, tags: ['competitions'] }
 );
-
-const getCachedPublicCompetitionBySlug = unstable_cache(
-  async (slug: string) => fetchPublicCompetitionBySlugRaw(slug),
-  ['public-competition-by-slug'],
-  { revalidate: 300, tags: ['competitions'] }
-);
-
-const getCachedFestivalSettings = unstable_cache(
-  async () => fetchFestivalSettingsRaw(),
-  ['festival-settings-data'],
-  { revalidate: 300, tags: ['settings'] }
-);
-
-const getCachedPublicOrganizers = unstable_cache(
-  async () => fetchPublicOrganizersRaw(),
-  ['public-organizers-list'],
-  { revalidate: 300, tags: ['organizers'] }
-);
-
-const getCachedPublicOrganizerMembers = unstable_cache(
-  async (category?: string) => fetchPublicOrganizerMembersRaw(category as 'turbo_bits' | 'faculty' | 'core_committee'),
-  ['public-organizer-members-list'],
-  { revalidate: 300, tags: ['organizers'] }
-);
-
-const getCachedPublicFaqs = unstable_cache(
-  async (competitionSlug?: string) => fetchPublicFaqsRaw(competitionSlug),
-  ['public-faqs-list'],
-  { revalidate: 300, tags: ['faqs'] }
-);
-
-// -----------------------------------------------------------------------------
-// Primary Exported API (Direct Drop-in Replacement for existing callers)
-// -----------------------------------------------------------------------------
 
 export async function getPublicCompetitions(): Promise<DbCompetition[]> {
   return getCachedPublicCompetitions();
 }
 
 export async function getPublicCompetitionBySlug(slug: string): Promise<DbCompetition | null> {
-  return getCachedPublicCompetitionBySlug(slug);
+  const fetcher = unstable_cache(
+    async () => fetchPublicCompetitionBySlugRaw(slug),
+    ['public-competition-by-slug', slug],
+    { revalidate: 60, tags: ['competitions', `competition-${slug}`] }
+  );
+  return fetcher();
 }
+
+const getCachedFestivalSettings = unstable_cache(
+  async () => fetchFestivalSettingsRaw(),
+  ['festival-settings-data'],
+  { revalidate: 60, tags: ['settings'] }
+);
+
+const getCachedPublicOrganizers = unstable_cache(
+  async () => fetchPublicOrganizersRaw(),
+  ['public-organizers-list'],
+  { revalidate: 60, tags: ['organizers'] }
+);
+
+const getCachedPublicOrganizerMembers = unstable_cache(
+  async (category?: string) => fetchPublicOrganizerMembersRaw(category as 'turbo_bits' | 'faculty' | 'core_committee'),
+  ['public-organizer-members-list'],
+  { revalidate: 60, tags: ['organizers'] }
+);
+
+const getCachedPublicFaqs = unstable_cache(
+  async (competitionSlug?: string) => fetchPublicFaqsRaw(competitionSlug),
+  ['public-faqs-list'],
+  { revalidate: 60, tags: ['faqs'] }
+);
+
 
 export async function getFestivalSettings(): Promise<FestivalSettings> {
   return getCachedFestivalSettings();
@@ -482,8 +478,16 @@ function mapDbRowToCompetition(r: Record<string, unknown>): DbCompetition {
     formatNote: String(r.format_note || ''),
     highlights: parseJson(r.highlights, []),
     iconName: String(r.icon_name || 'Trophy'),
-    bannerImage: String(r.banner_image || '/images/nexus-city/hero-futuristic-city-clouds.webp'),
-    cardImage: String(r.card_image || '/images/nexus-city/hero-futuristic-city-clouds.webp'),
+    bannerImage: String(
+      r.banner_image ||
+      COMPETITIONS.find((c) => c.slug === r.slug)?.bannerImage ||
+      '/images/nexus-city/hero-futuristic-city-clouds.webp'
+    ),
+    cardImage: String(
+      r.card_image ||
+      COMPETITIONS.find((c) => c.slug === r.slug)?.cardImage ||
+      '/images/nexus-city/hero-futuristic-city-clouds.webp'
+    ),
     mapCoords: parseJson(r.map_coords, { x: 50, y: 50 }),
     accentColor: String(r.accent_color || '#3B82F6'),
     accentSecondary: String(r.accent_secondary || '#6366F1'),

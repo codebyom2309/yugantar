@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { COMPETITIONS, Competition, FESTIVAL_INFO, getCompetitionGlow } from '@/data/events';
 import { fetchClientFestivalData } from '@/lib/client-festival-data';
+import { isUnoptimizedUrl } from '@/lib/drive';
 import {
   Cpu,
   Presentation,
@@ -38,6 +39,41 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Mic2,
 };
 
+function CompetitionCardArtwork({
+  src,
+  alt,
+  fallbackSrc,
+}: {
+  src: string;
+  alt: string;
+  fallbackSrc: string;
+}) {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setImgSrc(src);
+    setHasError(false);
+  }, [src]);
+
+  return (
+    <Image
+      src={imgSrc}
+      alt={alt}
+      fill
+      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
+      unoptimized={isUnoptimizedUrl(imgSrc)}
+      onError={() => {
+        if (!hasError && fallbackSrc && imgSrc !== fallbackSrc) {
+          setHasError(true);
+          setImgSrc(fallbackSrc);
+        }
+      }}
+    />
+  );
+}
+
 export default function CompetitionsOverviewPage() {
   const shouldReduceMotion = useReducedMotion();
   const [competitions, setCompetitions] = useState<Competition[]>(COMPETITIONS);
@@ -45,7 +81,7 @@ export default function CompetitionsOverviewPage() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
   useEffect(() => {
-    fetchClientFestivalData()
+    fetchClientFestivalData(true)
       .then((d) => {
         if (d.competitions && Array.isArray(d.competitions) && d.competitions.length > 0) {
           setCompetitions(d.competitions);
@@ -284,12 +320,10 @@ export default function CompetitionsOverviewPage() {
                 >
                   {/* 16:9 Image Artwork Header */}
                   <div className="relative aspect-video w-full overflow-hidden bg-[#EDF5FC]">
-                    <Image
+                    <CompetitionCardArtwork
                       src={comp.cardImage}
                       alt={`${comp.name} 16:9 artwork`}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                      fallbackSrc={`/images/competitions/${comp.slug}.webp`}
                     />
 
                     {/* Gradient Overlay for Text Contrast */}

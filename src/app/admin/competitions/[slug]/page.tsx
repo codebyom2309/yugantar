@@ -9,7 +9,7 @@ import CoordinatorManager from '@/components/admin/CoordinatorManager';
 import AdminTimeRangePicker from '@/components/admin/AdminTimeRangePicker';
 import AdminDatePicker from '@/components/admin/AdminDatePicker';
 import LiveMobileFrame from '@/components/competitions/cards/LiveMobileFrame';
-import { fetchClientFestivalData } from '@/lib/client-festival-data';
+import { fetchClientFestivalData, clearClientFestivalCache } from '@/lib/client-festival-data';
 import {
   Trophy,
   ArrowLeft,
@@ -485,6 +485,7 @@ export default function CompetitionEditorPage({
         throw new Error(data.error || 'Failed to save competition');
       }
 
+      clearClientFestivalCache();
       setForm((p) => ({ ...p, isPublished }));
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setLastSavedTime(timeStr);

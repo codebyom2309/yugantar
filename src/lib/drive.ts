@@ -32,3 +32,19 @@ export function isDriveUrl(url: string): boolean {
   if (!url) return false;
   return url.includes('drive.google.com') || url.includes('googleusercontent.com');
 }
+
+/**
+ * Determines whether a URL should bypass Next.js internal image optimization.
+ * Crucial for internal media proxy routes (/api/media/filebase?key=...) and Google Drive CDN embeds.
+ */
+export function isUnoptimizedUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return (
+    url.startsWith('/api/') ||
+    url.includes('?') ||
+    url.startsWith('data:') ||
+    url.startsWith('blob:') ||
+    isDriveUrl(url)
+  );
+}
+

@@ -42,7 +42,8 @@ export async function fetchClientFestivalData(forceFresh = false): Promise<Festi
     return inFlightPromise;
   }
 
-  inFlightPromise = fetch('/api/competitions')
+  const fetchOptions: RequestInit | undefined = forceFresh ? { cache: 'no-store' } : undefined;
+  inFlightPromise = fetch('/api/competitions', fetchOptions)
     .then((res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<FestivalDataResponse>;

@@ -13,6 +13,24 @@ import { revalidateTag, revalidatePath } from 'next/cache';
 
 export type CacheDomain = 'competitions' | 'organizers' | 'settings' | 'faqs' | 'all';
 
+function safeRevalidateTag(tag: string) {
+  try {
+    // Next.js standard signature
+    (revalidateTag as any)(tag);
+  } catch {
+    try {
+      // Next.js with expire 0 for immediate purge
+      (revalidateTag as any)(tag, { expire: 0 });
+    } catch {
+      try {
+        (revalidateTag as any)(tag, 'max');
+      } catch (err) {
+        console.warn(`[Cache Invalidation] Failed to revalidate tag ${tag}:`, err);
+      }
+    }
+  }
+}
+
 export function invalidatePublicCache(domains: CacheDomain | CacheDomain[], extraSlug?: string): void {
   const domainList = Array.isArray(domains) ? domains : [domains];
 
@@ -20,52 +38,57 @@ export function invalidatePublicCache(domains: CacheDomain | CacheDomain[], extr
     try {
       switch (domain) {
         case 'competitions':
-          revalidateTag('competitions', 'max');
+          safeRevalidateTag('competitions');
           if (extraSlug) {
-            revalidateTag(`competition-${extraSlug}`, 'max');
-            revalidatePath(`/competitions/${extraSlug}`);
+            safeRevalidateTag(`competition-${extraSlug}`);
+            revalidatePath(`/competitions/${extraSlug}`, 'page');
           }
-          revalidatePath('/competitions');
-          revalidatePath('/districts');
-          revalidatePath('/');
+          revalidatePath('/competitions', 'page');
+          revalidatePath('/competitions/[slug]', 'page');
+          revalidatePath('/districts', 'page');
+          revalidatePath('/', 'page');
+          revalidatePath('/journey', 'page');
           revalidatePath('/api/competitions');
           break;
 
         case 'organizers':
-          revalidateTag('organizers', 'max');
-          revalidatePath('/about');
-          revalidatePath('/');
+          safeRevalidateTag('organizers');
+          revalidatePath('/about', 'page');
+          revalidatePath('/', 'page');
           break;
 
         case 'settings':
-          revalidateTag('settings', 'max');
-          revalidatePath('/');
-          revalidatePath('/about');
-          revalidatePath('/competitions');
-          revalidatePath('/districts');
-          revalidatePath('/journey');
-          revalidatePath('/faq');
+          safeRevalidateTag('settings');
+          safeRevalidateTag('competitions');
+          revalidatePath('/', 'page');
+          revalidatePath('/about', 'page');
+          revalidatePath('/competitions', 'page');
+          revalidatePath('/competitions/[slug]', 'page');
+          revalidatePath('/districts', 'page');
+          revalidatePath('/journey', 'page');
+          revalidatePath('/faq', 'page');
           revalidatePath('/api/competitions');
           break;
 
         case 'faqs':
-          revalidateTag('faqs', 'max');
-          revalidatePath('/faq');
-          revalidatePath('/');
+          safeRevalidateTag('faqs');
+          revalidatePath('/faq', 'page');
+          revalidatePath('/', 'page');
           revalidatePath('/api/faqs');
           break;
 
         case 'all':
-          revalidateTag('competitions', 'max');
-          revalidateTag('organizers', 'max');
-          revalidateTag('settings', 'max');
-          revalidateTag('faqs', 'max');
-          revalidatePath('/');
-          revalidatePath('/about');
-          revalidatePath('/competitions');
-          revalidatePath('/districts');
-          revalidatePath('/journey');
-          revalidatePath('/faq');
+          safeRevalidateTag('competitions');
+          safeRevalidateTag('organizers');
+          safeRevalidateTag('settings');
+          safeRevalidateTag('faqs');
+          revalidatePath('/', 'page');
+          revalidatePath('/about', 'page');
+          revalidatePath('/competitions', 'page');
+          revalidatePath('/competitions/[slug]', 'page');
+          revalidatePath('/districts', 'page');
+          revalidatePath('/journey', 'page');
+          revalidatePath('/faq', 'page');
           revalidatePath('/api/competitions');
           revalidatePath('/api/faqs');
           break;
@@ -75,3 +98,4 @@ export function invalidatePublicCache(domains: CacheDomain | CacheDomain[], extr
     }
   }
 }
+

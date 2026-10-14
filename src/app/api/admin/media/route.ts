@@ -84,6 +84,21 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'No file supplied' }, { status: 400 });
       }
 
+      if (!file.type.startsWith('image/')) {
+        return NextResponse.json(
+          { error: 'Invalid file format. Only image formats (JPEG, PNG, WebP, SVG) are supported for artwork.' },
+          { status: 400 }
+        );
+      }
+
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { error: `File size exceeds 10MB limit (received ${(file.size / (1024 * 1024)).toFixed(1)}MB). Please compress before uploading.` },
+          { status: 400 }
+        );
+      }
+
       // Upload via storage provider
       const uploadResult = await uploadMediaFile(file, {
         competitionSlug: entityId || 'general',

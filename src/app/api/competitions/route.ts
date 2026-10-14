@@ -1,8 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { connection } from 'next/server';
 import { getPublicCompetitions, getFestivalSettings } from '@/lib/competitions';
 
 // GET /api/competitions — Public endpoint for published competitions & festival configuration
-export async function GET() {
+export async function GET(request: NextRequest) {
+  await connection();
   try {
     const [competitions, festival] = await Promise.all([
       getPublicCompetitions(),
@@ -27,7 +29,7 @@ export async function GET() {
       },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400',
+          'Cache-Control': 'public, max-age=0, s-maxage=5, stale-while-revalidate=30, must-revalidate',
         },
       }
     );
@@ -36,3 +38,4 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch competitions' }, { status: 500 });
   }
 }
+
