@@ -193,7 +193,10 @@ export default function DistrictsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
             {/* Left 8 cols: Interactive Map Canvas */}
-            <div className="lg:col-span-8 rounded-3xl bg-white p-4 sm:p-6 border border-[#DCE5F2] shadow-xs">
+            <div
+              suppressHydrationWarning
+              className="yugantar-card-interactive glow-cyan lg:col-span-8 rounded-3xl bg-white p-4 sm:p-6 border border-[#DCE5F2] shadow-xs transition-all"
+            >
               <div className="flex items-center justify-between mb-4 px-2">
                 <span className="text-xs font-mono font-bold uppercase text-[#10264A] tracking-wider flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#FF783E] animate-pulse" />
@@ -339,7 +342,10 @@ export default function DistrictsPage() {
             </div>
 
             {/* Right 4 cols: Active District Profile & Route to Detail */}
-            <div className="lg:col-span-4 rounded-3xl bg-white p-6 sm:p-8 border border-[#DCE5F2] shadow-xs lg:sticky lg:top-24">
+            <div
+              suppressHydrationWarning
+              className="yugantar-card-interactive glow-cyan lg:col-span-4 rounded-3xl bg-white p-6 sm:p-8 border border-[#DCE5F2] shadow-xs lg:sticky lg:top-24 transition-all"
+            >
               {isCenterSelected ? (
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">

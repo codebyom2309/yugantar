@@ -64,6 +64,7 @@ export default function FaqSection() {
             return (
               <motion.div
                 key={faq.question}
+                suppressHydrationWarning
                 initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-20px' }}
@@ -108,6 +109,7 @@ export default function FaqSection() {
         {/* Support Note */}
         <motion.div
           {...fadeIn(0.25)}
+          suppressHydrationWarning
           className="yugantar-card-interactive glow-blue mt-12 text-center p-6 rounded-2xl bg-white border border-[#DCE5F2] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs"
         >
           <div className="text-left">

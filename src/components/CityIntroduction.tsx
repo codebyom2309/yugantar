@@ -68,6 +68,7 @@ export default function CityIntroduction({ festival }: { festival?: FestivalSett
               
               <motion.div
                 {...fadeIn(0.22)}
+                suppressHydrationWarning
                 className="yugantar-card-interactive glow-amber nexus-skeuo-card p-5 text-left transition-all"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#FFF4EA] text-[#FF783E] flex items-center justify-center mb-3.5 border border-[#F0E5D8]">
@@ -83,6 +84,7 @@ export default function CityIntroduction({ festival }: { festival?: FestivalSett
 
               <motion.div
                 {...fadeIn(0.28)}
+                suppressHydrationWarning
                 className="yugantar-card-interactive glow-blue nexus-skeuo-card p-5 text-left transition-all"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#EDF5FC] text-[#3978F6] flex items-center justify-center mb-3.5 border border-[#DCE5F2]">
@@ -98,6 +100,7 @@ export default function CityIntroduction({ festival }: { festival?: FestivalSett
 
               <motion.div
                 {...fadeIn(0.34)}
+                suppressHydrationWarning
                 className="yugantar-card-interactive glow-violet nexus-skeuo-card p-5 text-left transition-all"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#F5F2FC] text-[#8578D8] flex items-center justify-center mb-3.5 border border-[#E8E1F8]">
@@ -138,7 +141,10 @@ export default function CityIntroduction({ festival }: { festival?: FestivalSett
             </div>
 
             {/* Institutional Dossier Panel */}
-            <div className="yugantar-card-interactive glow-amber p-6 sm:p-7 rounded-2xl bg-white border border-[#F2DECD] shadow-xs">
+            <div
+              suppressHydrationWarning
+              className="yugantar-card-interactive glow-amber p-6 sm:p-7 rounded-2xl bg-white border border-[#F2DECD] shadow-xs"
+            >
               <div className="flex items-center justify-between pb-4 border-b border-[#F0E5D8] mb-5">
                 <div>
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF783E] block">

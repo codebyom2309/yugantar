@@ -226,7 +226,10 @@ async function PassContent({ params, searchParams }: PassPageProps) {
       </div>
 
       {/* Main Pass Container — Cloud White Theme with Navy Typography */}
-      <div className="w-full max-w-xl bg-white border border-[#DCE5F2] rounded-3xl overflow-hidden shadow-xl relative print:border-2 print:border-[#172B49] print:shadow-none print:rounded-none">
+      <div
+        suppressHydrationWarning
+        className="yugantar-card-interactive glow-cyan w-full max-w-xl bg-white border border-[#DCE5F2] rounded-3xl overflow-hidden shadow-xl relative transition-all print:border-2 print:border-[#172B49] print:shadow-none print:rounded-none"
+      >
         {/* Top Header Banner: Institutional & Forum Branding */}
         <div className="p-6 bg-gradient-to-br from-[#EDF5FC] via-white to-[#F8FAFD] border-b border-[#DCE5F2] relative">
           <div className="flex items-start justify-between gap-4">

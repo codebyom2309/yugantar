@@ -15,7 +15,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import RegistrationFormWrapper from './RegistrationFormWrapper';
-import { getAllCompetitionSlugs } from '@/data/events';
+import { getAllCompetitionSlugs, getCompetitionGlow } from '@/data/events';
 import { getRegistrationFormBySlug } from '@/data/registrationForms';
 
 // Generate static params for all 8 competition registration routes
@@ -70,6 +70,7 @@ async function RegistrationContent({ params }: PageProps) {
     competition.registrationOpen !== false && festivalSettings.registrationGlobalOpen !== false
   );
   const eventDateDisplay = competition.eventDate || festivalSettings.date || '19 October 2026';
+  const compGlow = getCompetitionGlow(competition.accentColor, (competition as any).themeVibe);
 
   return (
     <div className="min-h-screen bg-[#F8FAFD] flex flex-col">
@@ -163,7 +164,14 @@ async function RegistrationContent({ params }: PageProps) {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Multi-Step Form Workspace */}
             <div className="lg:col-span-8">
-              <div className="nexus-card p-5 sm:p-8 bg-white border border-[#DCE5F2] shadow-sm rounded-3xl">
+              <div
+                suppressHydrationWarning
+                className={`yugantar-card-interactive ${compGlow} nexus-card p-5 sm:p-8 bg-white border border-[#DCE5F2] shadow-sm rounded-3xl transition-all`}
+                style={{
+                  '--card-edge-color': competition.accentColor,
+                  '--card-edge-hover-border': competition.accentColor,
+                } as React.CSSProperties}
+              >
                 {isRegistrationOpen ? (
                   <RegistrationFormWrapper
                     competitionSlug={competition.slug}
@@ -177,7 +185,7 @@ async function RegistrationContent({ params }: PageProps) {
                     </div>
                     <div className="space-y-2 max-w-md mx-auto">
                       <h3 className="text-lg font-display font-bold text-[#172B49]">
-                        Registrations Currently Closed
+                         Registrations Currently Closed
                       </h3>
                       <p className="text-xs sm:text-sm text-[#60728A] leading-relaxed">
                         {festivalSettings.registrationStatusMessage ||
@@ -201,7 +209,14 @@ async function RegistrationContent({ params }: PageProps) {
             {/* Sticky Sidebar Panel */}
             <div className="lg:col-span-4 space-y-5 lg:sticky lg:top-28">
               {/* Competition Quick Card */}
-              <div className="nexus-card p-5">
+              <div
+                suppressHydrationWarning
+                className={`yugantar-card-interactive ${compGlow} nexus-card p-5 bg-white border border-[#DCE5F2] rounded-2xl shadow-xs transition-all`}
+                style={{
+                  '--card-edge-color': competition.accentColor,
+                  '--card-edge-hover-border': competition.accentColor,
+                } as React.CSSProperties}
+              >
                 <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[#172B49] pb-3 border-b border-[#E2E8F0] mb-4">
                   Arena Reference
                 </h3>
@@ -226,7 +241,10 @@ async function RegistrationContent({ params }: PageProps) {
               </div>
 
               {/* Guidelines Card */}
-              <div className="p-4 rounded-2xl bg-[#FFF8F2] border border-[#FFE0CE] space-y-2">
+              <div
+                suppressHydrationWarning
+                className="yugantar-card-interactive glow-amber p-4 rounded-2xl bg-[#FFF8F2] border border-[#FFE0CE] space-y-2 shadow-xs transition-all"
+              >
                 <h4 className="text-xs font-bold text-[#E07A43] flex items-center gap-1.5 uppercase tracking-wider">
                   <FileText className="w-3.5 h-3.5" />
                   Submission Safeguards

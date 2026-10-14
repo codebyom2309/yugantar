@@ -349,7 +349,10 @@ export default function JourneyPage() {
           </div>
 
           {/* Delegate Readiness Checklist Banner */}
-          <div className="rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-10 lg:p-12 shadow-xs">
+          <div
+            suppressHydrationWarning
+            className="yugantar-card-interactive glow-cyan rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-10 lg:p-12 shadow-xs transition-all"
+          >
             <div className="max-w-3xl space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E9F2FF] border border-[#D2E4FF] text-[11px] font-mono font-bold text-[#3978F6] uppercase">
                 <CheckSquare className="w-3.5 h-3.5" />

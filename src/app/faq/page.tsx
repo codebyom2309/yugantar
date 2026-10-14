@@ -180,7 +180,8 @@ export default function FaqPage() {
                 return (
                   <div
                     key={index}
-                    className="bg-white rounded-2xl border border-[#DCE5F2] overflow-hidden transition-all hover:border-[#3978F6]/40 shadow-2xs"
+                    suppressHydrationWarning
+                    className="yugantar-card-interactive glow-neutral bg-white rounded-2xl border border-[#DCE5F2] overflow-hidden transition-all shadow-2xs"
                   >
                     <button
                       type="button"
@@ -224,7 +225,10 @@ export default function FaqPage() {
           </div>
 
           {/* Quick Help Card */}
-          <div className="rounded-2xl bg-gradient-to-r from-[#EDF5FC] via-[#F4F9FD] to-[#FFF4EA]/50 border border-[#DCE5F2] p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div
+            suppressHydrationWarning
+            className="yugantar-card-interactive glow-blue rounded-2xl bg-gradient-to-r from-[#EDF5FC] via-[#F4F9FD] to-[#FFF4EA]/50 border border-[#DCE5F2] p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm transition-all"
+          >
             <div>
               <h4 className="text-base font-display font-bold text-[#172B49] mb-1">
                 Have questions about specific competitions?

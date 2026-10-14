@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import {
   COMPETITIONS,
   getAllCompetitionSlugs,
+  getCompetitionGlow,
   FESTIVAL_INFO,
 } from '@/data/events';
 import {
@@ -101,6 +102,7 @@ async function CompetitionDetailContent({ params }: PageProps) {
   // Authoritative date and registration gating
   const isRegistrationOpen = Boolean(competition.registrationOpen !== false && festivalSettings.registrationGlobalOpen !== false);
   const eventDateDisplay = competition.eventDate || festivalSettings.date || '19 October 2026';
+  const compGlow = getCompetitionGlow(competition.accentColor, (competition as any).themeVibe);
 
   // Inter-competition navigation
   const currentIndex = COMPETITIONS.findIndex((c) => c.slug === competition.slug);
@@ -278,11 +280,14 @@ async function CompetitionDetailContent({ params }: PageProps) {
               {/* 1. Prominent Register Card */}
               {vis.registration !== false && (
                 <div
-                  className="p-6 sm:p-7 rounded-3xl border-2 shadow-xs relative overflow-hidden"
+                  suppressHydrationWarning
+                  className={`yugantar-card-interactive ${compGlow} p-6 sm:p-7 rounded-3xl border-2 shadow-xs relative overflow-hidden transition-all`}
                   style={{
                     backgroundColor: competition.accentBg,
                     borderColor: competition.accentColor + '40',
-                  }}
+                    '--card-edge-color': competition.accentColor,
+                    '--card-edge-hover-border': competition.accentColor,
+                  } as React.CSSProperties}
                 >
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div className="flex items-center gap-3">
@@ -350,7 +355,14 @@ async function CompetitionDetailContent({ params }: PageProps) {
 
               {/* 2. About & Event Description */}
               {vis.about !== false && (
-                <div className="rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4">
+                <div
+                  suppressHydrationWarning
+                  className={`yugantar-card-interactive ${compGlow} rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4 transition-all`}
+                  style={{
+                    '--card-edge-color': competition.accentColor,
+                    '--card-edge-hover-border': competition.accentColor,
+                  } as React.CSSProperties}
+                >
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-[#4B91E8]" />
                     <h2 className="text-xl sm:text-2xl font-display font-bold text-[#172B49]">
@@ -406,7 +418,14 @@ async function CompetitionDetailContent({ params }: PageProps) {
 
             {/* 3. Event Schedule & Timeline */}
               {vis.schedule !== false && competition.scheduleFlow && competition.scheduleFlow.length > 0 && (
-                <div className="rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4">
+                <div
+                  suppressHydrationWarning
+                  className={`yugantar-card-interactive ${compGlow} rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4 transition-all`}
+                  style={{
+                    '--card-edge-color': competition.accentColor,
+                    '--card-edge-hover-border': competition.accentColor,
+                  } as React.CSSProperties}
+                >
                   <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5 text-[#8578D8]" />
                     <h2 className="text-xl sm:text-2xl font-display font-bold text-[#172B49]">
@@ -436,7 +455,14 @@ async function CompetitionDetailContent({ params }: PageProps) {
 
               {/* 4. Evaluation Matrix (if applicable) */}
               {vis.rubric !== false && competition.evaluationMatrix && (
-                <div className="rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4">
+                <div
+                  suppressHydrationWarning
+                  className={`yugantar-card-interactive ${compGlow} rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4 transition-all`}
+                  style={{
+                    '--card-edge-color': competition.accentColor,
+                    '--card-edge-hover-border': competition.accentColor,
+                  } as React.CSSProperties}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Award className="w-5 h-5 text-[#E07A43]" />
@@ -467,7 +493,14 @@ async function CompetitionDetailContent({ params }: PageProps) {
 
               {/* 5. Authoritative Rules & Regulations */}
               {vis.rules !== false && competition.rules && competition.rules.length > 0 && (
-                <div className="rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4">
+                <div
+                  suppressHydrationWarning
+                  className={`yugantar-card-interactive ${compGlow} rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4 transition-all`}
+                  style={{
+                    '--card-edge-color': competition.accentColor,
+                    '--card-edge-hover-border': competition.accentColor,
+                  } as React.CSSProperties}
+                >
                   <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-[#4B91E8]" />
                     <h2 className="text-xl sm:text-2xl font-display font-bold text-[#172B49]">
@@ -491,7 +524,14 @@ async function CompetitionDetailContent({ params }: PageProps) {
 
               {/* 6. Expectations from Participants */}
               {vis.expectations !== false && competition.expectations && competition.expectations.length > 0 && (
-                <div className="rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4">
+                <div
+                  suppressHydrationWarning
+                  className={`yugantar-card-interactive ${compGlow} rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4 transition-all`}
+                  style={{
+                    '--card-edge-color': competition.accentColor,
+                    '--card-edge-hover-border': competition.accentColor,
+                  } as React.CSSProperties}
+                >
                   <div className="flex items-center gap-2">
                     <Layers className="w-5 h-5 text-[#2F855A]" />
                     <h2 className="text-xl sm:text-2xl font-display font-bold text-[#172B49]">
@@ -520,7 +560,14 @@ async function CompetitionDetailContent({ params }: PageProps) {
 
               {/* 7. FAQs */}
               {vis.faqs !== false && competition.faqs && competition.faqs.length > 0 && (
-                <div className="rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4">
+                <div
+                  suppressHydrationWarning
+                  className={`yugantar-card-interactive ${compGlow} rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 shadow-xs space-y-4 transition-all`}
+                  style={{
+                    '--card-edge-color': competition.accentColor,
+                    '--card-edge-hover-border': competition.accentColor,
+                  } as React.CSSProperties}
+                >
                   <div className="flex items-center gap-2">
                     <HelpCircle className="w-5 h-5 text-[#8578D8]" />
                     <h2 className="text-xl sm:text-2xl font-display font-bold text-[#172B49]">
@@ -592,8 +639,16 @@ async function CompetitionDetailContent({ params }: PageProps) {
             {/* RIGHT COLUMN: Quick Logistics Sidebar */}
             <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
               {/* Dossier Card */}
+              {/* Sidebar Quick Action Card */}
               {vis.dossier !== false && (
-                <div className="rounded-3xl bg-white border border-[#DCE5F2] p-6 shadow-xs space-y-5">
+                <div
+                  suppressHydrationWarning
+                  className={`yugantar-card-interactive ${compGlow} rounded-3xl bg-white border border-[#DCE5F2] p-6 shadow-xs space-y-5 transition-all`}
+                  style={{
+                    '--card-edge-color': competition.accentColor,
+                    '--card-edge-hover-border': competition.accentColor,
+                  } as React.CSSProperties}
+                >
                   <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[#172B49] pb-3 border-b border-[#E2E8F0]">
                     Competition Dossier
                   </h3>
@@ -665,7 +720,14 @@ async function CompetitionDetailContent({ params }: PageProps) {
 
               {/* Coordinators Section */}
               {vis.coordinators !== false && competition.coordinators && competition.coordinators.length > 0 && (
-                <div className="rounded-3xl bg-white border border-[#DCE5F2] p-5 shadow-xs space-y-3">
+                <div
+                  suppressHydrationWarning
+                  className={`yugantar-card-interactive ${compGlow} rounded-3xl bg-white border border-[#DCE5F2] p-5 shadow-xs space-y-3 transition-all`}
+                  style={{
+                    '--card-edge-color': competition.accentColor,
+                    '--card-edge-hover-border': competition.accentColor,
+                  } as React.CSSProperties}
+                >
                   <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[#172B49] pb-2 border-b border-[#E2E8F0] flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <Users className="w-3.5 h-3.5 text-[#8578D8]" />
