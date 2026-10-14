@@ -25,6 +25,11 @@ import { verifyPassToken, PassTokenPayload, PassMemberInfo } from '@/lib/passTok
 export const metadata: Metadata = {
   title: 'Digital Delegate Pass | YUGANTAR 2026',
   description: 'Official YUGANTAR 2026 Technical Festival Delegate Pass and Entry Credential.',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+  },
 };
 
 interface PassPageProps {

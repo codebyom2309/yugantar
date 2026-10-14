@@ -39,6 +39,14 @@
 - [16. Testing & Quality Verification](#16-testing--quality-verification)
 - [17. Contribution & Engineering Guidelines](#17-contribution--engineering-guidelines)
 - [18. Project Status, Verified Features & Known Limitations](#18-project-status-verified-features--known-limitations)
+- [19. Technical SEO, Google Indexing & Search Visibility](#19-technical-seo-google-indexing--search-visibility)
+  - [19.1 Architecture & Primary Canonical Domain](#191-architecture--primary-canonical-domain)
+  - [19.2 Sitemap & Robots.txt Routing](#192-sitemap--robotstxt-routing)
+  - [19.3 Per-Page & Dynamic Metadata Implementation](#193-per-page--dynamic-metadata-implementation)
+  - [19.4 Structured Data (Schema.org JSON-LD)](#194-structured-data-schemaorg-json-ld)
+  - [19.5 Privacy, Security & Indexing Boundaries](#195-privacy-security--indexing-boundaries)
+  - [19.6 Google Search Console Manual Verification Guide](#196-google-search-console-manual-verification-guide)
+  - [19.7 Automated SEO Verification](#197-automated-seo-verification)
 
 ---
 
@@ -475,4 +483,94 @@ npm run start
 
 ---
 
+## 19. Technical SEO, Google Indexing & Search Visibility
+
+### 19.1 Architecture & Primary Canonical Domain
+- **Primary Canonical Production Origin:** `https://teleera.turbobits.in`
+- **Configuration Module:** [`src/lib/site-url.ts`](file:///e:/new%20project/src/lib/site-url.ts)
+  - Exports `PRIMARY_PRODUCTION_ORIGIN = 'https://teleera.turbobits.in'`
+  - `getSiteUrl()` reads `NEXT_PUBLIC_SITE_URL` or `SITE_URL` from trusted environment variables and falls back safely to the primary origin.
+  - `getAbsoluteUrl(path)` constructs canonical URLs without ever trusting incoming client HTTP headers (`x-forwarded-host`, etc.).
+
+### 19.2 Sitemap & Robots.txt Routing
+- **XML Sitemap Route (`/sitemap.xml`):** Implemented in [`src/app/sitemap.ts`](file:///e:/new%20project/src/app/sitemap.ts) using Next.js App Router conventions.
+  - Dynamically discovers all published competitions from the authoritative loader (`getPublicCompetitions()`).
+  - Includes:
+    - `/` (Priority: 1.0, ChangeFrequency: daily)
+    - `/competitions` (Priority: 0.9, ChangeFrequency: daily)
+    - `/competitions/[slug]` for every published arena (Priority: 0.8, ChangeFrequency: daily)
+    - `/about` (Priority: 0.7, ChangeFrequency: weekly)
+    - `/districts` (Priority: 0.7, ChangeFrequency: weekly)
+    - `/journey` (Priority: 0.6, ChangeFrequency: weekly)
+    - `/faq` (Priority: 0.6, ChangeFrequency: weekly)
+  - **Strictly Excludes:** `/admin/*`, `/api/*`, `/pass/*`, `/verify/*`, `/city` (redirect), and `/*/register` sub-routes.
+- **Robots.txt Route (`/robots.txt`):** Implemented in [`src/app/robots.ts`](file:///e:/new%20project/src/app/robots.ts).
+  - Explicitly allows public pages, `/_next/static/*`, `/images/*`, and `/api/media/*`.
+  - Disallows crawler access to `/admin/`, `/pass/`, `/verify/`, `/api/`, and `/competitions/*/register`.
+  - Declares canonical sitemap: `https://teleera.turbobits.in/sitemap.xml`.
+
+### 19.3 Per-Page & Dynamic Metadata Implementation
+- **Root Layout ([`src/app/layout.tsx`](file:///e:/new%20project/src/app/layout.tsx)):** Sets `metadataBase`, global Open Graph (`og:url`, `og:image`, `og:type`), Twitter Large Card metadata, and indexing permissions for Googlebot (`max-image-preview: large`).
+- **Dynamic Competition Pages ([`src/app/competitions/[slug]/page.tsx`](file:///e:/new%20project/src/app/competitions/%5Bslug%5D/page.tsx)):**
+  - Implements `generateMetadata({ params })` fetching the specific competition details.
+  - Sets unique title (`{Name} — Arena 0{Index} | YUGANTAR 2026`), concise description, self-referencing canonical URL (`/competitions/{slug}`), and competition hero banner Open Graph artwork.
+  - Directly returns HTTP 404 via `notFound()` for unpublished or nonexistent competition slugs.
+- **Competitions Directory ([`src/app/competitions/page.tsx`](file:///e:/new%20project/src/app/competitions/page.tsx)):** Server component delivering descriptive title, meta description, and canonical link.
+- **About Page ([`src/app/about/page.tsx`](file:///e:/new%20project/src/app/about/page.tsx)):** Dedicated institutional metadata highlighting PCE, Department of ETC, TELE-ERA, and IIC Cell.
+- **Districts Page ([`src/app/districts/page.tsx`](file:///e:/new%20project/src/app/districts/page.tsx)):** Metadata for NEXUS CITY districts and interactive floor maps.
+- **Journey Page ([`src/app/journey/page.tsx`](file:///e:/new%20project/src/app/journey/page.tsx)):** Delegate timeline and festival schedule metadata.
+- **FAQ Page ([`src/app/faq/page.tsx`](file:///e:/new%20project/src/app/faq/page.tsx)):** Logistics, registration, and payment proof FAQ metadata.
+
+### 19.4 Structured Data (Schema.org JSON-LD)
+All schemas are centralized in [`src/lib/seo-schema.ts`](file:///e:/new%20project/src/lib/seo-schema.ts) using verified institutional data:
+1. **Organization (`EducationalOrganization` + `CollegeOrUniversity`):** Injected globally in root layout for PCE Nagpur, Department of ETC, and TELE-ERA Student Forum.
+2. **WebSite:** Injected globally in root layout with canonical domain and publisher reference.
+3. **Festival Event:** Injected on homepage (`/`) for YUGANTAR 2026 on 19 October 2026 at PCE Campus.
+4. **Competition Event:** Injected on each competition detail page (`/competitions/[slug]`) describing arena venue, dates, pricing/offers, and organizer links.
+5. **ItemList:** Injected on `/competitions` listing all eight flagship arenas for search crawler discovery.
+6. **FAQPage:** Injected on `/faq` with verified questions and answers.
+7. **BreadcrumbList:** Injected on all sub-pages for rich navigational breadcrumbs in SERPs.
+
+### 19.5 Privacy, Security & Indexing Boundaries
+To ensure that confidential participant and administrative data is never indexed:
+- **Participant Passes (`/pass/[id]`):** Injected with `robots: { index: false, follow: false, nocache: true }` and blocked in `robots.txt`.
+- **Credential Verification (`/verify/[token]`):** Injected with `robots: { index: false, follow: false, nocache: true }` and blocked in `robots.txt`.
+- **Admin Panel & Login (`/admin`, `/admin/login`):** Protected by `robots: { index: false, follow: false, nocache: true }` and authentication session checks.
+- **Registration Subpages (`/competitions/[slug]/register`):** Given `robots: { index: false, follow: true }` with canonical pointing to the parent competition page to eliminate duplicate form indexing.
+
+### 19.6 Google Search Console Manual Verification Guide
+To complete domain ownership verification and sitemap indexing in Google Search Console:
+
+1. **Add Property:**
+   - Log into [Google Search Console](https://search.google.com/search-console).
+   - Click **Add Property**.
+   - Select **Domain** (recommended: `turbobits.in`) OR **URL Prefix** (`https://teleera.turbobits.in`).
+2. **DNS Verification via GoDaddy:**
+   - When selecting Domain property verification, Google provides a TXT record value (e.g., `google-site-verification=XXXXXXXXXXXXXXXXXXXX`).
+   - Log into your GoDaddy DNS Management console for `turbobits.in`.
+   - Add a new DNS record:
+     - **Type:** `TXT`
+     - **Name:** `@` (or `teleera` if verifying subdomain prefix)
+     - **Value:** The verification string copied from Google Search Console
+     - **TTL:** 1 Hour (or 1/2 Hour)
+   - Save the record. Wait 5–15 minutes for DNS propagation, then click **Verify** in Search Console.
+3. **Submit Sitemap:**
+   - In Search Console, navigate to **Sitemaps** in the left sidebar.
+   - Enter `sitemap.xml` under *Add a new sitemap*.
+   - Click **Submit**. Verify that the status shows **Success**.
+4. **URL Inspection & Live Test:**
+   - Use the **URL Inspection** bar at the top to test `https://teleera.turbobits.in` and `https://teleera.turbobits.in/competitions/ideathon`.
+   - Click **Test Live URL** to confirm that Googlebot can fetch the HTML, reads the self-referencing canonical, and detects the JSON-LD Event and Organization schemas.
+   - Click **Request Indexing**.
+
+### 19.7 Automated SEO Verification
+Run the automated test suite locally at any time:
+```bash
+node scripts/test-seo.mjs
+```
+The suite executes 46 assertions validating `robots.txt`, `sitemap.xml`, canonical origins, OpenGraph tags, dynamic competition metadata, JSON-LD schemas, and `noindex` privacy enforcement.
+
+---
+
 *For further technical details, consult the dedicated guides in the [`docs/`](file:///e:/new%20project/docs) directory.*
+

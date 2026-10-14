@@ -53,11 +53,55 @@ function LinkedinSocialIcon({ className = 'w-3.5 h-3.5' }: { className?: string 
   );
 }
 
+import type { Metadata } from 'next';
+import { buildBreadcrumbSchema } from '@/lib/seo-schema';
+
+export const metadata: Metadata = {
+  title: 'About & Organizers — Department of ETC, TELE-ERA & IIC',
+  description:
+    'Discover the academic heritage, faculty mentorship, and student leadership behind YUGANTAR 2026 at Priyadarshini College of Engineering, Nagpur — Department of ETC, TELE-ERA Student Forum, and IIC Cell.',
+  alternates: {
+    canonical: '/about',
+  },
+  openGraph: {
+    title: 'About & Organizers — YUGANTAR 2026 | PCE Nagpur',
+    description:
+      'Academic leadership, organizing committees, and student forum driving YUGANTAR 2026 at Priyadarshini College of Engineering, Nagpur.',
+    url: '/about',
+    images: [
+      {
+        url: '/images/nexus-city/hero-panoramic-city.webp',
+        width: 1947,
+        height: 808,
+        alt: 'YUGANTAR 2026 Leadership and Campus Heritage',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About & Organizers — YUGANTAR 2026',
+    description:
+      'Academic leadership, organizing committees, and student forum driving YUGANTAR 2026.',
+    images: ['/images/nexus-city/hero-panoramic-city.webp'],
+  },
+};
+
 export default function AboutPage() {
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: 'Home', path: '/' },
+    { name: 'About & Organizers', path: '/about' },
+  ]);
+
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F8FAFD]" />}>
-      <AboutContent />
-    </Suspense>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <Suspense fallback={<div className="min-h-screen bg-[#F8FAFD]" />}>
+        <AboutContent />
+      </Suspense>
+    </>
   );
 }
 

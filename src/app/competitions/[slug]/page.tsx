@@ -80,24 +80,92 @@ function CompetitionDetailSkeleton() {
   );
 }
 
-export default function CompetitionDetailPage({ params }: PageProps) {
-  return (
-    <Suspense fallback={<CompetitionDetailSkeleton />}>
-      <CompetitionDetailContent params={params} />
-    </Suspense>
-  );
+import type { Metadata } from 'next';
+import { buildCompetitionEventSchema, buildBreadcrumbSchema } from '@/lib/seo-schema';
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const competition = await getPublicCompetitionBySlug(slug);
+
+  if (!competition) {
+    return {
+      title: 'Arena Not Found',
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const title = `${competition.name} — Arena 0${competition.districtIndex + 1}`;
+  const description =
+    competition.shortDescription ||
+    competition.about ||
+    `Official ${competition.name} arena at YUGANTAR 2026. Review rules, evaluation criteria, and schedule at Priyadarshini College of Engineering, Nagpur.`;
+  const canonicalUrl = `/competitions/${competition.slug}`;
+  const heroImage =
+    competition.bannerImage ||
+    competition.cardImage ||
+    `/images/competitions/${competition.slug}.webp`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: `${competition.name} — YUGANTAR 2026 | PCE Nagpur`,
+      description,
+      url: canonicalUrl,
+      images: [
+        {
+          url: heroImage,
+          width: 1200,
+          height: 675,
+          alt: `${competition.name} official artwork`,
+        },
+      ],
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${competition.name} | YUGANTAR 2026`,
+      description,
+      images: [heroImage],
+    },
+  };
 }
 
-async function CompetitionDetailContent({ params }: PageProps) {
+export default async function CompetitionDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const [competition, festivalSettings] = await Promise.all([
-    getPublicCompetitionBySlug(slug),
-    getFestivalSettings(),
-  ]);
+  const competition = await getPublicCompetitionBySlug(slug);
 
   if (!competition) {
     notFound();
   }
+
+  const festivalSettings = await getFestivalSettings();
+
+  return (
+    <CompetitionDetailContent
+      competition={competition}
+      festivalSettings={festivalSettings}
+    />
+  );
+}
+
+function CompetitionDetailContent({
+  competition,
+  festivalSettings,
+}: {
+  competition: DbCompetition;
+  festivalSettings: any;
+}) {
+
+  const eventSchema = buildCompetitionEventSchema(competition);
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: 'Home', path: '/' },
+    { name: 'Competitions', path: '/competitions' },
+    { name: competition.name, path: `/competitions/${competition.slug}` },
+  ]);
 
   const Icon = ICON_MAP[competition.iconName] || Cpu;
 
@@ -129,6 +197,14 @@ async function CompetitionDetailContent({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-[#F8FAFD] flex flex-col selection:bg-[#E07A43]/20 selection:text-[#172B49]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <Navbar />
 
       {/* =========================================================================

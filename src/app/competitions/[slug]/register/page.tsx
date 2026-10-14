@@ -18,6 +18,22 @@ import RegistrationFormWrapper from './RegistrationFormWrapper';
 import { getAllCompetitionSlugs, getCompetitionGlow } from '@/data/events';
 import { getRegistrationFormBySlug } from '@/data/registrationForms';
 
+import type { Metadata } from 'next';
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  return {
+    title: 'Competition Registration',
+    robots: {
+      index: false,
+      follow: true,
+    },
+    alternates: {
+      canonical: `/competitions/${slug}`,
+    },
+  };
+}
+
 // Generate static params for all 8 competition registration routes
 export async function generateStaticParams() {
   const slugs = getAllCompetitionSlugs();

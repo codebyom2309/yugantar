@@ -22,6 +22,11 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Credential Verification | YUGANTAR 2026',
   description: 'Official YUGANTAR 2026 Delegate Credential and Certificate Verification Portal.',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+  },
 };
 
 interface VerifyPageProps {

@@ -32,11 +32,18 @@ export default function HomePage() {
   );
 }
 
+import { buildFestivalEventSchema } from '@/lib/seo-schema';
+
 async function HomeContent() {
   const festival = await getFestivalSettings();
+  const festivalSchema = buildFestivalEventSchema();
 
   return (
     <main className="min-h-screen bg-[#F8FAFD] flex flex-col overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(festivalSchema) }}
+      />
       {/* Navigation Header */}
       <Navbar />
 

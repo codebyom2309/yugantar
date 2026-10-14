@@ -6,7 +6,11 @@ import AdminShell from '@/components/admin/AdminShell';
 export const metadata: Metadata = {
   title: 'Admin Panel — YUGANTAR 2026',
   description: 'YUGANTAR 2026 Administration Panel',
-  robots: 'noindex, nofollow',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+  },
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
