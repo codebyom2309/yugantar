@@ -75,10 +75,10 @@ export default function FestivalJourney({ festival }: { festival?: FestivalSetti
           {FESTIVAL_JOURNEY.map((item, idx) => {
             const Icon = STAGE_ICONS[idx] || Sparkles;
             const colors = [
-              { bg: 'bg-[#EDF5FC]', text: 'text-[#3978F6]', border: 'border-[#DCE5F2]' },
-              { bg: 'bg-[#F2EFFD]', text: 'text-[#8578D8]', border: 'border-[#E0DAF8]' },
-              { bg: 'bg-[#FFF4EA]', text: 'text-[#FF783E]', border: 'border-[#F0E5D8]' },
-              { bg: 'bg-[#EDF5FC]', text: 'text-[#3978F6]', border: 'border-[#DCE5F2]' },
+              { bg: 'bg-[#EDF5FC]', text: 'text-[#3978F6]', border: 'border-[#DCE5F2]', glow: 'glow-blue' },
+              { bg: 'bg-[#F2EFFD]', text: 'text-[#8578D8]', border: 'border-[#E0DAF8]', glow: 'glow-violet' },
+              { bg: 'bg-[#FFF4EA]', text: 'text-[#FF783E]', border: 'border-[#F0E5D8]', glow: 'glow-amber' },
+              { bg: 'bg-[#EDF5FC]', text: 'text-[#3978F6]', border: 'border-[#DCE5F2]', glow: 'glow-cyan' },
             ][idx % 4];
 
             return (
@@ -92,7 +92,7 @@ export default function FestivalJourney({ festival }: { festival?: FestivalSetti
                   delay: shouldReduceMotion ? 0 : idx * 0.08,
                   ease: [0.16, 1, 0.3, 1],
                 }}
-                className="nexus-skeuo-card p-7 flex flex-col justify-between relative z-10 group"
+                className={`yugantar-card-interactive ${colors.glow} nexus-skeuo-card p-7 flex flex-col justify-between relative z-10 group`}
               >
                 <div>
                   {/* Step Milestone Node */}

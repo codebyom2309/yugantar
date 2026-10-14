@@ -1360,9 +1360,11 @@ export default function StudioLandingPage() {
                     No registrations found for this arena yet. You can use Single / Custom mode to issue directly.
                   </div>
                 ) : (
-                  <div className="max-h-60 overflow-y-auto space-y-1.5 border border-black/10 dark:border-white/10 rounded-xl p-2 bg-slate-500/5">
+                  <div className="max-h-72 overflow-y-auto space-y-2 border border-black/10 dark:border-white/10 rounded-xl p-2 bg-slate-500/5">
                     {availableRegistrations.map((reg) => {
                       const isSelected = selectedRegIds.includes(reg.id);
+                      const recipients = extractRecipientsFromRegistration(reg, issuanceTeamScope, issuanceCitation);
+
                       return (
                         <div
                           key={reg.id}
@@ -1371,35 +1373,59 @@ export default function StudioLandingPage() {
                               isSelected ? prev.filter((id) => id !== reg.id) : [...prev, reg.id]
                             );
                           }}
-                          className={`p-2 rounded-lg flex items-center justify-between text-xs transition cursor-pointer ${
+                          className={`p-2.5 rounded-xl border text-xs transition cursor-pointer ${
                             isSelected
-                              ? 'bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30'
-                              : 'hover:bg-slate-500/5 border border-transparent'
+                              ? 'bg-blue-50/80 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/40 shadow-xs'
+                              : 'hover:bg-slate-500/5 border-black/5 dark:border-white/5 bg-white/40 dark:bg-neutral-900/40'
                           }`}
                         >
-                          <div className="flex items-center gap-2 min-w-0">
-                            {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-blue-600 shrink-0" />
-                            ) : (
-                              <Square className="w-4 h-4 text-slate-400 shrink-0" />
-                            )}
-                            <div className="truncate">
-                              <span className="font-bold text-slate-900 dark:text-white">
-                                {reg.leader_name}
-                              </span>
-                              {reg.team_name && (
-                                <span className="text-slate-500 text-[11px] ml-1.5">
-                                  ({reg.team_name})
-                                </span>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isSelected ? (
+                                <CheckSquare className="w-4 h-4 text-blue-600 shrink-0" />
+                              ) : (
+                                <Square className="w-4 h-4 text-slate-400 shrink-0" />
                               )}
-                              <span className="text-slate-400 text-[10px] ml-2">
-                                · {reg.leader_college || 'PCE'}
-                              </span>
+                              <div className="truncate">
+                                <span className="font-bold text-slate-900 dark:text-white">
+                                  {reg.leader_name}
+                                </span>
+                                {reg.team_name && (
+                                  <span className="text-blue-600 dark:text-blue-400 font-medium text-[11px] ml-1.5">
+                                    [{reg.team_name}]
+                                  </span>
+                                )}
+                                <span className="text-slate-400 text-[10px] ml-2">
+                                  · {reg.leader_college || 'PCE'}
+                                </span>
+                              </div>
                             </div>
+                            <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                              {reg.id.slice(0, 8)}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-mono text-slate-400 shrink-0 ml-2">
-                            {reg.id.slice(0, 8)}
-                          </span>
+
+                          {/* Member Breakdown Preview */}
+                          {recipients.length > 1 && (
+                            <div className="mt-2 pl-6 pt-1.5 border-t border-black/5 dark:border-white/5 flex flex-wrap items-center gap-1.5">
+                              <span className="text-[10px] font-mono text-slate-500 font-semibold">
+                                {recipients.length} Recipients:
+                              </span>
+                              {recipients.map((rec, rIdx) => (
+                                <span
+                                  key={rIdx}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono ${
+                                    rec.isLeader
+                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 font-bold'
+                                      : 'bg-slate-200 text-slate-700 dark:bg-neutral-800 dark:text-slate-300'
+                                  }`}
+                                >
+                                  {rec.isLeader ? '👑 Leader: ' : '👤 '}
+                                  {rec.recipientName}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

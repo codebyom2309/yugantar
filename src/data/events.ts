@@ -738,6 +738,43 @@ export function getAllCompetitionSlugs(): string[] {
   return COMPETITIONS.map((c) => c.slug);
 }
 
+export function getCompetitionGlow(accentColor?: string, themeVibe?: string): string {
+  if (themeVibe) {
+    switch (themeVibe) {
+      case 'innovation':
+        return 'glow-blue';
+      case 'research':
+        return 'glow-violet';
+      case 'circuit':
+        return 'glow-cyan';
+      case 'pitch':
+        return 'glow-amber';
+      case 'career':
+        return 'glow-emerald';
+      case 'creative':
+        return 'glow-coral';
+      case 'arena':
+        return 'glow-purple';
+      case 'culture':
+        return 'glow-amber';
+    }
+  }
+
+  if (accentColor) {
+    const c = accentColor.toLowerCase();
+    if (c.includes('8578d8')) return 'glow-violet';
+    if (c.includes('9333ea')) return 'glow-purple';
+    if (c.includes('e07a43')) return 'glow-amber';
+    if (c.includes('2f855a')) return 'glow-emerald';
+    if (c.includes('d66853')) return 'glow-coral';
+    if (c.includes('c05621')) return 'glow-amber';
+    if (c.includes('3b9cd8')) return 'glow-cyan';
+    if (c.includes('4b91e8')) return 'glow-blue';
+  }
+
+  return 'glow-blue';
+}
+
 export const FESTIVAL_JOURNEY = [
   {
     step: "01",

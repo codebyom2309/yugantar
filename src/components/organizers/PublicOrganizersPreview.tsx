@@ -3,6 +3,11 @@
 import React from 'react';
 import Image from 'next/image';
 import { Building2, Users, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
+import {
+  parseCropData,
+  getCropImageStyle,
+  getCropMaskClass,
+} from '@/lib/cropUtils';
 
 export interface PublicOrgBody {
   id?: string;
@@ -213,70 +218,75 @@ export default function PublicOrganizersPreview({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2.5">
-            {turboBitsMembers.map((member, i) => (
-              <div
-                key={member.id ? `${member.id}-${i}` : `${member.name}-${i}`}
-                className="p-3 rounded-2xl bg-white border border-[#DCE5F2] shadow-xs flex flex-col items-center text-center space-y-2"
-              >
-                {/* Circular Portrait Image */}
-                <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-[#DCE5F2] bg-[#EDF5FC] flex items-center justify-center shadow-2xs">
-                  {member.avatar_url ? (
-                    (() => {
-                      let pCropStyle: React.CSSProperties = { objectFit: 'cover' };
-                      const crop = member.crop_data || member.cropData;
-                      if (crop) {
-                        try {
-                          const c = typeof crop === 'string' ? JSON.parse(crop) : crop;
-                          if (c.zoom || c.x !== undefined || c.y !== undefined) {
-                            pCropStyle = {
-                              objectFit: 'cover',
-                              transform: `scale(${c.zoom || 1}) translate(${c.x || 0}px, ${c.y || 0}px)`,
-                              transformOrigin: 'center center',
-                            };
-                          }
-                        } catch {}
-                      }
-                      return (
+            {[...turboBitsMembers]
+              .sort((a, b) => {
+                const aLead = Boolean((a as any).is_lead || (a.role || '').toLowerCase().includes('lead') || (a.role || '').toLowerCase().includes('head'));
+                const bLead = Boolean((b as any).is_lead || (b.role || '').toLowerCase().includes('lead') || (b.role || '').toLowerCase().includes('head'));
+                if (aLead && !bLead) return -1;
+                if (!aLead && bLead) return 1;
+                return (a.display_order ?? 0) - (b.display_order ?? 0);
+              })
+              .map((member, i) => {
+                const roleLower = (member.role || '').toLowerCase();
+                const isLead = Boolean((member as any).is_lead || roleLower.includes('lead') || roleLower.includes('head'));
+                const crop = parseCropData(member.crop_data || member.cropData);
+
+                return (
+                  <div
+                    key={member.id ? `${member.id}-${i}` : `${member.name}-${i}`}
+                    className={`p-3 rounded-2xl bg-white border shadow-xs flex flex-col items-center text-center space-y-2 ${
+                      isLead
+                        ? 'col-span-2 border-[#3978F6] bg-gradient-to-b from-[#F0F6FF] to-white ring-2 ring-[#3978F6]/20'
+                        : 'border-[#DCE5F2]'
+                    }`}
+                  >
+                    {/* Portrait Image */}
+                    <div className={`relative ${isLead ? 'w-16 h-16 border-2 border-[#3978F6]' : 'w-14 h-14 border-2 border-[#DCE5F2]'} ${getCropMaskClass(crop.shape)} overflow-hidden bg-[#EDF5FC] flex items-center justify-center shadow-2xs shrink-0`}>
+                      {member.avatar_url ? (
                         <img
                           src={member.avatar_url}
                           alt={member.name}
-                          style={pCropStyle}
-                          className="w-full h-full object-cover"
+                          style={getCropImageStyle(crop)}
+                          className="pointer-events-none select-none"
                         />
-                      );
-                    })()
-                  ) : (
-                    <span className="text-sm font-bold font-display text-[#4B91E8]">
-                      {(member.name || 'TB')
-                        .split(' ')
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join('')
-                        .toUpperCase()}
-                    </span>
-                  )}
-                </div>
+                      ) : (
+                        <span className="text-sm font-bold font-display text-[#4B91E8]">
+                          {(member.name || 'TB')
+                            .split(' ')
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase()}
+                        </span>
+                      )}
+                    </div>
 
-                <div className="w-full space-y-0.5">
-                  <h4 className="text-xs font-bold text-[#172B49] truncate leading-tight">
-                    {member.name || 'Team Member'}
-                  </h4>
-                  <span className="text-[10px] font-mono text-[#E07A43] font-semibold block truncate">
-                    {member.role || 'Student Lead'}
-                  </span>
-                  {(member.forum_designation || member.forumDesignation) && (
-                    <span className="text-[8.5px] font-mono font-semibold text-[#2F855A] bg-[#2F855A]/10 px-1 py-0.5 rounded block truncate">
-                      {member.forum_designation || member.forumDesignation}
-                    </span>
-                  )}
-                  {member.department && (
-                    <span className="text-[9px] text-[#8CA0BA] block truncate">
-                      {member.department}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+                    <div className="w-full space-y-0.5">
+                      {isLead && (
+                        <span className="text-[9px] font-mono font-bold text-white bg-[#3978F6] px-2 py-0.5 rounded-full inline-block mb-0.5">
+                          ⚡ TurboBits Lead
+                        </span>
+                      )}
+                      <h4 className={`font-bold text-[#172B49] truncate leading-tight ${isLead ? 'text-xs sm:text-sm' : 'text-xs'}`}>
+                        {member.name || 'Team Member'}
+                      </h4>
+                      <span className="text-[10px] font-mono text-[#3978F6] font-semibold block truncate">
+                        {member.role || 'Student Member'}
+                      </span>
+                      {(member.forum_designation || member.forumDesignation) && (
+                        <span className="text-[8.5px] font-mono font-semibold text-[#2F855A] bg-[#2F855A]/10 px-1 py-0.5 rounded block truncate">
+                          {member.forum_designation || member.forumDesignation}
+                        </span>
+                      )}
+                      {member.department && (
+                        <span className="text-[9px] text-[#8CA0BA] block truncate">
+                          {member.department}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         )}
       </div>

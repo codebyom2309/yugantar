@@ -72,7 +72,7 @@ export default function FaqSection() {
                   delay: shouldReduceMotion ? 0 : idx * 0.06,
                   ease: [0.16, 1, 0.3, 1],
                 }}
-                className="nexus-skeuo-card overflow-hidden transition-all duration-200"
+                className="yugantar-card-interactive glow-neutral nexus-skeuo-card overflow-hidden transition-all duration-200"
               >
                 <button
                   type="button"
@@ -108,7 +108,7 @@ export default function FaqSection() {
         {/* Support Note */}
         <motion.div
           {...fadeIn(0.25)}
-          className="mt-12 text-center p-6 rounded-2xl bg-white border border-[#DCE5F2] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs"
+          className="yugantar-card-interactive glow-blue mt-12 text-center p-6 rounded-2xl bg-white border border-[#DCE5F2] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs"
         >
           <div className="text-left">
             <h4 className="text-sm font-display font-bold text-[#10264A]">

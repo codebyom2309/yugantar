@@ -183,7 +183,10 @@ export default function InteractiveCityMap() {
 
           {/* Right Column: Active District Profile (col-span-4) */}
           <motion.div {...fadeIn(0.18)} className="lg:col-span-4 flex flex-col gap-4">
-            <div className="nexus-skeuo-card p-6 sm:p-7 text-left">
+            <div
+              suppressHydrationWarning
+              className="yugantar-card-interactive glow-cyan nexus-skeuo-card p-6 sm:p-7 text-left"
+            >
               {isCenterSelected ? (
                 /* Center Spire View */
                 <>

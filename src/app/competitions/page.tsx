@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { motion, useReducedMotion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { COMPETITIONS, Competition, FESTIVAL_INFO } from '@/data/events';
+import { COMPETITIONS, Competition, FESTIVAL_INFO, getCompetitionGlow } from '@/data/events';
 import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import {
   Cpu,
@@ -262,6 +262,7 @@ export default function CompetitionsOverviewPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
             {filteredCompetitions.map((comp, idx) => {
               const Icon = ICON_MAP[comp.iconName] || Cpu;
+              const compGlow = getCompetitionGlow(comp.accentColor, comp.themeVibe);
 
               return (
                 <motion.article
@@ -274,7 +275,11 @@ export default function CompetitionsOverviewPage() {
                     delay: shouldReduceMotion ? 0 : idx * 0.05,
                     ease: [0.16, 1, 0.3, 1],
                   }}
-                  className="rounded-3xl bg-white border border-[#DCE5F2] hover:border-[#3978F6]/50 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden group hover:-translate-y-1"
+                  className={`yugantar-card-interactive ${compGlow} rounded-3xl bg-white border border-[#DCE5F2] shadow-xs flex flex-col overflow-hidden group`}
+                  style={{
+                    '--card-edge-color': comp.accentColor,
+                    '--card-edge-hover-border': comp.accentColor,
+                  } as React.CSSProperties}
                 >
                   {/* 16:9 Image Artwork Header */}
                   <div className="relative aspect-video w-full overflow-hidden bg-[#EDF5FC]">

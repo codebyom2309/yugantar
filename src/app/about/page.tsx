@@ -3,13 +3,17 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import TurboBitsObserver from '@/components/organizers/TurboBitsObserver';
 import {
   getPublicOrganizers,
   getPublicOrganizerMembers,
   getFestivalSettings,
   DbOrganizerMember,
 } from '@/lib/competitions';
+import {
+  parseCropData,
+  getCropImageStyle,
+  getCropMaskClass,
+} from '@/lib/cropUtils';
 import {
   MapPin,
   Calendar,
@@ -167,8 +171,9 @@ async function AboutContent() {
           {facultyLeads.length > 0 && (
             <section id="faculty-leadership" className="space-y-6 sm:space-y-8">
               <div className="max-w-2xl">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#3978F6] bg-[#E9F2FF] border border-[#D2E4FF] px-3 py-1 rounded-full mb-2.5 inline-block">
-                  INSTITUTIONAL PATRONAGE &amp; ACADEMIC MENTORSHIP
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#D97706] bg-[#FFF9EB] border border-[#FDE68A] px-3 py-1 rounded-full mb-2.5 inline-flex items-center gap-1.5">
+                  <GraduationCap className="w-3.5 h-3.5 text-[#D97706]" />
+                  <span>INSTITUTIONAL PATRONAGE &amp; ACADEMIC MENTORSHIP</span>
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-[#10264A] tracking-tight">
                   Academic &amp; Institutional Leadership
@@ -180,14 +185,17 @@ async function AboutContent() {
 
               {/* HOD Feature Spotlight Card */}
               {hodMember && (
-                <div className="rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 lg:p-10 shadow-xs relative overflow-hidden group hover:border-[#3978F6]/40 transition-all">
-                  <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-[#E9F2FF] via-[#F4F8FD] to-transparent rounded-bl-full pointer-events-none opacity-80" />
+                <div
+                  suppressHydrationWarning
+                  className="faculty-card yugantar-card-interactive glow-gold rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-8 lg:p-10 shadow-xs relative overflow-hidden group transition-all"
+                >
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-[#FFF9EB]/80 via-[#F4F8FD] to-transparent rounded-bl-full pointer-events-none opacity-80" />
                   
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start relative z-10">
                     
                     {/* HOD Portrait / Monogram */}
                     <div className="lg:col-span-4 flex flex-col items-start sm:items-center lg:items-start">
-                      <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden border-3 border-[#3978F6]/20 bg-[#E9F2FF] shadow-sm flex items-center justify-center shrink-0">
+                      <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden border-3 border-[#D97706]/25 bg-gradient-to-br from-[#FFF9EB] to-[#F4F8FD] shadow-sm flex items-center justify-center shrink-0">
                         {hodMember.avatar_url ? (
                           <Image
                             src={hodMember.avatar_url}
@@ -198,7 +206,7 @@ async function AboutContent() {
                           />
                         ) : (
                           <div className="flex flex-col items-center justify-center text-center p-2">
-                            <GraduationCap className="w-10 h-10 text-[#3978F6] mb-1" />
+                            <GraduationCap className="w-10 h-10 text-[#D97706] mb-1" />
                             <span className="text-xl font-bold font-display text-[#10264A]">
                               {(hodMember.name || 'HOD')
                                 .split(' ')
@@ -212,13 +220,13 @@ async function AboutContent() {
                       </div>
 
                       <div className="mt-4 space-y-1 sm:text-center lg:text-left">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9F2FF] text-[#3978F6] border border-[#D2E4FF] text-[11px] font-mono font-bold uppercase">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF9EB] text-[#B45309] border border-[#FDE68A] text-[11px] font-mono font-bold uppercase">
                           Academic Patron &amp; Head
                         </span>
                         <h3 className="text-xl sm:text-2xl font-display font-extrabold text-[#10264A] tracking-tight">
                           {hodMember.name}
                         </h3>
-                        <p className="text-xs font-mono font-bold text-[#FF783E]">
+                        <p className="text-xs sm:text-sm font-mono font-bold text-[#D97706]">
                           {hodMember.role}
                         </p>
                         <p className="text-xs text-[#536781] leading-relaxed">
@@ -233,7 +241,7 @@ async function AboutContent() {
                         <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#7E93AC] block mb-2">
                           PATRON&apos;S ADDRESS &amp; ACADEMIC VISION
                         </span>
-                        <blockquote className="text-xs sm:text-sm lg:text-base text-[#10264A] font-medium leading-relaxed italic border-l-3 border-[#3978F6] pl-4 sm:pl-5 py-1 bg-[#F8FAFD] rounded-r-2xl">
+                        <blockquote className="text-xs sm:text-sm lg:text-base text-[#10264A] font-medium leading-relaxed italic border-l-3 border-[#D97706] pl-4 sm:pl-5 py-1.5 bg-[#FFFDF7] rounded-r-2xl border-y border-r border-[#FDE68A]/40">
                           &ldquo;{hodMember.bio || 'YUGANTAR 2026 stands as the premier confluence of applied circuit intelligence, creative robotics, and technological exploration. We welcome student delegates across Maharashtra to participate in our laboratory tracks.'}&rdquo;
                         </blockquote>
                       </div>
@@ -262,56 +270,74 @@ async function AboutContent() {
                 </div>
               )}
 
-              {/* Other Faculty Leadership Cards */}
+              {/* Faculty Coordinator Cards: Visually Substantial, Dignified & Proportional */}
               {otherFaculty.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5">
-                  {otherFaculty.map((fac, idx) => (
-                    <div
-                      key={fac.id || `fac-${idx}`}
-                      className="p-5 sm:p-6 rounded-2xl bg-white border border-[#DCE5F2] shadow-xs flex items-start gap-4 hover:border-[#3978F6]/30 transition-all"
-                    >
-                      <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#DCE5F2] bg-[#E9F2FF] flex items-center justify-center shrink-0">
-                        {fac.avatar_url ? (
-                          <Image
-                            src={fac.avatar_url}
-                            alt={fac.name}
-                            fill
-                            className="object-cover"
-                            unoptimized={fac.avatar_url.startsWith('/api/') || fac.avatar_url.includes('google')}
-                          />
-                        ) : (
-                          <span className="text-base font-bold font-display text-[#3978F6]">
-                            {(fac.name || 'FC')
-                              .split(' ')
-                              .map((n) => n[0])
-                              .slice(0, 2)
-                              .join('')
-                              .toUpperCase()}
-                          </span>
-                        )}
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-7">
+                  {otherFaculty.map((fac, idx) => {
+                    const crop = parseCropData(fac.crop_data);
 
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-[#E9F2FF] text-[#3978F6] text-[10px] font-mono font-bold">
-                          Faculty Coordinator
-                        </span>
-                        <h4 className="text-sm sm:text-base font-display font-bold text-[#10264A] truncate">
-                          {fac.name}
-                        </h4>
-                        <p className="text-xs font-mono text-[#FF783E] font-semibold truncate">
-                          {fac.role}
-                        </p>
-                        {fac.department && (
-                          <p className="text-[11px] text-[#7E93AC] truncate">{fac.department}</p>
-                        )}
-                        {fac.bio && (
-                          <p className="text-xs text-[#536781] leading-relaxed pt-1 font-normal">
-                            {fac.bio}
+                    return (
+                      <div
+                        key={fac.id || `fac-${idx}`}
+                        suppressHydrationWarning
+                        className="faculty-card yugantar-card-interactive glow-gold rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-7 lg:p-8 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 group transition-all"
+                      >
+                        {/* Enlarged, Dignified Profile Portrait Container */}
+                        <div className={`relative ${getCropMaskClass(crop.shape)} w-20 h-20 sm:w-24 sm:h-24 lg:w-26 lg:h-26 overflow-hidden border-2 border-[#DCE5F2] bg-gradient-to-br from-[#FFF9EB] to-[#F4F8FD] flex items-center justify-center shrink-0 shadow-2xs group-hover:border-[#D97706]/40 transition-colors`}>
+                          {fac.avatar_url ? (
+                            <img
+                              src={fac.avatar_url}
+                              alt={fac.name}
+                              style={getCropImageStyle(crop)}
+                              className="w-full h-full object-cover pointer-events-none select-none transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-center p-2">
+                              <GraduationCap className="w-8 h-8 text-[#D97706] mb-0.5" />
+                              <span className="text-lg sm:text-xl font-bold font-display text-[#10264A]">
+                                {(fac.name || 'FC')
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .slice(0, 2)
+                                  .join('')
+                                  .toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Substantial Faculty Content & Typography */}
+                        <div className="min-w-0 flex-1 space-y-1.5 w-full">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FFF9EB] text-[#B45309] border border-[#FDE68A] text-[11px] font-mono font-bold uppercase tracking-wider">
+                              <GraduationCap className="w-3.5 h-3.5 text-[#D97706]" />
+                              <span>Faculty Coordinator</span>
+                            </span>
+                          </div>
+                          
+                          <h4 className="text-lg sm:text-xl font-display font-extrabold text-[#10264A] tracking-tight leading-snug group-hover:text-[#B45309] transition-colors">
+                            {fac.name}
+                          </h4>
+                          
+                          <p className="text-xs sm:text-sm font-mono text-[#D97706] font-bold">
+                            {fac.role}
                           </p>
-                        )}
+                          
+                          {fac.department && (
+                            <p className="text-xs text-[#64748B] font-medium leading-relaxed">
+                              {fac.department}
+                            </p>
+                          )}
+                          
+                          {fac.bio && (
+                            <p className="text-xs sm:text-[13px] text-[#536781] leading-relaxed pt-2 border-t border-[#F1F5F9] mt-2 font-normal">
+                              {fac.bio}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -332,56 +358,60 @@ async function AboutContent() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-              {organizers.map((org, index) => (
-                <div
-                  key={(org as any).id ? `${(org as any).id}-${index}` : `${org.name}-${index}`}
-                  className="rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-7 flex flex-col justify-between shadow-xs hover:border-[#FF783E]/40 transition-all group"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      {org.logoUrl ? (
-                        <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-[#DCE5F2] bg-[#E9F2FF] flex items-center justify-center p-1">
-                          <Image
-                            src={org.logoUrl}
-                            alt={org.name}
-                            fill
-                            className="object-contain p-1"
-                            unoptimized={org.logoUrl.startsWith('/api/') || org.logoUrl.includes('google')}
-                          />
-                        </div>
-                      ) : (
-                        <span className="w-9 h-9 rounded-xl bg-[#E9F2FF] text-[#3978F6] font-mono text-sm font-bold flex items-center justify-center">
-                          0{index + 1}
+              {organizers.map((org, index) => {
+                const orgGlow = index === 0 ? 'glow-amber' : index === 1 ? 'glow-blue' : 'glow-violet';
+                return (
+                  <div
+                    key={(org as any).id ? `${(org as any).id}-${index}` : `${org.name}-${index}`}
+                    suppressHydrationWarning
+                    className={`yugantar-card-interactive ${orgGlow} rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-7 flex flex-col justify-between shadow-xs transition-all group`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        {org.logoUrl ? (
+                          <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-[#DCE5F2] bg-[#E9F2FF] flex items-center justify-center p-1">
+                            <Image
+                              src={org.logoUrl}
+                              alt={org.name}
+                              fill
+                              className="object-contain p-1"
+                              unoptimized={org.logoUrl.startsWith('/api/') || org.logoUrl.includes('google')}
+                            />
+                          </div>
+                        ) : (
+                          <span className="w-9 h-9 rounded-xl bg-[#E9F2FF] text-[#3978F6] font-mono text-sm font-bold flex items-center justify-center">
+                            0{index + 1}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-[#F8FAFD] text-[#3978F6] border border-[#DCE5F2]">
+                          {org.badge}
                         </span>
-                      )}
-                      <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-[#F8FAFD] text-[#3978F6] border border-[#DCE5F2]">
-                        {org.badge}
+                      </div>
+
+                      <h3 className="text-lg sm:text-xl font-display font-extrabold text-[#10264A] mb-1.5 leading-snug group-hover:text-[#3978F6] transition-colors">
+                        {org.name}
+                      </h3>
+
+                      <span className="text-xs font-mono text-[#FF783E] font-semibold block mb-3">
+                        {org.role}
                       </span>
+
+                      <p className="text-xs sm:text-sm text-[#536781] leading-relaxed mb-5 font-normal">
+                        {org.description}
+                      </p>
                     </div>
 
-                    <h3 className="text-lg sm:text-xl font-display font-extrabold text-[#10264A] mb-1.5 leading-snug">
-                      {org.name}
-                    </h3>
-
-                    <span className="text-xs font-mono text-[#FF783E] font-semibold block mb-3">
-                      {org.role}
-                    </span>
-
-                    <p className="text-xs sm:text-sm text-[#536781] leading-relaxed mb-5 font-normal">
-                      {org.description}
-                    </p>
+                    {org.leadershipNote && (
+                      <div className="pt-3.5 border-t border-[#DCE5F2] text-xs font-mono text-[#10264A] bg-[#F8FAFD] p-3 rounded-2xl">
+                        <span className="text-[#7E93AC] block text-[10px] uppercase font-bold mb-1">
+                          Operational Scope:
+                        </span>
+                        <p className="text-[11px] text-[#536781] leading-normal">{org.leadershipNote}</p>
+                      </div>
+                    )}
                   </div>
-
-                  {org.leadershipNote && (
-                    <div className="pt-3.5 border-t border-[#DCE5F2] text-xs font-mono text-[#10264A] bg-[#F8FAFD] p-3 rounded-2xl">
-                      <span className="text-[#7E93AC] block text-[10px] uppercase font-bold mb-1">
-                        Operational Scope:
-                      </span>
-                      <p className="text-[11px] text-[#536781] leading-normal">{org.leadershipNote}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
@@ -401,49 +431,50 @@ async function AboutContent() {
                 </p>
               </div>
 
-              {/* Responsive Team Grid: Single-column on mobile (<640px) to prevent cramping/truncation */}
+              {/* Responsive Team Grid: Lead is prominently featured, followed by member cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-                {turboBitsTeam.map((member: DbOrganizerMember, idx: number) => {
+                {[...turboBitsTeam]
+                  .sort((a, b) => {
+                    const aLead = Boolean((a as any).is_lead || (a.role || '').toLowerCase().includes('lead') || (a.role || '').toLowerCase().includes('head'));
+                    const bLead = Boolean((b as any).is_lead || (b.role || '').toLowerCase().includes('lead') || (b.role || '').toLowerCase().includes('head'));
+                    if (aLead && !bLead) return -1;
+                    if (!aLead && bLead) return 1;
+                    return (a.display_order ?? 0) - (b.display_order ?? 0);
+                  })
+                  .map((member: DbOrganizerMember, idx: number) => {
                   const hasGithub = member.github_url && member.github_url.trim().length > 0;
                   const hasLinkedin = member.linkedin_url && member.linkedin_url.trim().length > 0;
                   const roleLower = (member.role || '').toLowerCase();
-                  const isLead = roleLower.includes('lead') || roleLower.includes('head');
-
-                  // Optional crop style
-                  let cropStyle: React.CSSProperties = { objectFit: 'cover' };
-                  if (member.crop_data) {
-                    try {
-                      const c = typeof member.crop_data === 'string' ? JSON.parse(member.crop_data) : member.crop_data;
-                      if (c.zoom || c.x !== undefined || c.y !== undefined) {
-                        cropStyle = {
-                          objectFit: 'cover',
-                          transform: `scale(${c.zoom || 1}) translate(${c.x || 0}%, ${c.y || 0}%)`,
-                          transformOrigin: 'center center',
-                        };
-                      }
-                    } catch {}
-                  }
+                  const isLead = Boolean((member as any).is_lead || roleLower.includes('lead') || roleLower.includes('head'));
+                  const crop = parseCropData(member.crop_data);
 
                   return (
                     <div
                       key={member.id ? `${member.id}-${idx}` : `tb-${idx}`}
-                      className="turbobits-card p-5 sm:p-6 rounded-3xl bg-white border border-[#DCE5F2] shadow-xs flex flex-col justify-between hover:border-[#3978F6] hover:shadow-[0_0_30px_-6px_rgba(57,120,246,0.35)] hover:-translate-y-1 transition-all duration-300 group"
+                      suppressHydrationWarning
+                      className={`turbobits-card ${isLead ? 'glow-cyan' : 'glow-blue'} rounded-3xl flex flex-col justify-between transition-all duration-300 group ${
+                        isLead
+                          ? 'col-span-1 sm:col-span-2 lg:col-span-3 p-6 sm:p-8 bg-gradient-to-br from-white via-white to-[#F0F6FF] border-2 border-[#3978F6]/60 shadow-[0_0_24px_rgba(57,120,246,0.18)]'
+                          : 'p-5 sm:p-6 bg-white border border-[#DCE5F2] shadow-xs'
+                      }`}
                     >
-                      <div className="space-y-3.5">
+                      <div className={isLead ? 'space-y-4' : 'space-y-3.5'}>
                         {/* Member Header with Avatar, Name, and Role */}
-                        <div className="flex items-start gap-4">
-                          <div className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-2xl overflow-hidden border-2 border-[#DCE5F2] bg-[#E9F2FF] flex items-center justify-center shadow-2xs shrink-0 group-hover:border-[#3978F6]/70 transition-colors">
+                        <div className={`flex ${isLead ? 'items-center sm:items-start gap-5 sm:gap-6' : 'items-start gap-4'}`}>
+                          <div className={`relative ${getCropMaskClass(crop.shape)} overflow-hidden shrink-0 flex items-center justify-center transition-all ${
+                            isLead
+                              ? 'w-22 h-22 sm:w-28 sm:h-28 border-3 border-[#3978F6] shadow-lg ring-4 ring-[#3978F6]/20 bg-[#E9F2FF]'
+                              : 'w-16 h-16 sm:w-18 sm:h-18 border-2 border-[#DCE5F2] bg-[#E9F2FF] shadow-2xs group-hover:border-[#3978F6]/70'
+                          }`}>
                             {member.avatar_url ? (
-                              <Image
+                              <img
                                 src={member.avatar_url}
                                 alt={member.name}
-                                fill
-                                style={cropStyle}
-                                className="transition-transform duration-300 group-hover:scale-105"
-                                unoptimized={member.avatar_url.startsWith('/api/') || member.avatar_url.includes('google')}
+                                style={getCropImageStyle(crop)}
+                                className="pointer-events-none select-none transition-transform duration-300 group-hover:scale-105"
                               />
                             ) : (
-                              <span className="text-lg font-bold font-display text-[#3978F6]">
+                              <span className={`font-display text-[#3978F6] font-bold ${isLead ? 'text-2xl sm:text-3xl' : 'text-lg'}`}>
                                 {(member.name || 'TB')
                                   .split(' ')
                                   .map((n) => n[0])
@@ -454,27 +485,33 @@ async function AboutContent() {
                             )}
                           </div>
 
-                          <div className="min-w-0 flex-1 space-y-1">
-                            {isLead ? (
-                              <span className="inline-block px-2 py-0.5 rounded-md bg-[#FFEFE3] text-[#FF783E] text-[10px] font-mono font-bold uppercase tracking-wider">
-                                TurboBits Lead
-                              </span>
-                            ) : (
-                              <span className="inline-block px-2 py-0.5 rounded-md bg-[#EBF2FF] text-[#2563EB] text-[10px] font-mono font-bold uppercase tracking-wider">
-                                {member.role || 'TurboBits Member'}
-                              </span>
-                            )}
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {isLead ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#3978F6] text-white text-xs font-mono font-extrabold uppercase tracking-wider shadow-xs">
+                                  <span>⚡ TurboBits Lead</span>
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2.5 py-0.5 rounded-md bg-[#EBF2FF] text-[#2563EB] text-[10px] font-mono font-bold uppercase tracking-wider border border-[#2563EB]/20">
+                                  {member.role || 'Coordinator'}
+                                </span>
+                              )}
 
-                            {member.forum_designation && (
-                              <div className="text-[10px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60 inline-flex items-center gap-1">
-                                <span>{member.forum_designation}</span>
-                              </div>
-                            )}
+                              {member.forum_designation && (
+                                <div className="text-[10px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60 inline-flex items-center gap-1">
+                                  <span>{member.forum_designation}</span>
+                                </div>
+                              )}
+                            </div>
 
-                            <h3 className="text-base sm:text-lg font-display font-extrabold text-[#10264A] leading-snug break-words">
+                            <h3 className={`font-display font-black text-[#10264A] leading-snug break-words ${
+                              isLead ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg'
+                            }`}>
                               {member.name}
                             </h3>
-                            <p className="text-xs font-mono font-bold text-[#3978F6] leading-snug break-words">
+                            <p className={`font-mono font-bold text-[#3978F6] leading-snug break-words ${
+                              isLead ? 'text-sm sm:text-base text-[#10264A]' : 'text-xs'
+                            }`}>
                               {member.role}
                             </p>
                           </div>
@@ -488,7 +525,9 @@ async function AboutContent() {
 
                         {/* Bio / Responsibility Scope */}
                         {member.bio && (
-                          <div className="p-3 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2]/80 text-xs text-[#536781] leading-relaxed">
+                          <div className={`p-3 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2]/80 leading-relaxed text-[#536781] ${
+                            isLead ? 'text-xs sm:text-sm' : 'text-xs'
+                          }`}>
                             <p className="font-normal text-[11px] sm:text-xs">
                               {member.bio}
                             </p>
@@ -546,9 +585,6 @@ async function AboutContent() {
                   );
                 })}
               </div>
-
-              {/* Mobile center-focus highlight observer */}
-              <TurboBitsObserver />
             </section>
           )}
 

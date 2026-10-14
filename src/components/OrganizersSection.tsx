@@ -70,7 +70,7 @@ export default function OrganizersSection() {
                 delay: shouldReduceMotion ? 0 : idx * 0.08,
                 ease: [0.16, 1, 0.3, 1],
               }}
-              className="nexus-skeuo-card p-8 flex flex-col justify-between group relative transition-all"
+              className={`yugantar-card-interactive ${idx === 0 ? 'glow-amber' : idx === 1 ? 'glow-blue' : 'glow-violet'} nexus-skeuo-card p-8 flex flex-col justify-between group relative transition-all`}
             >
               <div>
                 <div className="flex items-center justify-between mb-5">
@@ -106,7 +106,7 @@ export default function OrganizersSection() {
         {/* Institutional Patronage Banner */}
         <motion.div
           {...fadeIn(0.2)}
-          className="p-6 sm:p-8 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xs"
+          className="yugantar-card-interactive glow-gold p-6 sm:p-8 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xs"
         >
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-[#EDF5FC] text-[#3978F6] flex items-center justify-center shrink-0 border border-[#DCE5F2]">

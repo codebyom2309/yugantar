@@ -32,6 +32,12 @@ import PublicOrganizersPreview, {
   PublicOrgBody,
   PublicMember,
 } from '@/components/organizers/PublicOrganizersPreview';
+import {
+  parseCropData,
+  getCropImageStyle,
+  getCropMaskClass,
+  OrganizerCropData,
+} from '@/lib/cropUtils';
 
 export default function OrganizersPage() {
   const [activeTab, setActiveTab] = useState<'bodies' | 'turbo_bits' | 'faculty'>('bodies');
@@ -74,6 +80,7 @@ export default function OrganizersPage() {
     cropData: '',
     displayOrder: 0,
     isPublished: 1,
+    isLead: false,
   });
 
   // Public Order display toggle state
@@ -87,7 +94,7 @@ export default function OrganizersPage() {
   const [cropY, setCropY] = useState(0);
   const [cropShape, setCropShape] = useState<'circle' | 'square' | 'rounded'>('circle');
   const [isDraggingCrop, setIsDraggingCrop] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ clientX: 0, clientY: 0, startX: 0, startY: 0 });
 
   // Upload & Drive State
   const [activePhotoTab, setActivePhotoTab] = useState<'upload' | 'drive'>('upload');
@@ -137,30 +144,16 @@ export default function OrganizersPage() {
 
   const openCropModal = () => {
     if (!memberForm.avatarUrl) return;
-    if (memberForm.cropData) {
-      try {
-        const c = typeof memberForm.cropData === 'string' ? JSON.parse(memberForm.cropData) : memberForm.cropData;
-        setCropZoom(c.zoom ?? 1);
-        setCropX(c.x ?? 0);
-        setCropY(c.y ?? 0);
-        setCropShape(c.shape ?? 'circle');
-      } catch {
-        setCropZoom(1);
-        setCropX(0);
-        setCropY(0);
-        setCropShape('circle');
-      }
-    } else {
-      setCropZoom(1);
-      setCropX(0);
-      setCropY(0);
-      setCropShape('circle');
-    }
+    const c = parseCropData(memberForm.cropData);
+    setCropZoom(c.zoom);
+    setCropX(c.x);
+    setCropY(c.y);
+    setCropShape(c.shape);
     setShowCropModal(true);
   };
 
   const handleApplyCrop = () => {
-    const data = {
+    const data: OrganizerCropData = {
       zoom: Number(cropZoom.toFixed(2)),
       x: Math.round(cropX),
       y: Math.round(cropY),
@@ -174,7 +167,7 @@ export default function OrganizersPage() {
   };
 
   const handleResetCrop = () => {
-    setCropZoom(1);
+    setCropZoom(1.0);
     setCropX(0);
     setCropY(0);
     setCropShape('circle');
@@ -278,6 +271,7 @@ export default function OrganizersPage() {
       cropData: '',
       displayOrder: members.filter((m) => m.category === defaultCategory).length,
       isPublished: 1,
+      isLead: false,
     });
     setDriveInput('');
     setErrorMsg(null);
@@ -286,6 +280,8 @@ export default function OrganizersPage() {
 
   const openEditMember = (member: PublicMember) => {
     setEditingMember(member);
+    const roleLower = (member.role || '').toLowerCase();
+    const isLeadVal = Boolean((member as any).is_lead || roleLower.includes('lead') || roleLower.includes('head'));
     setMemberForm({
       name: member.name,
       role: member.role,
@@ -299,6 +295,7 @@ export default function OrganizersPage() {
       cropData: (member as any).crop_data || (member as any).cropData || '',
       displayOrder: member.display_order,
       isPublished: Number(member.is_published) ? 1 : 0,
+      isLead: isLeadVal,
     });
     setDriveInput(member.avatar_url || '');
     setErrorMsg(null);
@@ -319,13 +316,13 @@ export default function OrganizersPage() {
         await fetch('/api/admin/organizers/members', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingMember.id, ...memberForm }),
+          body: JSON.stringify({ id: editingMember.id, ...memberForm, isLead: memberForm.isLead ? 1 : 0 }),
         });
       } else {
         await fetch('/api/admin/organizers/members', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(memberForm),
+          body: JSON.stringify({ ...memberForm, isLead: memberForm.isLead ? 1 : 0 }),
         });
       }
       setShowMemberModal(false);
@@ -701,43 +698,32 @@ export default function OrganizersPage() {
                       </button>
                     </div>
 
-                    {/* Circular Portrait */}
-                    <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-slate-300 dark:border-white/20 bg-black/5 dark:bg-white/5 flex items-center justify-center mt-2 shadow-xs">
-                      {member.avatar_url ? (
-                        (() => {
-                          let listCropStyle: React.CSSProperties = { objectFit: 'cover' };
-                          if ((member as any).crop_data) {
-                            try {
-                              const c = typeof (member as any).crop_data === 'string' ? JSON.parse((member as any).crop_data) : (member as any).crop_data;
-                              if (c.zoom || c.x !== undefined || c.y !== undefined) {
-                                listCropStyle = {
-                                  objectFit: 'cover',
-                                  transform: `scale(${c.zoom || 1}) translate(${c.x || 0}px, ${c.y || 0}px)`,
-                                  transformOrigin: 'center center',
-                                };
-                              }
-                            } catch {}
-                          }
-                          return (
+                    {/* Portrait Avatar */}
+                    {(() => {
+                      const crop = parseCropData((member as any).crop_data);
+                      const isLeadMember = Boolean((member as any).is_lead || (member.role || '').toLowerCase().includes('lead') || (member.role || '').toLowerCase().includes('head'));
+                      return (
+                        <div className={`relative w-16 h-16 ${getCropMaskClass(crop.shape)} overflow-hidden border-2 ${isLeadMember ? 'border-blue-500 shadow-md ring-2 ring-blue-500/20' : 'border-slate-300 dark:border-white/20'} bg-black/5 dark:bg-white/5 flex items-center justify-center mt-2 shadow-xs shrink-0`}>
+                          {member.avatar_url ? (
                             <img
                               src={member.avatar_url}
                               alt={member.name}
-                              style={listCropStyle}
-                              className="w-full h-full object-cover"
+                              style={getCropImageStyle(crop)}
+                              className="pointer-events-none select-none"
                             />
-                          );
-                        })()
-                      ) : (
-                        <span className="text-base font-bold font-display text-blue-500">
-                          {member.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .slice(0, 2)
-                            .join('')
-                            .toUpperCase()}
-                        </span>
-                      )}
-                    </div>
+                          ) : (
+                            <span className="text-base font-bold font-display text-blue-500">
+                              {member.name
+                                .split(' ')
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join('')
+                                .toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     <div className="w-full space-y-0.5">
                       <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
@@ -1164,6 +1150,26 @@ export default function OrganizersPage() {
                 </div>
               </div>
 
+              {/* TurboBits Lead Designation Toggle */}
+              {memberForm.category === 'turbo_bits' && (
+                <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 block">
+                      Designate as TurboBits Lead
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-400 block">
+                      Highlights this student coordinator with a prominent leadership badge and ~20% elevated presence.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(memberForm.isLead)}
+                    onChange={(e) => setMemberForm({ ...memberForm, isLead: e.target.checked })}
+                    className="w-4 h-4 accent-blue-600 rounded cursor-pointer shrink-0 ml-3"
+                  />
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="font-semibold text-slate-800 dark:text-zinc-200 block">
                   Department / Institution
@@ -1241,42 +1247,30 @@ export default function OrganizersPage() {
                 </label>
 
                 <div className="flex items-center gap-3">
-                  <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-slate-300 dark:border-white/20 bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                    {memberForm.avatarUrl ? (
-                      (() => {
-                        let cropStyle: React.CSSProperties = { objectFit: 'cover' };
-                        if (memberForm.cropData) {
-                          try {
-                            const c = typeof memberForm.cropData === 'string' ? JSON.parse(memberForm.cropData) : memberForm.cropData;
-                            if (c.zoom || c.x !== undefined || c.y !== undefined) {
-                              cropStyle = {
-                                objectFit: 'cover',
-                                transform: `scale(${c.zoom || 1}) translate(${c.x || 0}px, ${c.y || 0}px)`,
-                                transformOrigin: 'center center',
-                              };
-                            }
-                          } catch {}
-                        }
-                        return (
+                  {(() => {
+                    const crop = parseCropData(memberForm.cropData);
+                    return (
+                      <div className={`relative w-14 h-14 ${getCropMaskClass(crop.shape)} overflow-hidden border-2 border-slate-300 dark:border-white/20 bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0`}>
+                        {memberForm.avatarUrl ? (
                           <img
                             src={memberForm.avatarUrl}
                             alt="Avatar"
-                            style={cropStyle}
-                            className="w-full h-full object-cover"
+                            style={getCropImageStyle(crop)}
+                            className="pointer-events-none select-none"
                           />
-                        );
-                      })()
-                    ) : (
-                      <span className="text-sm font-bold font-display text-blue-500">
-                        {(memberForm.name || 'TB')
-                          .split(' ')
-                          .map((n) => n[0])
-                          .slice(0, 2)
-                          .join('')
-                          .toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+                        ) : (
+                          <span className="text-sm font-bold font-display text-blue-500">
+                            {(memberForm.name || 'TB')
+                              .split(' ')
+                              .map((n) => n[0])
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex-1 space-y-1.5">
                     <div className="flex items-center gap-2">
@@ -1431,36 +1425,42 @@ export default function OrganizersPage() {
             </div>
 
             {/* Interactive Viewport Canvas */}
-            <div className="flex items-center justify-center py-2">
+            <div className="flex flex-col items-center justify-center py-2 space-y-1.5">
               <div
-                className={`relative w-48 h-48 bg-slate-950 overflow-hidden border-4 border-blue-500/80 shadow-2xl cursor-grab active:cursor-grabbing select-none ${
-                  cropShape === 'circle'
-                    ? 'rounded-full'
-                    : cropShape === 'rounded'
-                    ? 'rounded-3xl'
-                    : 'rounded-none'
-                }`}
+                className={`relative w-56 h-56 bg-slate-950 overflow-hidden border-4 border-blue-500/80 shadow-2xl cursor-grab active:cursor-grabbing select-none ${getCropMaskClass(
+                  cropShape,
+                  'editor'
+                )}`}
                 onMouseDown={(e) => {
+                  e.preventDefault();
                   setIsDraggingCrop(true);
-                  setDragStart({ x: e.clientX - cropX, y: e.clientY - cropY });
+                  setDragStart({ clientX: e.clientX, clientY: e.clientY, startX: cropX, startY: cropY });
                 }}
                 onMouseMove={(e) => {
                   if (!isDraggingCrop) return;
-                  setCropX(e.clientX - dragStart.x);
-                  setCropY(e.clientY - dragStart.y);
+                  const dx = e.clientX - dragStart.clientX;
+                  const dy = e.clientY - dragStart.clientY;
+                  const nextX = Math.max(-80, Math.min(80, Math.round(dragStart.startX + (dx / 224) * 100)));
+                  const nextY = Math.max(-80, Math.min(80, Math.round(dragStart.startY + (dy / 224) * 100)));
+                  setCropX(nextX);
+                  setCropY(nextY);
                 }}
                 onMouseUp={() => setIsDraggingCrop(false)}
                 onMouseLeave={() => setIsDraggingCrop(false)}
                 onTouchStart={(e) => {
                   const touch = e.touches[0];
                   setIsDraggingCrop(true);
-                  setDragStart({ x: touch.clientX - cropX, y: touch.clientY - cropY });
+                  setDragStart({ clientX: touch.clientX, clientY: touch.clientY, startX: cropX, startY: cropY });
                 }}
                 onTouchMove={(e) => {
                   if (!isDraggingCrop) return;
                   const touch = e.touches[0];
-                  setCropX(touch.clientX - dragStart.x);
-                  setCropY(touch.clientY - dragStart.y);
+                  const dx = touch.clientX - dragStart.clientX;
+                  const dy = touch.clientY - dragStart.clientY;
+                  const nextX = Math.max(-80, Math.min(80, Math.round(dragStart.startX + (dx / 224) * 100)));
+                  const nextY = Math.max(-80, Math.min(80, Math.round(dragStart.startY + (dy / 224) * 100)));
+                  setCropX(nextX);
+                  setCropY(nextY);
                 }}
                 onTouchEnd={() => setIsDraggingCrop(false)}
               >
@@ -1468,13 +1468,13 @@ export default function OrganizersPage() {
                   src={memberForm.avatarUrl}
                   alt="Portrait crop"
                   draggable={false}
-                  className="w-full h-full object-cover pointer-events-none transition-none"
-                  style={{
-                    transform: `scale(${cropZoom}) translate(${cropX}px, ${cropY}px)`,
-                    transformOrigin: 'center center',
-                  }}
+                  className="pointer-events-none select-none transition-none"
+                  style={getCropImageStyle({ zoom: cropZoom, x: cropX, y: cropY, shape: cropShape })}
                 />
               </div>
+              <p className="text-[11px] text-slate-500 font-mono text-center">
+                Drag photo to frame · {cropShape.toUpperCase()} mask preview
+              </p>
             </div>
 
             {/* Control Sliders */}
@@ -1482,12 +1482,12 @@ export default function OrganizersPage() {
               <div>
                 <div className="flex items-center justify-between text-slate-700 dark:text-zinc-300 font-semibold mb-1">
                   <span>Zoom Scale</span>
-                  <span className="font-mono text-blue-600 dark:text-blue-400">{cropZoom.toFixed(2)}x</span>
+                  <span className="font-mono text-blue-600 dark:text-blue-400 font-bold">{cropZoom.toFixed(2)}x</span>
                 </div>
                 <input
                   type="range"
                   min="0.5"
-                  max="3"
+                  max="3.0"
                   step="0.05"
                   value={cropZoom}
                   onChange={(e) => setCropZoom(parseFloat(e.target.value))}
@@ -1499,7 +1499,7 @@ export default function OrganizersPage() {
                 <div>
                   <div className="flex items-center justify-between text-slate-700 dark:text-zinc-300 font-semibold mb-1">
                     <span>Pan Horizontal</span>
-                    <span className="font-mono text-slate-500">{Math.round(cropX)}px</span>
+                    <span className="font-mono text-slate-600 dark:text-zinc-400 font-bold">{cropX > 0 ? `+${cropX}%` : `${cropX}%`}</span>
                   </div>
                   <input
                     type="range"
@@ -1514,7 +1514,7 @@ export default function OrganizersPage() {
                 <div>
                   <div className="flex items-center justify-between text-slate-700 dark:text-zinc-300 font-semibold mb-1">
                     <span>Pan Vertical</span>
-                    <span className="font-mono text-slate-500">{Math.round(cropY)}px</span>
+                    <span className="font-mono text-slate-600 dark:text-zinc-400 font-bold">{cropY > 0 ? `+${cropY}%` : `${cropY}%`}</span>
                   </div>
                   <input
                     type="range"

@@ -169,6 +169,9 @@ export default function CompetitionEditorPage({
     showPaymentQr: true,
     whatsappLink: '',
     confirmationInstructions: '',
+    passEnabled: true,
+    certificateEnabled: true,
+    allowedSemesters: [] as string[],
   });
 
   const [associatedSpreadsheet, setAssociatedSpreadsheet] = useState<{ id: string; display_name: string; spreadsheet_url: string } | null>(null);
@@ -312,6 +315,13 @@ export default function CompetitionEditorPage({
         showPaymentQr: c.show_payment_qr !== undefined && c.show_payment_qr !== null ? Boolean(c.show_payment_qr) : true,
         whatsappLink: c.whatsapp_link || '',
         confirmationInstructions: c.confirmation_instructions || '',
+        passEnabled: c.pass_enabled !== undefined && c.pass_enabled !== null ? Boolean(c.pass_enabled) : true,
+        certificateEnabled: c.certificate_enabled !== undefined && c.certificate_enabled !== null ? Boolean(c.certificate_enabled) : true,
+        allowedSemesters: Array.isArray(c.allowed_semesters)
+          ? c.allowed_semesters
+          : typeof c.allowed_semesters === 'string'
+          ? JSON.parse(c.allowed_semesters || '[]')
+          : [],
       });
 
       // Fetch linked spreadsheet from Spreadsheet Manager for this track
@@ -582,6 +592,14 @@ export default function CompetitionEditorPage({
       required: false,
       isComplete: customSections.length > 0,
     },
+    {
+      id: 'settings',
+      number: '12',
+      title: 'Governance & Document Switches',
+      subtitle: 'Pass & Certificate Generation, Team Size Limits, Eligibility, and Section Visibility.',
+      required: true,
+      isComplete: true,
+    },
   ];
 
   const currentSectionMeta = SECTIONS.find((s) => s.id === activeSection) || SECTIONS[0];
@@ -775,7 +793,7 @@ export default function CompetitionEditorPage({
                 <span>Select Participant Card to Edit</span>
               </span>
               <span className="text-[11px] text-slate-500 dark:text-zinc-400">
-                11 Public Sections
+                12 Operational Sections
               </span>
             </div>
 
@@ -2582,6 +2600,402 @@ export default function CompetitionEditorPage({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* =======================================================================
+              SECTION 12: GOVERNANCE & DOCUMENT SWITCHES
+              ======================================================================= */}
+          {activeSection === 'settings' && (
+            <div className="admin-glass-panel rounded-2xl p-5 sm:p-6 space-y-8 animate-in fade-in duration-200">
+              {/* Section Header */}
+              <div className="border-b border-black/10 dark:border-white/10 pb-4">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                    <Sliders className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>Document & Registration Governance</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 font-bold uppercase">
+                        Master Controls
+                      </span>
+                    </h2>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                      Configure track-specific generation rules for passes and certificates, regulate registration constraints and team capacities, and manage public section displays.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* -------------------------------------------------------------------
+                  GROUP A: DOCUMENT GENERATION SWITCHES
+                  ------------------------------------------------------------------- */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-blue-500" />
+                      <span>Document Generation Switches</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                      Independent switches controlling real-time document rendering, PDF generation, and public participant downloads.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Pass Generation Switch Card */}
+                  <div
+                    className={`p-4 rounded-xl border transition-all ${
+                      form.passEnabled
+                        ? 'bg-emerald-500/5 border-emerald-500/30'
+                        : 'bg-rose-500/5 border-rose-500/30'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">
+                            Pass Generation
+                          </span>
+                          <span
+                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                              form.passEnabled
+                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
+                            }`}
+                          >
+                            {form.passEnabled ? 'ENABLED' : 'PAUSED'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">
+                          Controls whether digital delegate passes can be downloaded or generated for this track. When disabled, pass links and APIs reject generation requests while preserving all registrations, rosters, and payment statuses.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, passEnabled: !prev.passEnabled }));
+                          setIsDirty(true);
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          form.passEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-zinc-700'
+                        }`}
+                        role="switch"
+                        aria-checked={form.passEnabled}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                            form.passEnabled ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Certificate Generation Switch Card */}
+                  <div
+                    className={`p-4 rounded-xl border transition-all ${
+                      form.certificateEnabled
+                        ? 'bg-emerald-500/5 border-emerald-500/30'
+                        : 'bg-rose-500/5 border-rose-500/30'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">
+                            Certificate Generation
+                          </span>
+                          <span
+                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                              form.certificateEnabled
+                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
+                            }`}
+                          >
+                            {form.certificateEnabled ? 'ENABLED' : 'PAUSED'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">
+                          Controls whether participation and merit certificates can be issued or downloaded for this track. Works completely independently from pass generation.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, certificateEnabled: !prev.certificateEnabled }));
+                          setIsDirty(true);
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          form.certificateEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-zinc-700'
+                        }`}
+                        role="switch"
+                        aria-checked={form.certificateEnabled}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                            form.certificateEnabled ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* -------------------------------------------------------------------
+                  GROUP B: TEAM PARTICIPATION CAPACITY & BOUNDARIES
+                  ------------------------------------------------------------------- */}
+              <div className="space-y-4 pt-4 border-t border-black/10 dark:border-white/10">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-500" />
+                    <span>Team Capacity & Participation Rules</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                    Regulates the number of delegates allowed per squad. Maximum team size directly controls the number of participant forms rendered during registration.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block">
+                      Min Team Members
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={4}
+                      value={form.minTeamMembers || 1}
+                      onChange={(e) => {
+                        const val = Math.max(1, Math.min(4, parseInt(e.target.value) || 1));
+                        setForm((prev) => ({ ...prev, minTeamMembers: val }));
+                        setIsDirty(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+                    />
+                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 block">
+                      Default: 1 (Leader)
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block">
+                      Max Team Members
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={4}
+                      value={form.maxTeamMembers || 4}
+                      onChange={(e) => {
+                        const val = Math.max(1, Math.min(4, parseInt(e.target.value) || 4));
+                        setForm((prev) => ({ ...prev, maxTeamMembers: val }));
+                        setIsDirty(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+                    />
+                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 block">
+                      Restricts form inputs (1 to 4)
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block">
+                      Team Capacity Headline
+                    </label>
+                    <input
+                      type="text"
+                      value={form.teamSizeLimit || ''}
+                      onChange={(e) => {
+                        setForm((prev) => ({ ...prev, teamSizeLimit: e.target.value }));
+                        setIsDirty(true);
+                      }}
+                      placeholder="e.g. 1 to 4 Members or Duo Only"
+                      className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white text-xs focus:outline-none focus:border-blue-500"
+                    />
+                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 block">
+                      Public display badge text
+                    </span>
+                  </div>
+                </div>
+
+                {/* Team Form Behavior Callout */}
+                <div className="p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/20 text-xs text-slate-700 dark:text-zinc-300 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-600 dark:text-blue-400">
+                    <Info className="w-4 h-4" />
+                    <span>How Team Limits Function:</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
+                    Setting Max Team Members to <strong>{form.maxTeamMembers || 4}</strong> automatically configures the public registration form. If set to <strong>2</strong>, delegates can only register a Leader plus Member 2. Input sections for Members 3 and 4 are completely omitted from the registration view and rejected by the server.
+                  </p>
+                </div>
+              </div>
+
+              {/* -------------------------------------------------------------------
+                  GROUP C: ACADEMIC ELIGIBILITY & SEMESTER RESTRICTIONS
+                  ------------------------------------------------------------------- */}
+              <div className="space-y-4 pt-4 border-t border-black/10 dark:border-white/10">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-blue-500" />
+                    <span>Academic Eligibility & Semester Restrictions</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                    Enforce eligibility criteria and optionally restrict candidate enrollment to specific academic semesters.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block">
+                    Public Eligibility Description
+                  </label>
+                  <input
+                    type="text"
+                    value={form.eligibility || ''}
+                    onChange={(e) => {
+                      setForm((prev) => ({ ...prev, eligibility: e.target.value }));
+                      setIsDirty(true);
+                    }}
+                    placeholder="e.g. Open to all engineering students or VII Semester students only"
+                    className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white text-xs focus:outline-none focus:border-blue-500"
+                  />
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 block">
+                    Displayed on the public competition card overview
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block">
+                      Enforce Semester Eligibility
+                    </label>
+                    <span className="text-[10px] font-mono font-bold text-blue-500">
+                      {form.allowedSemesters && form.allowedSemesters.length > 0
+                        ? `Restricted to: ${form.allowedSemesters.join(', ')}`
+                        : 'All Semesters Permitted (Default)'}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                    Click semesters to toggle restriction. If none are selected, candidates from any semester may register. If specific semesters are selected (e.g. VII Semester), registration dropdowns and backend validation will strictly limit selection to only the permitted semesters.
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'].map((sem) => {
+                      const isSelected = form.allowedSemesters?.includes(sem);
+                      return (
+                        <button
+                          key={sem}
+                          type="button"
+                          onClick={() => {
+                            const current = form.allowedSemesters || [];
+                            const updated = current.includes(sem)
+                              ? current.filter((s) => s !== sem)
+                              : [...current, sem];
+                            setForm((prev) => ({ ...prev, allowedSemesters: updated }));
+                            setIsDirty(true);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-1 ring-blue-500/20 dark:bg-blue-500/25 dark:text-blue-300 dark:border-blue-500/50'
+                              : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 hover:border-slate-400 text-slate-700 dark:text-zinc-400'
+                          }`}
+                        >
+                          Semester {sem}
+                        </button>
+                      );
+                    })}
+
+                    {form.allowedSemesters && form.allowedSemesters.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, allowedSemesters: [] }));
+                          setIsDirty(true);
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl text-[10px] font-mono text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      >
+                        Clear Restrictions
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* -------------------------------------------------------------------
+                  GROUP D: CONTENT SECTION VISIBILITY
+                  ------------------------------------------------------------------- */}
+              <div className="space-y-4 pt-4 border-t border-black/10 dark:border-white/10">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-blue-500" />
+                    <span>Public Section Visibility Switches</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                    Toggle individual participant cards on the public page without deleting any saved data.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[
+                    { id: 'hero', name: 'Hero / Overview Banner' },
+                    { id: 'registration', name: 'Registration Call to Action' },
+                    { id: 'about', name: 'About & Challenge Brief' },
+                    { id: 'schedule', name: 'Event Timeline & Schedule' },
+                    { id: 'rubric', name: 'Evaluation Rubric & Matrix' },
+                    { id: 'rules', name: 'Rules & Guidelines' },
+                    { id: 'expectations', name: 'Participant Expectations' },
+                    { id: 'faqs', name: 'Frequently Asked Questions' },
+                    { id: 'dossier', name: 'Logistics Dossier' },
+                    { id: 'coordinators', name: 'Track Coordinators' },
+                    { id: 'custom', name: 'Custom Content Blocks' },
+                  ].map((sec) => {
+                    const isVisible = sectionVisibility[sec.id] !== false;
+                    return (
+                      <div
+                        key={sec.id}
+                        className="p-3 rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] flex items-center justify-between gap-2"
+                      >
+                        <div className="truncate">
+                          <span className="text-xs font-medium text-slate-900 dark:text-white truncate block">
+                            {sec.name}
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-500 dark:text-zinc-400">
+                            ID: {sec.id}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSectionVisibility((prev) => ({
+                              ...prev,
+                              [sec.id]: isVisible ? false : true,
+                            }));
+                            setIsDirty(true);
+                          }}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            isVisible ? 'bg-blue-600' : 'bg-slate-300 dark:bg-zinc-700'
+                          }`}
+                          role="switch"
+                          aria-checked={isVisible}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                              isVisible ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>

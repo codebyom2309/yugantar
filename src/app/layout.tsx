@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Sora, Manrope, Space_Grotesk } from "next/font/google";
+import TurboBitsObserver from "@/components/organizers/TurboBitsObserver";
 import "./globals.css";
 
 const sora = Sora({
@@ -73,6 +74,7 @@ export default function RootLayout({
       className={`${sora.variable} ${manrope.variable} ${spaceGrotesk.variable} scroll-smooth`}
     >
       <body className="min-h-screen bg-[#F5F6FA] text-[#15294A] font-sans antialiased selection:bg-[#FF874D] selection:text-white overflow-x-hidden">
+        <TurboBitsObserver />
         {children}
       </body>
     </html>

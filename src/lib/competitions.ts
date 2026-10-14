@@ -36,6 +36,9 @@ export interface DbCompetition extends Competition {
   showPaymentQr?: boolean;
   whatsappLink?: string;
   confirmationInstructions?: string;
+  passEnabled?: boolean;
+  certificateEnabled?: boolean;
+  allowedSemesters?: string[];
   sectionVisibility?: Record<string, boolean>;
   customSections?: Array<{
     id: string;
@@ -103,6 +106,7 @@ export interface DbOrganizerMember {
   is_published: number;
   crop_data?: string | null;
   forum_designation?: string | null;
+  is_lead?: number | boolean | null;
 }
 
 // -----------------------------------------------------------------------------
@@ -529,5 +533,8 @@ function mapDbRowToCompetition(r: Record<string, unknown>): DbCompetition {
     showPaymentQr: r.show_payment_qr !== undefined && r.show_payment_qr !== null ? Boolean(r.show_payment_qr) : true,
     whatsappLink: r.whatsapp_link ? String(r.whatsapp_link) : COMPETITIONS.find((c) => c.slug === r.slug)?.whatsappLink,
     confirmationInstructions: r.confirmation_instructions ? String(r.confirmation_instructions) : undefined,
+    passEnabled: r.pass_enabled !== undefined && r.pass_enabled !== null ? Boolean(r.pass_enabled) : true,
+    certificateEnabled: r.certificate_enabled !== undefined && r.certificate_enabled !== null ? Boolean(r.certificate_enabled) : true,
+    allowedSemesters: parseJson(r.allowed_semesters, []),
   };
 }

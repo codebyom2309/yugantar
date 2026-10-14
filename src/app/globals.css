@@ -1133,22 +1133,202 @@ nextjs-portal {
   }
 }
 
-/* TurboBits Card Electric-Blue Edge Glow & Mobile Center Focus */
-.turbobits-card {
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease;
+/* =========================================================================
+   YUGANTAR CONTEXTUAL EDGE LIGHTING & INTERACTIVE CARDS
+   Refined layered light: thin edge highlight, subtle glow, elevation shadow.
+   Preserves elevation movement, smooth transitions & mobile center-focus.
+   ========================================================================= */
+
+:root {
+  /* Default / Fallback Contextual Edge Lighting (Soft Electric Blue / Sapphire) */
+  --card-edge-color: rgba(57, 120, 246, 0.75);
+  --card-edge-glow: rgba(57, 120, 246, 0.22);
+  --card-edge-hover-border: rgba(57, 120, 246, 0.85);
+  --card-edge-shadow: rgba(16, 38, 74, 0.12);
 }
 
-.turbobits-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(57, 120, 246, 0.65) !important;
-  box-shadow: 0 0 25px -4px rgba(57, 120, 246, 0.32), 0 10px 25px -5px rgba(16, 38, 74, 0.08) !important;
+/* 1. Contextual Color Presets */
+.glow-blue,
+[data-glow="blue"] {
+  --card-edge-color: rgba(57, 120, 246, 0.75);
+  --card-edge-glow: rgba(57, 120, 246, 0.22);
+  --card-edge-hover-border: rgba(57, 120, 246, 0.88);
+  --card-edge-shadow: rgba(16, 38, 74, 0.12);
 }
 
-@media (max-width: 639px) {
-  .turbobits-card.mobile-focused-card {
-    border-color: rgba(57, 120, 246, 0.75) !important;
-    box-shadow: 0 0 24px -2px rgba(57, 120, 246, 0.35), 0 8px 20px -4px rgba(16, 38, 74, 0.12) !important;
-    transform: scale(1.015);
+.glow-cyan,
+[data-glow="cyan"] {
+  --card-edge-color: rgba(14, 165, 233, 0.75);
+  --card-edge-glow: rgba(14, 165, 233, 0.22);
+  --card-edge-hover-border: rgba(14, 165, 233, 0.88);
+  --card-edge-shadow: rgba(14, 50, 80, 0.12);
+}
+
+.glow-violet,
+[data-glow="violet"] {
+  --card-edge-color: rgba(133, 120, 216, 0.75);
+  --card-edge-glow: rgba(133, 120, 216, 0.22);
+  --card-edge-hover-border: rgba(133, 120, 216, 0.88);
+  --card-edge-shadow: rgba(30, 20, 60, 0.12);
+}
+
+.glow-amber,
+[data-glow="amber"] {
+  --card-edge-color: rgba(224, 122, 67, 0.75);
+  --card-edge-glow: rgba(224, 122, 67, 0.22);
+  --card-edge-hover-border: rgba(224, 122, 67, 0.88);
+  --card-edge-shadow: rgba(45, 25, 10, 0.12);
+}
+
+/* Subtle Warm Gold for Academic & Faculty Leadership */
+.glow-gold,
+[data-glow="gold"] {
+  --card-edge-color: rgba(217, 150, 26, 0.75);
+  --card-edge-glow: rgba(217, 150, 26, 0.22);
+  --card-edge-hover-border: rgba(217, 150, 26, 0.88);
+  --card-edge-shadow: rgba(40, 30, 10, 0.12);
+}
+
+.glow-teal,
+[data-glow="teal"] {
+  --card-edge-color: rgba(20, 184, 166, 0.75);
+  --card-edge-glow: rgba(20, 184, 166, 0.22);
+  --card-edge-hover-border: rgba(20, 184, 166, 0.88);
+  --card-edge-shadow: rgba(10, 40, 35, 0.12);
+}
+
+.glow-emerald,
+[data-glow="emerald"] {
+  --card-edge-color: rgba(47, 133, 90, 0.75);
+  --card-edge-glow: rgba(47, 133, 90, 0.22);
+  --card-edge-hover-border: rgba(47, 133, 90, 0.88);
+  --card-edge-shadow: rgba(10, 40, 25, 0.12);
+}
+
+.glow-coral,
+[data-glow="coral"] {
+  --card-edge-color: rgba(214, 104, 83, 0.75);
+  --card-edge-glow: rgba(214, 104, 83, 0.22);
+  --card-edge-hover-border: rgba(214, 104, 83, 0.88);
+  --card-edge-shadow: rgba(40, 18, 12, 0.12);
+}
+
+.glow-purple,
+[data-glow="purple"] {
+  --card-edge-color: rgba(147, 51, 234, 0.75);
+  --card-edge-glow: rgba(147, 51, 234, 0.22);
+  --card-edge-hover-border: rgba(147, 51, 234, 0.88);
+  --card-edge-shadow: rgba(35, 15, 50, 0.12);
+}
+
+.glow-neutral,
+[data-glow="neutral"] {
+  --card-edge-color: rgba(126, 147, 172, 0.6);
+  --card-edge-glow: rgba(126, 147, 172, 0.18);
+  --card-edge-hover-border: rgba(100, 125, 155, 0.75);
+  --card-edge-shadow: rgba(16, 38, 74, 0.10);
+}
+
+/* 2. Interactive Card Core Definition */
+.turbobits-card,
+.yugantar-card-interactive,
+.faculty-card {
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
+  will-change: transform, box-shadow, border-color;
+}
+
+/* Desktop Hover Elevation & Controlled Edge Glow */
+@media (hover: hover) and (pointer: fine) {
+  .turbobits-card:hover,
+  .yugantar-card-interactive:hover,
+  .faculty-card:hover {
+    transform: translateY(-5px) !important;
+    border-color: var(--card-edge-hover-border, var(--card-edge-color, rgba(57, 120, 246, 0.85))) !important;
+    box-shadow: 0 0 20px -3px var(--card-edge-glow, rgba(57, 120, 246, 0.22)),
+                0 14px 28px -6px var(--card-edge-shadow, rgba(16, 38, 74, 0.12)) !important;
+  }
+
+  /* Faculty Coordinator Card: subtle restraint, dignified prestige */
+  .faculty-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: var(--card-edge-hover-border, rgba(217, 150, 26, 0.85)) !important;
+    box-shadow: 0 0 18px -3px var(--card-edge-glow, rgba(217, 150, 26, 0.20)),
+                0 12px 24px -6px var(--card-edge-shadow, rgba(40, 30, 10, 0.10)) !important;
   }
 }
+
+/* Mobile Center-Focus State triggered by IntersectionObserver */
+@media (max-width: 767px) {
+  .turbobits-card.mobile-focused-card,
+  .yugantar-card-interactive.mobile-focused-card,
+  .faculty-card.mobile-focused-card,
+  .turbobits-card[data-mobile-focused="true"],
+  .yugantar-card-interactive[data-mobile-focused="true"],
+  .faculty-card[data-mobile-focused="true"] {
+    border-color: var(--card-edge-hover-border, var(--card-edge-color, rgba(57, 120, 246, 0.9))) !important;
+    box-shadow: 0 0 18px -3px var(--card-edge-glow, rgba(57, 120, 246, 0.24)),
+                0 10px 22px -5px var(--card-edge-shadow, rgba(16, 38, 74, 0.14)) !important;
+    transform: translateY(-3px) scale(1.015) !important;
+  }
+
+  .faculty-card.mobile-focused-card,
+  .faculty-card[data-mobile-focused="true"] {
+    border-color: var(--card-edge-hover-border, rgba(217, 150, 26, 0.85)) !important;
+    box-shadow: 0 0 16px -3px var(--card-edge-glow, rgba(217, 150, 26, 0.20)),
+                0 8px 18px -4px var(--card-edge-shadow, rgba(40, 30, 10, 0.10)) !important;
+    transform: translateY(-2px) scale(1.01) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .turbobits-card,
+  .yugantar-card-interactive,
+  .faculty-card,
+  .turbobits-card:hover,
+  .yugantar-card-interactive:hover,
+  .faculty-card:hover,
+  .turbobits-card.mobile-focused-card,
+  .yugantar-card-interactive.mobile-focused-card,
+  .faculty-card.mobile-focused-card,
+  .turbobits-card[data-mobile-focused="true"],
+  .yugantar-card-interactive[data-mobile-focused="true"],
+  .faculty-card[data-mobile-focused="true"] {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* Yugantar Luminous Glass Cockpit & Cards */
+.glass-card-luminous {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(220, 229, 242, 0.85);
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 20px -2px rgba(16, 38, 74, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card-luminous:hover {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(57, 120, 246, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -4px rgba(16, 38, 74, 0.1), 0 0 16px rgba(57, 120, 246, 0.15);
+}
+
+.glass-cockpit {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 253, 0.82) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(220, 229, 242, 0.9);
+  box-shadow: 0 8px 32px -4px rgba(16, 38, 74, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.luminous-icon-pod {
+  background: linear-gradient(135deg, #EDF5FC 0%, #E2EDFA 100%);
+  border: 1px solid rgba(57, 120, 246, 0.2);
+}
+
 

@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import {
   COMPETITIONS,
   Competition,
+  getCompetitionGlow,
 } from '@/data/events';
 import { fetchClientFestivalData } from '@/lib/client-festival-data';
 import {
@@ -116,6 +117,7 @@ export default function CompetitionsGrid() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {filteredCompetitions.map((comp, idx) => {
             const Icon = ICON_MAP[comp.iconName] || Cpu;
+            const compGlow = getCompetitionGlow(comp.accentColor, comp.themeVibe);
 
             return (
               <motion.div
@@ -128,7 +130,11 @@ export default function CompetitionsGrid() {
                   delay: shouldReduceMotion ? 0 : idx * 0.05,
                   ease: [0.16, 1, 0.3, 1],
                 }}
-                className="nexus-skeuo-card tech-crosshair p-6 sm:p-7 flex flex-col justify-between group relative transition-all"
+                className={`yugantar-card-interactive ${compGlow} nexus-skeuo-card tech-crosshair p-6 sm:p-7 flex flex-col justify-between group relative transition-all`}
+                style={{
+                  '--card-edge-color': comp.accentColor,
+                  '--card-edge-hover-border': comp.accentColor,
+                } as React.CSSProperties}
               >
                 <div>
                   {/* Top Badge: District Identifier & Arena Number */}

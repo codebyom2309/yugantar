@@ -292,25 +292,28 @@ export default function Footer({ festival: initialFestival }: { festival?: Festi
                 Helpful Resources
               </h5>
               <ul className="space-y-2 text-xs text-[#536781]">
-                {customLinks.map((link, idx) => (
-                  <li key={idx}>
-                    {link.url.startsWith('http') ? (
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-[#3978F6] transition-colors flex items-center gap-1"
-                      >
-                        <span>{link.label}</span>
-                        <ExternalLink className="w-2.5 h-2.5 opacity-60" />
-                      </a>
-                    ) : (
-                      <Link href={link.url} className="hover:text-[#3978F6] transition-colors">
-                        {link.label}
-                      </Link>
-                    )}
-                  </li>
-                ))}
+                {customLinks.map((link, idx) => {
+                  const isInternal = typeof link.url === 'string' && link.url.startsWith('/') && !link.url.startsWith('//');
+                  return (
+                    <li key={idx}>
+                      {isInternal ? (
+                        <Link href={link.url} className="hover:text-[#3978F6] transition-colors">
+                          {link.label}
+                        </Link>
+                      ) : (
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-[#3978F6] transition-colors flex items-center gap-1"
+                        >
+                          <span>{link.label}</span>
+                          <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>

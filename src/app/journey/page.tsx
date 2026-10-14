@@ -201,6 +201,7 @@ export default function JourneyPage() {
                 const meta = TIMELINE_METADATA[index] || TIMELINE_METADATA[0];
                 const IconComponent = meta.icon;
                 const isCurrentActive = activeStep === index;
+                const stageGlow = ['glow-blue', 'glow-violet', 'glow-amber', 'glow-teal'][index % 4];
 
                 return (
                   <div
@@ -217,10 +218,10 @@ export default function JourneyPage() {
                       </div>
 
                       {/* Main Timeline Card */}
-                      <div className={`rounded-3xl bg-white border p-6 sm:p-8 lg:p-9 shadow-xs transition-all ${
+                      <div className={`yugantar-card-interactive ${stageGlow} rounded-3xl bg-white border p-6 sm:p-8 lg:p-9 shadow-xs transition-all ${
                         isCurrentActive
                           ? 'border-[#3978F6]/60 ring-2 ring-[#3978F6]/10 shadow-sm'
-                          : 'border-[#DCE5F2] hover:border-[#3978F6]/30'
+                          : 'border-[#DCE5F2]'
                       }`}>
                         
                         {/* Mobile Step Header with Marker */}
