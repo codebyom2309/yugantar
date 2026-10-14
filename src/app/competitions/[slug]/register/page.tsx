@@ -117,7 +117,7 @@ async function RegistrationContent({ params }: PageProps) {
             </span>
             {competition.isPaid ? (
               <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-[#EDF5FC] text-[#1E5FA8] border border-[#B8D5F8]">
-                ENTRY FEE: {competition.registrationFee || '₹300'}
+                ENTRY FEE: {competition.registrationFee?.trim() || 'Configured Fee Required'}
               </span>
             ) : (
               <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -166,7 +166,7 @@ async function RegistrationContent({ params }: PageProps) {
             <div className="lg:col-span-8">
               <div
                 suppressHydrationWarning
-                className={`yugantar-card-interactive ${compGlow} nexus-card p-5 sm:p-8 bg-white border border-[#DCE5F2] shadow-sm rounded-3xl transition-all`}
+                className={`registration-workspace-card yugantar-card-interactive ${compGlow} nexus-card p-5 sm:p-8 bg-white border border-[#DCE5F2] shadow-sm rounded-3xl transition-all`}
                 style={{
                   '--card-edge-color': competition.accentColor,
                   '--card-edge-hover-border': competition.accentColor,

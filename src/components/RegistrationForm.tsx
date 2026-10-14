@@ -31,7 +31,7 @@ import {
 import type { RegistrationFormConfig, FormField } from '@/data/registrationForms';
 import confetti from 'canvas-confetti';
 import QRCode from 'qrcode';
-import { buildUpiPaymentUri, extractNumericFee } from '@/lib/upiPayment';
+import { buildUpiPaymentUri, extractNumericFee, validateCompetitionFee } from '@/lib/upiPayment';
 
 // ---------------------------------------------------------------------------
 // Types & Constants
@@ -274,7 +274,18 @@ function PaymentProofUploadField({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadAccount, setUploadAccount] = useState<string | null>(null);
   const [showManualUrl, setShowManualUrl] = useState(false);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const [localFileName, setLocalFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cleanly revoke local object URL on unmount or replacement
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrl) {
+        URL.revokeObjectURL(localPreviewUrl);
+      }
+    };
+  }, [localPreviewUrl]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -286,6 +297,15 @@ function PaymentProofUploadField({
       return;
     }
 
+    // Instantly generate local preview to eliminate layout shifts & height jumps
+    if (file.type.startsWith('image/')) {
+      const objUrl = URL.createObjectURL(file);
+      setLocalPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return objUrl;
+      });
+    }
+    setLocalFileName(file.name);
     setIsUploading(true);
     setUploadError(null);
 
@@ -320,10 +340,19 @@ function PaymentProofUploadField({
 
   const handleRemove = () => {
     onChange(field.key, '');
+    if (localPreviewUrl) {
+      URL.revokeObjectURL(localPreviewUrl);
+      setLocalPreviewUrl(null);
+    }
+    setLocalFileName(null);
     setUploadError(null);
     setUploadAccount(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
+  const activePreview = localPreviewUrl || value;
   const isCloudinaryUrl = value && value.includes('cloudinary.com');
 
   return (
@@ -343,20 +372,28 @@ function PaymentProofUploadField({
         id="payment-screenshot-input"
       />
 
-      {/* Upload State 1: File Already Uploaded or URL Set */}
-      {value ? (
-        <div className="p-4 rounded-2xl bg-white border border-emerald-200 shadow-2xs space-y-3">
+      {/* Upload State Box: Sized with min-h to prevent layout shift & viewport vibration */}
+      {activePreview ? (
+        <div className="p-4 rounded-2xl bg-white border border-emerald-200 shadow-2xs space-y-3 min-h-[160px] transition-all">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                <CheckCircle className="w-5 h-5" />
+                {isUploading ? (
+                  <Loader2 className="w-5 h-5 text-[#4B91E8] animate-spin" />
+                ) : (
+                  <CheckCircle className="w-5 h-5" />
+                )}
               </div>
               <div className="min-w-0">
                 <span className="text-xs font-bold text-[#172B49] block truncate">
-                  Payment Proof Attached
+                  {isUploading ? 'Uploading Screenshot...' : 'Payment Proof Attached'}
                 </span>
                 <span className="text-[10px] font-mono text-emerald-700 block truncate">
-                  {isCloudinaryUrl ? '✓ Verified on Cloudinary Storage' : '✓ External Link Configured'}
+                  {isUploading
+                    ? 'Syncing with secure vault...'
+                    : isCloudinaryUrl
+                    ? '✓ Verified on Cloudinary Storage'
+                    : '✓ Screenshot Attached'}
                 </span>
               </div>
             </div>
@@ -364,15 +401,17 @@ function PaymentProofUploadField({
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
+                disabled={isUploading}
                 onClick={() => fileInputRef.current?.click()}
-                className="px-2.5 py-1.5 rounded-lg bg-[#F8FAFD] hover:bg-[#EDF5FC] text-[#4B91E8] text-[11px] font-mono font-bold border border-[#DCE5F2] transition-colors"
+                className="px-2.5 py-1.5 rounded-lg bg-[#F8FAFD] hover:bg-[#EDF5FC] text-[#4B91E8] text-[11px] font-mono font-bold border border-[#DCE5F2] transition-colors disabled:opacity-50"
               >
                 Replace
               </button>
               <button
                 type="button"
+                disabled={isUploading}
                 onClick={handleRemove}
-                className="p-1.5 rounded-lg bg-[#F8FAFD] hover:bg-red-50 text-[#8CA0BA] hover:text-red-600 transition-colors"
+                className="p-1.5 rounded-lg bg-[#F8FAFD] hover:bg-red-50 text-[#8CA0BA] hover:text-red-600 transition-colors disabled:opacity-50"
                 title="Remove attachment"
               >
                 <X className="w-4 h-4" />
@@ -380,26 +419,33 @@ function PaymentProofUploadField({
             </div>
           </div>
 
-          {/* Thumbnail preview if it's an image link */}
-          {isCloudinaryUrl && (
-            <div className="relative h-32 w-full rounded-xl overflow-hidden bg-[#F8FAFD] border border-[#E2E8F0]">
-              <img
-                src={value}
-                alt="Payment screenshot preview"
-                className="w-full h-full object-contain"
-              />
+          {/* Reserved Preview Frame */}
+          <div className="relative h-36 w-full rounded-xl overflow-hidden bg-[#F8FAFD] border border-[#E2E8F0]">
+            <img
+              src={activePreview}
+              alt="Payment screenshot preview"
+              className="w-full h-full object-contain"
+            />
+            {isUploading && (
+              <div className="absolute inset-0 bg-[#172B49]/70 backdrop-blur-xs flex flex-col items-center justify-center text-white space-y-1.5 p-3">
+                <Loader2 className="w-6 h-6 text-[#FF874D] animate-spin" />
+                <span className="text-xs font-mono font-bold">Storing in Secure Vault...</span>
+                <span className="text-[10px] text-white/80 truncate max-w-xs">{localFileName}</span>
+              </div>
+            )}
+          </div>
+
+          {value && (
+            <div className="text-[10px] font-mono text-[#8CA0BA] truncate">
+              Asset URL: {value}
             </div>
           )}
-
-          <div className="text-[10px] font-mono text-[#8CA0BA] truncate">
-            Asset URL: {value}
-          </div>
         </div>
       ) : (
-        /* Upload State 2: Upload Area */
+        /* Empty State */
         <div
           onClick={() => !isUploading && fileInputRef.current?.click()}
-          className={`p-5 sm:p-6 rounded-2xl border-2 border-dashed transition-all cursor-pointer text-center space-y-3 ${
+          className={`p-6 rounded-2xl border-2 border-dashed transition-all cursor-pointer text-center space-y-3 min-h-[160px] flex flex-col justify-center ${
             isUploading
               ? 'bg-[#EDF5FC]/50 border-[#4B91E8] cursor-wait'
               : error || uploadError
@@ -411,7 +457,7 @@ function PaymentProofUploadField({
             <div className="py-2 space-y-2">
               <Loader2 className="w-7 h-7 text-[#4B91E8] animate-spin mx-auto" />
               <p className="text-xs font-bold text-[#172B49]">
-                Uploading Screenshot to Cloudinary...
+                Preparing Screenshot Upload...
               </p>
               <p className="text-[11px] font-mono text-[#8CA0BA]">
                 Storing in secure competition vault
@@ -432,7 +478,7 @@ function PaymentProofUploadField({
                 </p>
               </div>
 
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#DCE5F2] text-[10px] font-mono text-[#60728A]">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#DCE5F2] text-[10px] font-mono text-[#60728A] mx-auto">
                 <ShieldCheck className="w-3 h-3 text-[#2F855A]" />
                 <span>Deterministic Dual Cloudinary Account Vault</span>
               </div>
@@ -680,19 +726,30 @@ export default function RegistrationForm({
   const submitLockRef = useRef(false);
   const autoDownloadTriggeredRef = useRef(false);
 
+  // Authoritative fee validation: ensures no silent ₹1 or ₹300 substitutions,
+  // prevents misleading QRs, and strictly validates numeric INR amounts
+  const feeValidation = useMemo(() => {
+    return validateCompetitionFee(
+      isPaid,
+      competition?.registrationFee,
+      competition?.upiId,
+      values.teamSize || defaultTeamSize
+    );
+  }, [isPaid, competition?.registrationFee, competition?.upiId, values.teamSize, defaultTeamSize]);
+
   // Compute canonical UPI URI using standard URLSearchParams generator
   const upiPaymentUri = useMemo(() => {
-    if (!isPaid || !competition?.upiId) return '';
+    if (!isPaid || !feeValidation.isValid || !competition?.upiId) return '';
     const cleanUpiId = competition.upiId.trim();
     const payee = (competition.payeeName || 'TELE-ERA YUGANTAR 2026').trim();
-    const feeAmount = competition.isFeeFixed !== false ? extractNumericFee(competition.registrationFee) : undefined;
+    const feeAmount = competition.isFeeFixed !== false ? feeValidation.numericAmount : undefined;
     return buildUpiPaymentUri({
       upiId: cleanUpiId,
       payeeName: payee,
       amount: feeAmount,
       transactionNote: `${config.competitionName} Registration`,
     });
-  }, [isPaid, competition?.upiId, competition?.payeeName, competition?.registrationFee, competition?.isFeeFixed, config.competitionName]);
+  }, [isPaid, feeValidation, competition?.upiId, competition?.payeeName, competition?.isFeeFixed, config.competitionName]);
 
   // Robust, single-click pass downloader with automatic Blob download & object URL revocation
   const handleDownloadPass = useCallback(async (regId: string, token?: string) => {
@@ -728,9 +785,10 @@ export default function RegistrationForm({
     }
   }, []);
 
-  // Generate dynamic UPI QR Code if in generate mode or if uploaded QR is absent
+  // Generate dynamic UPI QR Code if in generate mode or if uploaded QR is absent,
+  // strictly gated by feeValidation to prevent misleading QR generation
   useEffect(() => {
-    if (isPaid && competition?.upiId && upiPaymentUri) {
+    if (isPaid && feeValidation.isValid && competition?.upiId && upiPaymentUri) {
       const isGenerateMode = competition.qrMode === 'generate' || !competition.qrCodeUrl;
       if (isGenerateMode) {
         QRCode.toDataURL(upiPaymentUri, {
@@ -744,8 +802,10 @@ export default function RegistrationForm({
           .then((url) => setDynamicQrUrl(url))
           .catch((err) => console.error('Failed to generate dynamic UPI QR code:', err));
       }
+    } else {
+      setDynamicQrUrl(null);
     }
-  }, [isPaid, competition?.upiId, competition?.qrMode, competition?.qrCodeUrl, upiPaymentUri]);
+  }, [isPaid, feeValidation.isValid, competition?.upiId, competition?.qrMode, competition?.qrCodeUrl, upiPaymentUri]);
 
   // Handle toggling "Use team leader's details" for member 2, 3, 4
   const handleToggleLeaderDetails = (memberIdx: number, checked: boolean) => {
@@ -1638,9 +1698,9 @@ export default function RegistrationForm({
                         Step 1: Payment Summary
                       </h3>
                     </div>
-                    {competition?.registrationFee && (
+                    {feeValidation.isValid && (
                       <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#E07A43] text-white shadow-2xs">
-                        Fee: {competition.registrationFee}
+                        Fee: {feeValidation.displayFee}
                       </span>
                     )}
                   </div>
@@ -1652,7 +1712,7 @@ export default function RegistrationForm({
                     </div>
                     <div className="p-3 rounded-xl bg-white border border-[#FFE0CE]">
                       <span className="text-[10px] font-mono uppercase text-[#7E93AC] block">Configured Fee</span>
-                      <span className="font-bold text-[#E07A43] block">{competition?.registrationFee || '₹300'}</span>
+                      <span className="font-bold text-[#E07A43] block">{feeValidation.displayFee}</span>
                     </div>
                     <div className="p-3 rounded-xl bg-white border border-[#FFE0CE]">
                       <span className="text-[10px] font-mono uppercase text-[#7E93AC] block">Requirements</span>
@@ -1690,7 +1750,15 @@ export default function RegistrationForm({
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-center gap-6 pt-1">
-                      {(competition?.qrCodeUrl || dynamicQrUrl) ? (
+                      {!feeValidation.isValid ? (
+                        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-left text-xs text-amber-900 space-y-1.5 w-full">
+                          <span className="font-bold flex items-center gap-1.5 text-amber-800">
+                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                            Payment Configuration Notice
+                          </span>
+                          <p>{feeValidation.errorMessage || 'Fee configuration incomplete. Contact coordinators.'}</p>
+                        </div>
+                      ) : (competition?.qrCodeUrl || dynamicQrUrl) ? (
                         <div className="p-4 bg-white rounded-2xl border border-[#DCE5F2] shrink-0 text-center shadow-xs">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -1700,7 +1768,7 @@ export default function RegistrationForm({
                           />
                           <div className="mt-2 space-y-0.5">
                             <span className="text-[11px] font-mono font-bold text-[#10264A] block">
-                              {competition?.registrationFee || '₹300'}
+                              {feeValidation.numericAmount ? `₹${feeValidation.numericAmount}` : feeValidation.displayFee}
                             </span>
                             <span className="text-[10px] font-mono text-[#536781] block">
                               {competition?.qrMode === 'upload' ? 'Official Department QR' : 'Dynamic UPI QR'}

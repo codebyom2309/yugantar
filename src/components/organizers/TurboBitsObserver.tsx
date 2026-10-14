@@ -37,19 +37,25 @@ export default function TurboBitsObserver() {
         (entries) => {
           if (window.innerWidth >= 768 || !hasHydrated) return;
           entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('mobile-focused-card');
-              entry.target.setAttribute('data-mobile-focused', 'true');
-            } else {
-              entry.target.classList.remove('mobile-focused-card');
-              entry.target.removeAttribute('data-mobile-focused');
+            const isCurrentlyFocused = entry.target.classList.contains('mobile-focused-card');
+            // Hysteresis: enter at 0.15+, exit only when dropped below 0.06 to eliminate boundary oscillation
+            if (entry.intersectionRatio >= 0.15) {
+              if (!isCurrentlyFocused) {
+                entry.target.classList.add('mobile-focused-card');
+                entry.target.setAttribute('data-mobile-focused', 'true');
+              }
+            } else if (entry.intersectionRatio <= 0.06 || !entry.isIntersecting) {
+              if (isCurrentlyFocused) {
+                entry.target.classList.remove('mobile-focused-card');
+                entry.target.removeAttribute('data-mobile-focused');
+              }
             }
           });
         },
         {
           root: null,
           rootMargin: '-20% 0px -20% 0px',
-          threshold: 0.12,
+          threshold: [0.06, 0.15],
         }
       );
 
