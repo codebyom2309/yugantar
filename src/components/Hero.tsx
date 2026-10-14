@@ -227,9 +227,16 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
               {...fadeIn(0.12)}
               className="flex flex-wrap items-center gap-2 mb-2.5 sm:mb-3.5"
             >
-              {/* Midnight Navy Capsule with Orange Star */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-[#0B1B36] border border-white/20 text-white text-[10.5px] sm:text-xs font-mono font-bold shadow-xs">
-                <span className="text-[#FF783E]">✦</span>
+              {/* Midnight Navy Capsule with Official Emblem */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-[#0B1B36] border border-white/20 text-white text-[10.5px] sm:text-xs font-mono font-bold shadow-xs">
+                <Image
+                  src="/images/yugantar-logo.webp"
+                  alt="YUGANTAR 2026"
+                  width={16}
+                  height={16}
+                  unoptimized
+                  className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                />
                 <span>{festival.name} {festival.edition}</span>
               </div>
 

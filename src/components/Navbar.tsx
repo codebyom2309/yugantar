@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ArrowUpRight, LayoutGrid, Sparkles } from 'lucide-react';
 import { fetchClientFestivalData } from '@/lib/client-festival-data';
@@ -71,12 +72,17 @@ export default function Navbar() {
             className="flex items-center gap-1.5 sm:gap-2.5 group focus:outline-none rounded-full shrink-0"
             aria-label="YUGANTAR 2026 Homepage"
           >
-            {/* Deep Midnight Blue Emblem with Gold 4-Point Star */}
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-[#102344] border border-white/20 flex items-center justify-center text-white shadow-2xs transition-transform duration-250 group-hover:scale-105 shrink-0">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z" fill="#FF874D" />
-                <circle cx="12" cy="12" r="2.2" fill="#FFFFFF" />
-              </svg>
+            {/* Official TELE-ERA / YUGANTAR 2026 Emblem */}
+            <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-[#0B1B36] border border-white/20 p-0.5 flex items-center justify-center shadow-2xs transition-transform duration-250 group-hover:scale-105 shrink-0 overflow-hidden">
+              <Image
+                src="/images/yugantar-logo.webp"
+                alt="YUGANTAR 2026 Official Logo"
+                width={32}
+                height={32}
+                priority
+                unoptimized
+                className="w-full h-full object-contain rounded-md sm:rounded-lg"
+              />
             </div>
 
             {/* Wordmark, Year Badge and TELE-ERA Identity */}
@@ -154,7 +160,16 @@ export default function Navbar() {
           <div className="max-h-[82vh] overflow-y-auto p-4 sm:p-5 rounded-3xl bg-white/95 backdrop-blur-2xl border border-white/90 shadow-2xl animate-in fade-in duration-200">
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#E2E8F0]">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#FF874D]" />
+                <div className="relative w-5 h-5 rounded-full overflow-hidden bg-[#0B1B36] border border-[#FFD1B5]/50 shrink-0">
+                  <Image
+                    src="/images/yugantar-logo.webp"
+                    alt="YUGANTAR 2026"
+                    width={20}
+                    height={20}
+                    unoptimized
+                    className="w-full h-full object-cover"
+                  />
+                </div>
                 <span className="text-[11px] font-mono uppercase tracking-wider text-[#536781] font-bold">
                   {eventDateLabel}
                 </span>
