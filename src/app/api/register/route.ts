@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { signPassToken, PassMemberInfo } from '@/lib/passToken';
 import { getDepartmentDiscountRule } from '@/lib/competitions';
 import { extractNumericFee } from '@/lib/upiPayment';
+import { syncRegistrationToGoogleForm } from '@/lib/sheetsSync';
 
 // ---------------------------------------------------------------------------
 // Helpers & Semester Normalization
@@ -561,80 +562,36 @@ export async function POST(request: NextRequest) {
     let googleSubmitError: string | null = null;
     let confirmationEvidence: string | null = null;
 
-    const isPlaceholderForm =
-      formConfig.googleFormId.includes('mini-project') ||
-      formConfig.formResponseUrl.includes('mini-project');
-
-    if (!sendToSpreadsheet || isPlaceholderForm) {
+    if (!sendToSpreadsheet) {
       googleSubmitSuccess = true;
-      confirmationEvidence = isPlaceholderForm
-        ? 'Direct authoritative festival database registration (independent track)'
-        : 'Spreadsheet workflow bypassed by administrator setting (direct festival registration)';
+      confirmationEvidence = 'Spreadsheet workflow bypassed by administrator setting (direct festival registration)';
     } else {
-      try {
-        const googleFormData = new URLSearchParams();
+      const syncResult = await syncRegistrationToGoogleForm(
+        {
+          id: registrationId,
+          competition_slug: formConfig.competitionSlug,
+          leader_name: leaderName,
+          leader_email: leaderEmail,
+          leader_phone: leaderPhone,
+          leader_college: leaderCollege,
+          leader_branch: leaderBranch,
+          leader_semester: leaderSemester,
+          team_name: teamName,
+          team_size: teamSize,
+          payment_id: effectivePaymentId,
+          payment_proof_url: effectivePaymentProof,
+          payment_status: initialPaymentStatus,
+          form_data: formDataPayload,
+        },
+        sanitizedFormValues,
+        true // Skip duplicate check during brand new registration insert to avoid extra roundtrip latency
+      );
 
-        for (const field of formConfig.fields) {
-          // Exclude conditionally hidden fields
-          if (field.showWhen) {
-            const depValue = formValues[field.showWhen.field];
-            if (!field.showWhen.values.includes(depValue || '')) {
-              continue;
-            }
-          }
-
-          let value = formValues[field.key]?.trim() || '';
-          // If free track and payment field is empty, provide valid placeholder so Google Form accepts it
-          if (!isPaid && !value) {
-            if (field.key === 'paymentId') value = 'FREE-TRACK';
-            if (field.key === 'paymentProof') value = 'https://yugantar.pce.ac.in/free-track';
-          }
-
-          if (value) {
-            googleFormData.append(`entry.${field.entryId}`, value);
-          }
-        }
-
-        // Add rules acknowledgment
-        if (formConfig.acknowledgmentEntryId) {
-          googleFormData.append(
-            `entry.${formConfig.acknowledgmentEntryId}`,
-            'Yes',
-          );
-        }
-
-        // Exact verified formResponseUrl (no runtime guessing)
-        const formResponseUrl = formConfig.formResponseUrl;
-
-        const response = await fetch(formResponseUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          },
-          body: googleFormData.toString(),
-          redirect: 'follow',
-        });
-
-        const responseText = await response.text();
-        const isRecorded =
-          response.status === 200 &&
-          (responseText.includes('response has been recorded') ||
-            responseText.includes('Your response has been recorded') ||
-            responseText.includes('freebirdFormviewerViewResponseConfirmationMessage'));
-
-        if (isRecorded) {
-          googleSubmitSuccess = true;
-          confirmationEvidence = 'Google Forms response recorded confirmation received';
-        } else if (response.status === 200) {
-          googleSubmitError = 'Google Forms returned HTTP 200 but did not confirm response recorded (check required fields).';
-        } else {
-          googleSubmitError = `Google Forms returned HTTP ${response.status}: ${response.statusText}`;
-        }
-      } catch (err) {
-        googleSubmitError =
-          err instanceof Error ? err.message : 'Network error during Google Forms submission';
+      if (syncResult.success) {
+        googleSubmitSuccess = true;
+        confirmationEvidence = syncResult.evidence || 'Google Forms response recorded confirmation received';
+      } else {
+        googleSubmitError = syncResult.error || 'Google Forms synchronization failed';
       }
     }
 

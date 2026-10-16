@@ -122,6 +122,8 @@ export default function RegistrationsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkOperating, setIsBulkOperating] = useState(false);
   const [isExportingAll, setIsExportingAll] = useState(false);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [isBulkSyncing, setIsBulkSyncing] = useState(false);
 
   // Debounce search input by 350ms
   useEffect(() => {
@@ -321,6 +323,94 @@ export default function RegistrationsPage() {
     } catch (err) {
       console.error('Failed to delete registration:', err);
     }
+  };
+
+  const handleRetrySync = async (id: string) => {
+    setSyncingId(id);
+    try {
+      const res = await fetch('/api/admin/registrations/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationId: id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        fetchRegistrations();
+        if (selectedReg && selectedReg.id === id) {
+          setSelectedReg((prev) =>
+            prev ? { ...prev, submission_error: null, submitted_at: new Date().toISOString() } : null
+          );
+        }
+      } else {
+        alert(data.error || 'Failed to sync to Google Sheets');
+      }
+    } catch (err) {
+      console.error('Failed to retry sync:', err);
+      alert('Error triggering sync: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
+  const handleBulkRetrySync = async () => {
+    if (selectedIds.length === 0) return;
+    setIsBulkSyncing(true);
+    try {
+      const res = await fetch('/api/admin/registrations/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationIds: selectedIds }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Sync complete: ${data.succeeded} synced, ${data.skipped} already in sheet, ${data.failed} failed.`);
+        setSelectedIds([]);
+        fetchRegistrations();
+      } else {
+        alert(data.error || 'Failed to execute bulk sync');
+      }
+    } catch (err) {
+      console.error('Bulk sync failed:', err);
+    } finally {
+      setIsBulkSyncing(false);
+    }
+  };
+
+  const renderSyncBadge = (r: Registration) => {
+    const isFailed = Boolean(r.submission_error);
+    const isPending = !isFailed && (r.submission_status === 'pending' || !r.submitted_at);
+
+    if (isFailed) {
+      return (
+        <span
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 whitespace-nowrap"
+          title={r.submission_error || 'Sync Failed'}
+        >
+          <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0" />
+          Sync Failed
+        </span>
+      );
+    }
+    if (isPending) {
+      return (
+        <span
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 whitespace-nowrap"
+          title="Pending sync to Google Sheets"
+        >
+          <Clock className="w-3 h-3 text-amber-500 shrink-0" />
+          Pending
+        </span>
+      );
+    }
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 whitespace-nowrap"
+        title={`Synced to Google Spreadsheet on ${r.submitted_at ? new Date(r.submitted_at).toLocaleString() : 'confirmed'}`}
+      >
+        <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+        Synced
+      </span>
+    );
   };
 
   const handleViewDetail = async (reg: Registration) => {
@@ -816,6 +906,15 @@ export default function RegistrationsPage() {
             </button>
             <button
               type="button"
+              disabled={isBulkOperating || isBulkSyncing}
+              onClick={handleBulkRetrySync}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
+            >
+              <FileSpreadsheet className={`w-3.5 h-3.5 ${isBulkSyncing ? 'animate-spin' : ''}`} />
+              <span>Sync to Sheets</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setSelectedIds([])}
               className="px-2.5 py-1.5 rounded-xl admin-glass-panel text-slate-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
             >
@@ -976,6 +1075,23 @@ export default function RegistrationsPage() {
                   })()}
                 </div>
 
+                {/* Sheets Sync Status Row */}
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-500 dark:text-zinc-400 pt-1 border-t border-black/5 dark:border-white/5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase">Sheets:</span>
+                    {renderSyncBadge(r)}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={syncingId === r.id}
+                    onClick={() => handleRetrySync(r.id)}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg admin-glass-panel text-slate-600 dark:text-zinc-300 hover:text-blue-500 text-[10px] font-semibold cursor-pointer"
+                  >
+                    <FileSpreadsheet className={`w-3 h-3 ${syncingId === r.id ? 'animate-spin' : ''}`} />
+                    <span>{r.submission_error ? 'Retry Sync' : 'Re-sync'}</span>
+                  </button>
+                </div>
+
                 {/* Mobile Action Buttons */}
                 <div className="flex items-center justify-end gap-2 pt-1 border-t border-black/5 dark:border-white/5">
                   <button
@@ -1040,6 +1156,7 @@ export default function RegistrationsPage() {
                 <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Payment UTR</th>
                 <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Payment Status</th>
                 <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Accreditation</th>
+                <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Sheets Sync</th>
                 <th className="py-3 px-3 font-semibold text-[11px] uppercase tracking-wider">Date Recorded</th>
                 <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-right">Actions</th>
               </tr>
@@ -1049,7 +1166,7 @@ export default function RegistrationsPage() {
                 [...Array(6)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     <td className="py-3 px-3 text-center"><div className="w-4 h-4 bg-black/10 dark:bg-white/10 rounded mx-auto" /></td>
-                    {[...Array(8)].map((_, j) => (
+                    {[...Array(9)].map((_, j) => (
                       <td key={j} className="py-3 px-3">
                         <div className="h-4 bg-black/10 dark:bg-white/10 rounded" />
                       </td>
@@ -1058,7 +1175,7 @@ export default function RegistrationsPage() {
                 ))
               ) : registrations.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-500 dark:text-zinc-400">
+                  <td colSpan={10} className="py-12 text-center text-slate-500 dark:text-zinc-400">
                     No registrations found matching the active criteria.
                   </td>
                 </tr>
@@ -1186,6 +1303,24 @@ export default function RegistrationsPage() {
                         </select>
                       </td>
 
+                      {/* Sheets Sync Status */}
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-1.5">
+                          {renderSyncBadge(r)}
+                          {r.submission_error && (
+                            <button
+                              type="button"
+                              disabled={syncingId === r.id}
+                              onClick={() => handleRetrySync(r.id)}
+                              className="p-1 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 cursor-pointer transition shadow-2xs"
+                              title={`Retry Sync: ${r.submission_error}`}
+                            >
+                              <RotateCcw className={`w-3 h-3 ${syncingId === r.id ? 'animate-spin' : ''}`} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+
                       <td className="py-3 px-3 text-slate-500 dark:text-zinc-400 font-mono text-[11px]">
                         {r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}
                       </td>
@@ -1193,6 +1328,19 @@ export default function RegistrationsPage() {
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            disabled={syncingId === r.id}
+                            onClick={() => handleRetrySync(r.id)}
+                            className={`p-1.5 rounded-lg admin-glass-panel transition-colors cursor-pointer ${
+                              r.submission_error
+                                ? 'text-rose-500 hover:text-rose-600 hover:border-rose-500/40'
+                                : 'text-emerald-600 dark:text-emerald-400 hover:border-emerald-500/40'
+                            }`}
+                            title={r.submission_error ? `Retry Sheets Sync: ${r.submission_error}` : "Synchronize to Google Spreadsheet"}
+                          >
+                            <FileSpreadsheet className={`w-3.5 h-3.5 ${syncingId === r.id ? 'animate-spin' : ''}`} />
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleOpenQrModal(r)}
@@ -1571,6 +1719,32 @@ export default function RegistrationsPage() {
                   Pending Review
                 </button>
               </div>
+            </div>
+
+            {/* Google Sheets Sync Control Panel */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 rounded-xl admin-glass-card border border-black/5 dark:border-white/10">
+              <div>
+                <span className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-zinc-400 block font-semibold">
+                  Google Spreadsheet Synchronization
+                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  {renderSyncBadge(selectedReg)}
+                  {selectedReg.submission_error && (
+                    <span className="text-xs text-rose-600 dark:text-rose-400 font-mono">
+                      {selectedReg.submission_error}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={syncingId === selectedReg.id}
+                onClick={() => handleRetrySync(selectedReg.id)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer disabled:opacity-50"
+              >
+                <FileSpreadsheet className={`w-3.5 h-3.5 ${syncingId === selectedReg.id ? 'animate-spin' : ''}`} />
+                <span>{selectedReg.submission_error ? 'Retry Sync' : 'Sync to Sheets'}</span>
+              </button>
             </div>
 
             <div className="space-y-2.5 text-xs">
