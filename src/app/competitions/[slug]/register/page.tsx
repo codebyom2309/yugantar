@@ -168,10 +168,10 @@ export default async function RegistrationPage({ params }: PageProps) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Multi-Step Form Workspace */}
-            <div className="lg:col-span-8">
+            <div className="lg:col-span-8 relative z-20">
               <div
                 suppressHydrationWarning
-                className={`registration-workspace-card yugantar-card-interactive ${compGlow} nexus-card p-5 sm:p-8 bg-white border border-[#DCE5F2] shadow-sm rounded-3xl transition-all`}
+                className={`registration-workspace-card yugantar-card-interactive ${compGlow} nexus-card p-5 sm:p-8 bg-white border border-[#DCE5F2] shadow-sm rounded-3xl transition-all relative z-20`}
                 style={{
                   '--card-edge-color': competition.accentColor,
                   '--card-edge-hover-border': competition.accentColor,
@@ -212,11 +212,11 @@ export default async function RegistrationPage({ params }: PageProps) {
             </div>
 
             {/* Sticky Sidebar Panel */}
-            <div className="lg:col-span-4 space-y-5 lg:sticky lg:top-28">
+            <div className="lg:col-span-4 space-y-5 lg:sticky lg:top-28 relative z-10">
               {/* Competition Quick Card */}
               <div
                 suppressHydrationWarning
-                className={`yugantar-card-interactive ${compGlow} nexus-card p-5 bg-white border border-[#DCE5F2] rounded-2xl shadow-xs transition-all`}
+                className={`yugantar-card-interactive ${compGlow} nexus-card p-5 bg-white border border-[#DCE5F2] rounded-2xl shadow-xs transition-all relative z-10`}
                 style={{
                   '--card-edge-color': competition.accentColor,
                   '--card-edge-hover-border': competition.accentColor,
