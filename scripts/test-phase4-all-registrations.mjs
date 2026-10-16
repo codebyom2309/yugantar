@@ -23,15 +23,15 @@ const COMPS_TO_TEST = [
   {
     slug: 'breadboard-competition',
     name: 'Bread Board Competition',
-    validSemester: 'IV',
-    ineligibleSemester: null, // no restriction
+    validSemester: 'III',
+    ineligibleSemester: 'IV',
     samplePayload: {
       leaderName: 'Test Auditor Breadboard',
       leaderPhone: '9876543210',
       leaderEmail: 'audit.breadboard@test.pce.edu.in',
       leaderCollege: 'PCE',
       leaderBranch: 'ETC',
-      leaderSemester: 'IV',
+      leaderSemester: 'III',
       teamSize: '1',
       paymentId: 'UTR_TEST_BB_001',
       paymentProof: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
@@ -164,15 +164,15 @@ const COMPS_TO_TEST = [
   {
     slug: 'ppt-presentation',
     name: 'PPT Presentation Competition',
-    validSemester: 'V',
-    ineligibleSemester: null,
+    validSemester: 'VII',
+    ineligibleSemester: 'V',
     samplePayload: {
       leaderName: 'Test Auditor PPT',
       leaderPhone: '9876543217',
       leaderEmail: 'audit.ppt@test.pce.edu.in',
       leaderCollege: 'PCE',
       leaderBranch: 'ETC',
-      leaderSemester: 'V',
+      leaderSemester: 'VII',
       teamName: 'Research Wizards',
       presentationTitle: 'Terahertz Wireless Body Area Networks',
       pptTheme: 'Advanced Telecommunications',

@@ -8,6 +8,7 @@ import {
   Loader2,
   ChevronDown,
   Info,
+  HelpCircle,
   ShieldCheck,
   RefreshCw,
   ArrowRight,
@@ -675,6 +676,8 @@ export default function RegistrationForm({
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
   const [isDraftSaved, setIsDraftSaved] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+  const [copiedUpiId, setCopiedUpiId] = useState(false);
+  const [copyUpiFailed, setCopyUpiFailed] = useState(false);
   const [copiedPassUrl, setCopiedPassUrl] = useState(false);
   const [autoDownloadStatus, setAutoDownloadStatus] = useState<
     'idle' | 'downloading' | 'completed' | 'blocked'
@@ -683,6 +686,37 @@ export default function RegistrationForm({
   const [useLeaderDetails, setUseLeaderDetails] = useState<Record<number, boolean>>({});
   const submitLockRef = useRef(false);
   const autoDownloadTriggeredRef = useRef(false);
+
+  // Robust, reliable UPI ID copy handler with fallback for restrictive mobile browsers
+  const handleCopyUpiId = useCallback(async () => {
+    if (!competition?.upiId) return;
+    const cleanId = competition.upiId.trim();
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(cleanId);
+      } else if (typeof document !== 'undefined') {
+        const textArea = document.createElement('textarea');
+        textArea.value = cleanId;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (!successful) throw new Error('execCommand copy failed');
+      }
+      setCopiedUpiId(true);
+      setCopyUpiFailed(false);
+      setTimeout(() => setCopiedUpiId(false), 2000);
+    } catch (err) {
+      console.warn('Failed to copy UPI ID:', err);
+      setCopyUpiFailed(true);
+      setTimeout(() => setCopyUpiFailed(false), 3000);
+    }
+  }, [competition?.upiId]);
 
   // Auto-prune ineligible semesters if restricted by festival administration
   useEffect(() => {
@@ -838,7 +872,7 @@ export default function RegistrationForm({
       const isGenerateMode = competition.qrMode === 'generate' || !competition.qrCodeUrl;
       if (isGenerateMode) {
         QRCode.toDataURL(upiPaymentUri, {
-          width: 280,
+          width: 600,
           margin: 2,
           color: {
             dark: '#10264A',
@@ -1827,7 +1861,7 @@ export default function RegistrationForm({
                       </h3>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center gap-6 pt-1">
+                    <div className="flex flex-col lg:flex-row items-center lg:items-start gap-6 pt-1">
                       {!feeValidation.isValid ? (
                         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-left text-xs text-amber-900 space-y-1.5 w-full">
                           <span className="font-bold flex items-center gap-1.5 text-amber-800">
@@ -1837,17 +1871,24 @@ export default function RegistrationForm({
                           <p>{feeValidation.errorMessage || 'Fee configuration incomplete. Contact coordinators.'}</p>
                         </div>
                       ) : (competition?.qrCodeUrl || dynamicQrUrl) ? (
-                        <div className="p-4 bg-white rounded-2xl border border-[#DCE5F2] shrink-0 text-center shadow-xs">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={competition?.qrMode === 'upload' && competition.qrCodeUrl ? competition.qrCodeUrl : (dynamicQrUrl || competition?.qrCodeUrl)}
-                            alt="Payment QR Code"
-                            className="w-36 h-36 object-contain mx-auto rounded-xl"
-                          />
-                          <div className="mt-2 space-y-0.5">
-                            <span className="text-[11px] font-mono font-bold text-[#10264A] block">
-                              {discountEligibility.eligible ? `₹${discountEligibility.finalFee}` : (feeValidation.numericAmount ? `₹${feeValidation.numericAmount}` : feeValidation.displayFee)}
-                            </span>
+                        <div className="p-3.5 sm:p-4 bg-white rounded-2xl border border-[#DCE5F2] shrink-0 text-center shadow-xs w-full lg:w-[310px] max-w-[320px] mx-auto flex flex-col items-center justify-center">
+                          <div className="bg-white p-2 rounded-xl border border-[#EDF2F7] shadow-2xs flex items-center justify-center w-full">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={competition?.qrMode === 'upload' && competition.qrCodeUrl ? competition.qrCodeUrl : (dynamicQrUrl || competition?.qrCodeUrl)}
+                              alt="Payment QR Code"
+                              className="w-[260px] h-[260px] min-[390px]:w-[270px] min-[390px]:h-[270px] sm:w-[280px] sm:h-[280px] max-w-full aspect-square object-contain mx-auto rounded-lg"
+                            />
+                          </div>
+                          <div className="mt-3 pt-2.5 border-t border-[#E2E8F0] w-full text-center space-y-1">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <span className="text-[11px] font-mono uppercase text-[#7E93AC] tracking-wider">
+                                Payable Amount:
+                              </span>
+                              <span className="text-base font-mono font-bold text-[#10264A]">
+                                {discountEligibility.eligible ? `₹${discountEligibility.finalFee}` : (feeValidation.numericAmount ? `₹${feeValidation.numericAmount}` : feeValidation.displayFee)}
+                              </span>
+                            </div>
                             <span className="text-[10px] font-mono text-[#536781] block">
                               {discountEligibility.eligible ? 'Concession Applied UPI QR' : (competition?.qrMode === 'upload' ? 'Official Department QR' : 'Dynamic UPI QR')}
                             </span>
@@ -1860,58 +1901,103 @@ export default function RegistrationForm({
                         </div>
                       )}
 
-                      <div className="space-y-3 flex-1 w-full text-left">
+                      <div className="space-y-3.5 flex-1 w-full text-left">
                         {competition?.payeeName && (
-                          <div className="p-3 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2]">
-                            <span className="text-[10px] font-mono uppercase text-[#7E93AC] block">
+                          <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2]">
+                            <span className="text-[10px] font-mono uppercase text-[#7E93AC] tracking-wider block">
                               Official Payee Name
                             </span>
-                            <span className="text-xs font-bold text-[#10264A]">
+                            <span className="text-sm font-bold text-[#10264A]">
                               {competition.payeeName}
                             </span>
                           </div>
                         )}
 
-                        {competition?.upiId && (
-                          <div className="p-3 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-1">
-                            <span className="text-[10px] font-mono uppercase text-[#7E93AC] block">
-                              Official UPI ID
-                            </span>
+                        {competition?.upiId ? (
+                          <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-mono uppercase text-[#7E93AC] tracking-wider block">
+                                Official UPI ID
+                              </span>
+                              <span className="text-[10px] font-mono text-[#536781]">
+                                Tap copy to pay manually
+                              </span>
+                            </div>
                             <div className="flex items-center justify-between gap-2">
-                              <code className="text-xs font-mono font-bold text-[#10264A] select-all">
+                              <code className="text-xs sm:text-sm font-mono font-bold text-[#10264A] select-all break-all bg-white px-2.5 py-1.5 rounded-lg border border-[#E2E8F0] flex-1">
                                 {competition.upiId}
                               </code>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (competition?.upiId) {
-                                    navigator.clipboard.writeText(competition.upiId.trim());
-                                    setCopiedId(true);
-                                    setTimeout(() => setCopiedId(false), 2000);
-                                  }
-                                }}
-                                className="p-1.5 px-2.5 rounded-lg bg-white border border-[#DCE5F2] hover:bg-[#E9F2FF] text-[#10264A] text-xs font-mono font-bold transition flex items-center gap-1 cursor-pointer"
+                                onClick={handleCopyUpiId}
+                                className="shrink-0 min-h-[38px] px-3.5 rounded-lg bg-white border border-[#DCE5F2] hover:bg-[#E9F2FF] hover:border-[#B8D5F8] text-[#10264A] text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                aria-label="Copy UPI ID"
                               >
-                                {copiedId ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-[#3978F6]" />}
-                                <span>{copiedId ? 'Copied' : 'Copy'}</span>
+                                {copiedUpiId ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span className="text-emerald-700">Copied!</span>
+                                  </>
+                                ) : copyUpiFailed ? (
+                                  <>
+                                    <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                                    <span className="text-amber-700">Failed</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 text-[#3978F6]" />
+                                    <span>Copy UPI ID</span>
+                                  </>
+                                )}
                               </button>
                             </div>
                           </div>
+                        ) : (
+                          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 space-y-1">
+                            <span className="font-bold flex items-center gap-1.5">
+                              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                              Configuration Error
+                            </span>
+                            <span>UPI ID is not configured for this competition arena. Please contact the coordinators.</span>
+                          </div>
                         )}
 
-                        {upiPaymentUri && (
-                          <a
-                            href={upiPaymentUri}
-                            className="inline-flex items-center justify-center gap-2 min-h-[44px] w-full px-4 py-2.5 rounded-xl bg-[#10264A] hover:bg-[#1A386B] text-white text-xs font-mono font-bold transition shadow-2xs cursor-pointer"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5 text-[#3978F6]" />
-                            <span>Pay Directly via UPI App (Mobile)</span>
-                          </a>
-                        )}
-
-                        <p className="text-[11px] text-[#60728A] leading-normal">
-                          📱 Scan the QR code using Google Pay, PhonePe, Paytm, or BHIM. If fixed-fee mode is active, the exact fee amount is pre-filled.
-                        </p>
+                        {/* Manual Payment Instructions Card */}
+                        <div className="p-3.5 sm:p-4 rounded-xl bg-[#F0F6FE] border border-[#C8DCF8] text-xs text-[#10264A] space-y-2">
+                          <div className="flex items-center gap-1.5 font-bold text-[#1E5FA8]">
+                            <HelpCircle className="w-4 h-4 shrink-0 text-[#3978F6]" />
+                            <span>Having trouble scanning the QR?</span>
+                          </div>
+                          <p className="text-[11px] text-[#536781] leading-relaxed">
+                            You can manually pay using the official UPI ID above. Open Google Pay, PhonePe, Paytm, BHIM, or your preferred UPI app, choose the option to pay a UPI ID, enter the copied UPI ID, verify the displayed recipient name, and enter the exact configured registration fee.
+                          </p>
+                          <div className="pt-2 border-t border-[#D5E5FA] space-y-1.5 text-[11px] text-[#536781]">
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-[#3978F6] font-bold shrink-0">•</span>
+                              <span>
+                                <strong>Verify recipient:</strong> Confirm that the recipient name matches <strong>{competition?.payeeName || 'the official organizer'}</strong> before confirming payment.
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-[#3978F6] font-bold shrink-0">•</span>
+                              <span>
+                                <strong>Exact fee:</strong> Enter the exact configured registration fee: <strong>{discountEligibility.eligible ? `₹${discountEligibility.finalFee}` : (feeValidation.numericAmount ? `₹${feeValidation.numericAmount}` : feeValidation.displayFee)}</strong>.
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-[#3978F6] font-bold shrink-0">•</span>
+                              <span>
+                                <strong>Payment proof:</strong> {competition?.requireUtr !== false && competition?.requireScreenshot !== false
+                                  ? 'Retain your 12-digit UTR / reference number and save your payment screenshot for Steps 3 & 4 below.'
+                                  : competition?.requireUtr !== false
+                                  ? 'Retain your 12-digit UTR / reference number for Step 3 below.'
+                                  : competition?.requireScreenshot !== false
+                                  ? 'Save your payment confirmation screenshot for Step 4 below.'
+                                  : 'Keep your transaction reference for your records.'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
