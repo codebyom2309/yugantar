@@ -560,23 +560,48 @@ function FormFieldInput({
 
       {field.type === 'select' && field.options ? (() => {
         const isSemester = field.key.toLowerCase().includes('semester');
+        const isDomain = field.key === 'projectDomain';
         let selectOptions = field.options;
         if (isSemester && allowedSemesters && allowedSemesters.length > 0) {
           const normAllowed = allowedSemesters.map(normalizeSemester);
           selectOptions = field.options.filter((opt) => normAllowed.includes(normalizeSemester(opt)));
         }
+
+        const isCustomDomain = isDomain && Boolean(value && !selectOptions.includes(value as any));
+        const currentSelectVal = isCustomDomain ? 'Other' : value;
+
         return (
           <div className="space-y-1.5">
             <ModernSelect
               id={`input-${field.key}`}
-              value={value}
+              value={currentSelectVal}
               options={selectOptions}
-              onChange={(val) => onChange(field.key, val)}
+              onChange={(val) => {
+                if (isDomain && val === 'Other') {
+                  onChange(field.key, 'Other');
+                } else {
+                  onChange(field.key, val);
+                }
+              }}
               placeholder={`Select ${field.label}...`}
               error={error}
               required={field.required}
               ariaLabel={field.label}
             />
+            {isDomain && (value === 'Other' || isCustomDomain) && (
+              <div className="p-3 rounded-xl bg-[#F8FAFD] border border-[#E2E8F0] space-y-1 animate-in fade-in duration-200">
+                <label className="text-[11px] font-mono text-[#60728A] block font-semibold">
+                  Specify Project Domain / Category:
+                </label>
+                <input
+                  type="text"
+                  value={value === 'Other' ? '' : value}
+                  onChange={(e) => onChange(field.key, e.target.value.trim() ? e.target.value : 'Other')}
+                  placeholder="e.g., Cybersecurity, Blockchain, Edge Computing..."
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-white border border-[#DCE5F2] text-[#10264A] focus:outline-none focus:border-[#3978F6] focus:ring-2 focus:ring-[#3978F6]/20 font-medium"
+                />
+              </div>
+            )}
             {isSemester && allowedSemesters && allowedSemesters.length > 0 && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#E9F2FF] border border-[#CDE1FF] text-[11px] font-mono text-[#3978F6] font-semibold">
                 <Sparkles className="w-3 h-3 shrink-0 text-[#3978F6]" />
@@ -794,8 +819,16 @@ export default function RegistrationForm({
       return { eligible: false, normalFee, discountAmount: 0, finalFee: normalFee, ruleName: '', discountPercentage: 0 };
     }
 
-    const matchesCollege = leaderCollege.toUpperCase() === (discountRule.institution || '').trim().toUpperCase();
-    const matchesBranch = leaderBranch.toUpperCase() === (discountRule.department || '').trim().toUpperCase();
+    const inst = (discountRule.institution || '').trim().toUpperCase();
+    const dept = (discountRule.department || '').trim().toUpperCase();
+    const normCol = leaderCollege.trim().toUpperCase();
+    const normDept = leaderBranch.trim().toUpperCase();
+
+    const matchesCollege = normCol === inst || (inst === 'PCE' && normCol.includes('PRIYADARSHINI'));
+    const matchesBranch =
+      normDept === dept ||
+      (dept === 'ITC' && normDept === 'ETC') ||
+      (dept === 'ETC' && normDept === 'ITC');
     const isApplicableComp =
       (discountRule.applicableCompetitions || []).includes('all') ||
       (discountRule.applicableCompetitions || []).includes(config.competitionSlug);
@@ -1216,7 +1249,12 @@ export default function RegistrationForm({
         },
         body: JSON.stringify({
           competitionSlug: config.competitionSlug,
-          formValues: values,
+          formValues: {
+            ...values,
+            acknowledged: acknowledged ? 'true' : '',
+            confirmation: acknowledged ? 'true' : '',
+          },
+          acknowledged,
           idempotencyKey,
         }),
       });

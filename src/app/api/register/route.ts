@@ -159,6 +159,9 @@ export async function POST(request: NextRequest) {
             allowedSemesters = [];
           }
         }
+        if (canonicalSlug === 'mini-project-competition' || competitionSlug === 'mini-project-competition') {
+          allowedSemesters = ['I', 'V'];
+        }
         configuredFeeRaw = comp.registration_fee || '';
         const feeStr = (comp.registration_fee || '').trim().toLowerCase();
         const hasFee = feeStr !== '' && feeStr !== 'free' && feeStr !== '₹0' && feeStr !== '0';
@@ -194,8 +197,8 @@ export async function POST(request: NextRequest) {
         // Fallback to static COMPETITIONS configuration to prevent accidental free status
         const staticComp = COMPETITIONS.find((c) => c.slug === canonicalSlug || c.slug === competitionSlug);
         if (staticComp) {
-          if (staticComp.slug === 'mini-project-competition') {
-            allowedSemesters = ['III', 'VI'];
+          if (staticComp.slug === 'mini-project-competition' || canonicalSlug === 'mini-project-competition') {
+            allowedSemesters = ['I', 'V'];
           }
           configuredFeeRaw = staticComp.registrationFee || '';
           isPaid = Boolean(staticComp.isPaid || (staticComp.registrationFee && staticComp.registrationFee.toLowerCase() !== 'free'));
@@ -272,10 +275,19 @@ export async function POST(request: NextRequest) {
     // 3b. Authoritative Server-Side Semester Eligibility Validation
     if (allowedSemesters && allowedSemesters.length > 0) {
       const normAllowed = allowedSemesters.map((s) => normalizeSemester(s));
+      const parsedTeamSize = Math.max(1, parseInt(safeFormValues.teamSize || '1', 10));
       const semesterKeys = Object.keys(safeFormValues).filter((k) =>
         k.toLowerCase().includes('semester')
       );
       for (const k of semesterKeys) {
+        // Skip semester validation for hidden members beyond selected team size
+        const memberMatch = k.match(/^member(\d+)semester$/i);
+        if (memberMatch) {
+          const memberIndex = parseInt(memberMatch[1], 10);
+          if (memberIndex > parsedTeamSize) {
+            continue;
+          }
+        }
         const semVal = safeFormValues[k];
         if (semVal && typeof semVal === 'string' && semVal.trim() !== '') {
           const normSem = normalizeSemester(semVal);
@@ -293,6 +305,29 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+    }
+
+    // 3c. Explicit Eligibility & Originality Confirmation Validation
+    const isAcknowledged = Boolean(
+      (body as Record<string, unknown>).acknowledged === true ||
+      safeFormValues.acknowledged === 'true' ||
+      safeFormValues.confirmation === 'true' ||
+      (formConfig.acknowledgmentEntryId && (
+        safeFormValues[`entry.${formConfig.acknowledgmentEntryId}`] ||
+        safeFormValues[formConfig.acknowledgmentEntryId]
+      ))
+    );
+    if (formConfig.acknowledgmentEntryId && !isAcknowledged) {
+      return NextResponse.json(
+        {
+          status: 'failed',
+          error: 'You must confirm the eligibility and originality undertaking before submitting.',
+          errors: {
+            _acknowledgment: 'You must confirm the eligibility and originality undertaking before submitting.',
+          },
+        },
+        { status: 400 }
+      );
     }
 
     if (Object.keys(errors).length > 0) {
@@ -374,9 +409,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Extract team members for multi-member registrations
+    // Extract team members for multi-member registrations (only up to selected teamSize)
     const members: PassMemberInfo[] = [];
-    for (let i = 2; i <= 4; i++) {
+    for (let i = 2; i <= teamSize; i++) {
       const mName = safeFormValues[`member${i}Name`]?.trim();
       if (mName) {
         members.push({
@@ -400,12 +435,23 @@ export async function POST(request: NextRequest) {
 
       try {
         const discountRule = await getDepartmentDiscountRule();
+        const normCol = leaderCollege.trim().toUpperCase();
+        const normDept = leaderBranch.trim().toUpperCase();
+        const ruleInst = (discountRule?.institution || '').trim().toUpperCase();
+        const ruleDept = (discountRule?.department || '').trim().toUpperCase();
+
+        const matchesInst = normCol === ruleInst || (ruleInst === 'PCE' && normCol.includes('PRIYADARSHINI'));
+        const matchesDept =
+          normDept === ruleDept ||
+          (ruleDept === 'ITC' && normDept === 'ETC') ||
+          (ruleDept === 'ETC' && normDept === 'ITC');
+
         if (
           discountRule &&
           discountRule.enabled &&
           normalFee > 0 &&
-          leaderCollege.trim().toUpperCase() === discountRule.institution.trim().toUpperCase() &&
-          leaderBranch.trim().toUpperCase() === discountRule.department.trim().toUpperCase()
+          matchesInst &&
+          matchesDept
         ) {
           const isApplicable =
             discountRule.applicableCompetitions.includes('all') ||
@@ -430,7 +476,20 @@ export async function POST(request: NextRequest) {
     const initialPaymentStatus = isPaid ? 'pending' : 'free';
     const effectivePaymentId = paymentId || null;
     const effectivePaymentProof = paymentProof || null;
-    const formDataPayload = (saveFullResponses || storageMode === 'full') ? JSON.stringify(formValues) : null;
+
+    // Build sanitized form data preserving complete active roster and project details
+    const sanitizedFormValues: Record<string, string> = {};
+    for (const [k, v] of Object.entries(safeFormValues)) {
+      const memberMatch = k.match(/^member(\d+)/i);
+      if (memberMatch) {
+        const mIdx = parseInt(memberMatch[1], 10);
+        if (mIdx > teamSize) {
+          continue; // Strip inactive member fields beyond teamSize
+        }
+      }
+      sanitizedFormValues[k] = v;
+    }
+    const formDataPayload = JSON.stringify(sanitizedFormValues);
 
     const passToken = signPassToken({
       id: registrationId,

@@ -60,6 +60,7 @@ interface Registration {
   discount_rule?: string | null;
   final_fee?: number | null;
   registration_mode?: 'LIVE' | 'TEST' | string;
+  form_data?: string | null;
 }
 
 const SLUG_LABELS: Record<string, string> = {
@@ -71,6 +72,7 @@ const SLUG_LABELS: Record<string, string> = {
   'e-gaming': 'E-Gaming',
   'open-mic': 'Open Mic',
   'mock-placement-drive': 'Mock Placement',
+  'mini-project-competition': 'Mini Project Competition',
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -1599,6 +1601,118 @@ export default function RegistrationsPage() {
               {selectedReg.verification_token && (
                 <DetailRow label="Pass Verification Token" value={selectedReg.verification_token} mono />
               )}
+
+              {/* Project Information (for competitions with project details like Mini Project) */}
+              {(() => {
+                let parsedForm: Record<string, any> | null = null;
+                if (selectedReg.form_data) {
+                  try {
+                    parsedForm = typeof selectedReg.form_data === 'string' ? JSON.parse(selectedReg.form_data) : selectedReg.form_data;
+                  } catch {}
+                }
+                const projectTitle = parsedForm?.projectTitle;
+                const projectDomain = parsedForm?.projectDomain;
+                const projectSynopsis = parsedForm?.projectSynopsis;
+
+                if (!projectTitle && !projectDomain && !projectSynopsis) return null;
+
+                return (
+                  <div className="p-3.5 rounded-xl admin-glass-card space-y-2 border border-blue-500/20 bg-blue-50/20 dark:bg-blue-950/20">
+                    <h4 className="font-semibold text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5" /> Project Information
+                    </h4>
+                    {projectTitle && <DetailRow label="Project Title" value={projectTitle} />}
+                    {projectDomain && <DetailRow label="Domain / Category" value={projectDomain} />}
+                    {projectSynopsis && (
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-slate-600 dark:text-zinc-400 font-medium text-xs">Synopsis / Abstract</span>
+                        <a
+                          href={projectSynopsis}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline font-mono text-xs"
+                        >
+                          View Document <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Full Team Roster (Leader + Active Members 2..4) */}
+              {(() => {
+                let parsedForm: Record<string, any> | null = null;
+                if (selectedReg.form_data) {
+                  try {
+                    parsedForm = typeof selectedReg.form_data === 'string' ? JSON.parse(selectedReg.form_data) : selectedReg.form_data;
+                  } catch {}
+                }
+                const teamSize = selectedReg.team_size || 1;
+                if (teamSize <= 1 && !parsedForm?.member2Name) return null;
+
+                const teamMembers: Array<{ role: string; name: string; college: string; branch: string; semester: string }> = [];
+                teamMembers.push({
+                  role: 'Team Leader',
+                  name: selectedReg.leader_name,
+                  college: selectedReg.leader_college,
+                  branch: selectedReg.leader_branch,
+                  semester: selectedReg.leader_semester,
+                });
+
+                for (let i = 2; i <= Math.min(teamSize, 4); i++) {
+                  const mName = parsedForm?.[`member${i}Name`];
+                  if (mName) {
+                    teamMembers.push({
+                      role: `Member ${i}`,
+                      name: mName,
+                      college: parsedForm?.[`member${i}College`] || selectedReg.leader_college,
+                      branch: parsedForm?.[`member${i}Branch`] || selectedReg.leader_branch,
+                      semester: parsedForm?.[`member${i}Semester`] || selectedReg.leader_semester,
+                    });
+                  }
+                }
+
+                return (
+                  <div className="p-3.5 rounded-xl admin-glass-card space-y-2 border border-slate-200 dark:border-white/10">
+                    <h4 className="font-semibold text-xs text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                      <Building className="w-3.5 h-3.5" /> Full Team Roster ({teamMembers.length} Members)
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-[11px]">
+                        <thead>
+                          <tr className="border-b border-black/5 dark:border-white/10 text-slate-500 font-medium">
+                            <th className="py-1 pr-2">Role</th>
+                            <th className="py-1 px-2">Name</th>
+                            <th className="py-1 px-2">College</th>
+                            <th className="py-1 px-2">Branch</th>
+                            <th className="py-1 pl-2">Sem</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                          {teamMembers.map((m, idx) => (
+                            <tr key={idx} className="hover:bg-black/5 dark:hover:bg-white/5">
+                              <td className="py-1.5 pr-2 font-mono font-semibold text-slate-700 dark:text-zinc-300">{m.role}</td>
+                              <td className="py-1.5 px-2 font-medium text-slate-900 dark:text-white">{m.name}</td>
+                              <td className="py-1.5 px-2 text-slate-600 dark:text-zinc-400">{m.college}</td>
+                              <td className="py-1.5 px-2 text-slate-600 dark:text-zinc-400">{m.branch}</td>
+                              <td className="py-1.5 pl-2 font-mono font-bold text-blue-600 dark:text-blue-400">{m.semester}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Eligibility & Originality Confirmation Undertaking */}
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[11px] flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span>
+                  Eligibility &amp; Originality Undertaking: <strong>Confirmed by Team Leader upon submission</strong>
+                </span>
+              </div>
 
               {selectedReg.payment_proof_url && (
                 <div className="p-3.5 rounded-xl admin-glass-card space-y-2.5">
