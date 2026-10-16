@@ -126,32 +126,56 @@ async function TurboBitsContent() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFD] flex flex-col text-[#10264A]">
-      <Navbar />
-
-      {/* Hero Section with technical background asset and dot pattern */}
-      <section className="relative pt-24 sm:pt-32 lg:pt-36 pb-12 sm:pb-20 border-b border-[#DCE5F2] overflow-hidden bg-gradient-to-b from-[#EDF5FC] via-[#F4F8FD] to-[#F8FAFD]">
-        
-        {/* Supplied Technical Circuit Background Asset */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-20 sm:opacity-25 mix-blend-multiply overflow-hidden">
-          <Image
-            src="/images/turbobits/turbobits-bg.png"
-            alt="TurboBits Circuit Network Background"
-            fill
-            priority
-            className="object-cover object-top"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/85 via-[#F8FAFD]/90 to-[#F8FAFD]" />
-        </div>
-
-        {/* Technical Grid / Dot Pattern */}
+    <div className="relative min-h-screen bg-[#F8FAFD] flex flex-col text-[#10264A] selection:bg-[#3978F6]/20 selection:text-[#10264A]">
+      {/* =========================================================================
+          FULL-PAGE SUBTLE TECHNICAL GRID & DOT PATTERN BACKGROUND
+          Covers the entire page from top navigation/hero down through final sections & footer.
+          Fixed positioning ensures zero scrolling jitter, seamless continuity, and no layout shift.
+          ========================================================================= */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-0 overflow-hidden" 
+        aria-hidden="true"
+      >
+        {/* Subtle technical line grid */}
         <div
-          className="absolute inset-0 z-0 pointer-events-none opacity-40"
+          className="absolute inset-0 opacity-[0.35]"
           style={{
-            backgroundImage: 'radial-gradient(#3978F6 0.75px, transparent 0.75px)',
+            backgroundImage: `
+              linear-gradient(to right, rgba(57, 120, 246, 0.06) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(57, 120, 246, 0.06) 1px, transparent 1px)
+            `,
+            backgroundSize: '36px 36px',
+          }}
+        />
+        {/* Technical dot pattern matching the original TurboBits aesthetic */}
+        <div
+          className="absolute inset-0 opacity-[0.38]"
+          style={{
+            backgroundImage: 'radial-gradient(#3978F6 0.8px, transparent 0.8px)',
             backgroundSize: '24px 24px',
           }}
         />
+        {/* Soft atmospheric gradient wash ensuring perfect contrast and readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/30 via-transparent to-[#F8FAFD]/50" />
+      </div>
+
+      <div className="relative z-10 flex flex-col flex-1">
+        <Navbar />
+
+        {/* Hero Section with technical background asset */}
+        <section className="relative pt-24 sm:pt-32 lg:pt-36 pb-12 sm:pb-20 border-b border-[#DCE5F2] overflow-hidden bg-gradient-to-b from-[#EDF5FC]/80 via-[#F4F8FD]/70 to-[#F8FAFD]/60">
+          
+          {/* Supplied Technical Circuit Background Asset */}
+          <div className="absolute inset-0 z-0 pointer-events-none opacity-20 sm:opacity-25 mix-blend-multiply overflow-hidden">
+            <Image
+              src="/images/turbobits/turbobits-bg.png"
+              alt="TurboBits Circuit Network Background"
+              fill
+              priority
+              className="object-cover object-top"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#EDF5FC]/85 via-[#F8FAFD]/90 to-[#F8FAFD]" />
+          </div>
 
         {/* Ambient atmospheric glows */}
         <div className="absolute -top-32 -right-32 w-96 h-96 bg-[#3978F6]/15 rounded-full blur-3xl pointer-events-none" />
@@ -531,7 +555,8 @@ async function TurboBitsContent() {
         </div>
       </main>
 
-      <Footer festival={festival} />
+        <Footer festival={festival} className="bg-transparent" />
+      </div>
     </div>
   );
 }

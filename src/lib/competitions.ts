@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { db } from '@/lib/db';
 import { COMPETITIONS, Competition, FESTIVAL_INFO, FESTIVAL_ASSETS, getCompetitionBySlug } from '@/data/events';
@@ -195,33 +196,57 @@ export async function fetchPublicCompetitionsRaw(): Promise<DbCompetition[]> {
 
 export async function fetchPublicCompetitionBySlugRaw(slug: string): Promise<DbCompetition | null> {
   try {
-    const rows = await db.query<Record<string, unknown>>(
+    const compPromise = db.query<Record<string, unknown>>(
       `SELECT * FROM competitions
        WHERE (slug = ? OR id = ? OR (slug = 'mock-placement-drive' AND ? = 'mock-placement'))
        LIMIT 1`,
       [slug, slug, slug]
     );
 
+    const coordsPromise = db.query<{
+      id: string;
+      name: string;
+      role: string;
+      email: string | null;
+      phone: string | null;
+      avatar_url: string | null;
+    }>(
+      `SELECT id, name, role, email, phone, avatar_url
+       FROM competition_coordinators
+       WHERE (competition_slug = ? OR (competition_slug = 'mock-placement-drive' AND ? = 'mock-placement'))
+         AND is_active = 1 AND is_public = 1
+       ORDER BY display_order ASC`,
+      [slug, slug]
+    );
+
+    const [rows, coords] = await Promise.all([compPromise, coordsPromise]);
+
     if (rows && rows.length > 0) {
       const comp = mapDbRowToCompetition(rows[0]);
 
-      // Fetch public coordinators
-      const coords = await db.query<{
-        id: string;
-        name: string;
-        role: string;
-        email: string | null;
-        phone: string | null;
-        avatar_url: string | null;
-      }>(
-        `SELECT id, name, role, email, phone, avatar_url
-         FROM competition_coordinators
-         WHERE competition_slug = ? AND is_active = 1 AND is_public = 1
-         ORDER BY display_order ASC`,
-        [comp.slug]
-      );
+      if (coords && coords.length > 0) {
+        comp.coordinators = coords;
+      } else if (comp.slug !== slug) {
+        // Fallback fetch if queried by ID or alternate slug and coordinator query didn't match initial slug
+        const fallbackCoords = await db.query<{
+          id: string;
+          name: string;
+          role: string;
+          email: string | null;
+          phone: string | null;
+          avatar_url: string | null;
+        }>(
+          `SELECT id, name, role, email, phone, avatar_url
+           FROM competition_coordinators
+           WHERE competition_slug = ? AND is_active = 1 AND is_public = 1
+           ORDER BY display_order ASC`,
+          [comp.slug]
+        );
+        comp.coordinators = fallbackCoords;
+      } else {
+        comp.coordinators = [];
+      }
 
-      comp.coordinators = coords;
       return comp;
     }
   } catch (err) {
@@ -451,18 +476,19 @@ const getCachedPublicCompetitions = unstable_cache(
   { revalidate: 60, tags: ['competitions'] }
 );
 
-export async function getPublicCompetitions(): Promise<DbCompetition[]> {
+export const getPublicCompetitions = cache(async (): Promise<DbCompetition[]> => {
   return getCachedPublicCompetitions();
-}
+});
 
-export async function getPublicCompetitionBySlug(slug: string): Promise<DbCompetition | null> {
-  const fetcher = unstable_cache(
-    async () => fetchPublicCompetitionBySlugRaw(slug),
-    ['public-competition-by-slug', slug],
-    { revalidate: 60, tags: ['competitions', `competition-${slug}`] }
-  );
-  return fetcher();
-}
+const getCachedPublicCompetitionBySlug = unstable_cache(
+  async (slug: string) => fetchPublicCompetitionBySlugRaw(slug),
+  ['public-competition-by-slug'],
+  { revalidate: 60, tags: ['competitions'] }
+);
+
+export const getPublicCompetitionBySlug = cache(async (slug: string): Promise<DbCompetition | null> => {
+  return getCachedPublicCompetitionBySlug(slug);
+});
 
 const getCachedFestivalSettings = unstable_cache(
   async () => fetchFestivalSettingsRaw(),
@@ -489,9 +515,9 @@ const getCachedPublicFaqs = unstable_cache(
 );
 
 
-export async function getFestivalSettings(): Promise<FestivalSettings> {
+export const getFestivalSettings = cache(async (): Promise<FestivalSettings> => {
   return getCachedFestivalSettings();
-}
+});
 
 export async function getDepartmentDiscountRule(): Promise<DepartmentDiscountRule | null> {
   try {

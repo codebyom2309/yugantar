@@ -16,7 +16,7 @@ import {
 import {
   getPublicCompetitionBySlug,
   getFestivalSettings,
-  fetchPublicCompetitionsRaw,
+  getPublicCompetitions,
   DbCompetition,
 } from '@/lib/competitions';
 import {
@@ -64,34 +64,17 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-function CompetitionDetailSkeleton() {
-  return (
-    <div className="min-h-screen bg-[#F8FAFD] flex flex-col animate-pulse">
-      <div className="h-16 w-full border-b border-[#DCE5F2] bg-white/70" />
-      <div className="pt-24 sm:pt-32 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
-        <div className="h-4 w-48 bg-[#E2E8F0] rounded mb-6" />
-        <div className="h-6 w-36 bg-[#E2E8F0] rounded-full mb-4" />
-        <div className="h-12 w-3/4 max-w-xl bg-[#E2E8F0] rounded-xl mb-4" />
-        <div className="h-64 bg-white border border-[#DCE5F2] rounded-3xl mb-8" />
-      </div>
-      <div className="h-24 w-full border-t border-[#DCE5F2] bg-white/70" />
-    </div>
-  );
-}
+
 
 import type { Metadata } from 'next';
 import { buildCompetitionEventSchema, buildBreadcrumbSchema } from '@/lib/seo-schema';
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  await connection();
   const { slug } = await params;
   const competition = await getPublicCompetitionBySlug(slug);
 
   if (!competition) {
-    return {
-      title: 'Arena Not Found',
-      robots: { index: false, follow: false },
-    };
+    notFound();
   }
 
   const title = `${competition.name} — Arena 0${competition.districtIndex + 1}`;
@@ -135,7 +118,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function CompetitionDetailPage({ params }: PageProps) {
-  await connection();
   const { slug } = await params;
   const competition = await getPublicCompetitionBySlug(slug);
 
@@ -145,7 +127,7 @@ export default async function CompetitionDetailPage({ params }: PageProps) {
 
   const [festivalSettings, allComps] = await Promise.all([
     getFestivalSettings(),
-    fetchPublicCompetitionsRaw(),
+    getPublicCompetitions(),
   ]);
 
   return (

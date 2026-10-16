@@ -49,7 +49,13 @@ function GitHubIcon({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
-export default function Footer({ festival: initialFestival }: { festival?: FestivalSettings }) {
+export default function Footer({
+  festival: initialFestival,
+  className = '',
+}: {
+  festival?: FestivalSettings;
+  className?: string;
+}) {
   const [festival, setFestival] = useState<FestivalSettings | undefined>(initialFestival);
 
   useEffect(() => {
@@ -125,8 +131,9 @@ export default function Footer({ festival: initialFestival }: { festival?: Festi
         { label: 'Official College Portal', url: collegeUrl },
       ];
 
+  const bgClass = className.includes('bg-') ? '' : 'bg-[#F8FAFD]';
   return (
-    <footer className="bg-[#F8FAFD] text-[#15294A] pt-16 pb-12 border-t border-[#DCE5F2] relative overflow-hidden">
+    <footer className={`${bgClass} text-[#15294A] pt-16 pb-12 border-t border-[#DCE5F2] relative overflow-hidden ${className}`}>
       {/* Subtle atmospheric ambient glow */}
       <div className="absolute top-0 right-10 w-96 h-96 bg-gradient-to-br from-[#FFEFE3] to-[#E2EFFF]/40 rounded-full blur-3xl pointer-events-none opacity-70" />
       <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-[#3978F6]/5 rounded-full blur-3xl pointer-events-none" />
