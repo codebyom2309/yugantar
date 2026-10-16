@@ -12,9 +12,24 @@ export const PRIMARY_PRODUCTION_ORIGIN = 'https://teleera.turbobits.in';
  * Returns the sanitized site origin (e.g. 'https://teleera.turbobits.in').
  */
 export function getSiteUrl(): string {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // Allow local development on localhost/127.0.0.1
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local')) {
+      return window.location.origin;
+    }
+    // On any external browser deployment (preview, Vercel branch, etc.), always enforce official production origin
+    return PRIMARY_PRODUCTION_ORIGIN;
+  }
+
   const envUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
   if (envUrl && envUrl.trim() !== '') {
-    return envUrl.trim().replace(/\/+$/, '');
+    const cleaned = envUrl.trim().replace(/\/+$/, '');
+    // If set to localhost/127.0.0.1 in development, keep local development working
+    if (cleaned.includes('localhost') || cleaned.includes('127.0.0.1')) {
+      return cleaned;
+    }
+    return PRIMARY_PRODUCTION_ORIGIN;
   }
   return PRIMARY_PRODUCTION_ORIGIN;
 }

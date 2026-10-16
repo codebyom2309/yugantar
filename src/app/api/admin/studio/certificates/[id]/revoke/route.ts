@@ -19,7 +19,7 @@ export async function POST(
     const { id } = await context.params;
     const body = await request.json().catch(() => ({}));
     const reason = body.reason || 'Revoked by administrator';
-    const adminEmail = session?.user?.email || 'admin@yugantar2026.pce.ac.in';
+    const adminEmail = session?.user?.email || 'admin@teleera.turbobits.in';
 
     await revokeCertificate(id, reason, adminEmail);
 

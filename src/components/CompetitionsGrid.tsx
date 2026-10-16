@@ -81,13 +81,13 @@ export default function CompetitionsGrid() {
           <motion.div {...fadeIn(0)} className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EDF5FC] border border-[#DCE5F2] text-xs font-mono font-bold text-[#3978F6] uppercase tracking-wider mb-4 shadow-2xs">
               <Layers className="w-3.5 h-3.5" />
-              <span>THE EIGHT ARENAS · NEXUS CITY</span>
+              <span>THE ARENAS · NEXUS CITY</span>
             </div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-[#10264A] tracking-tight mb-4">
-              Eight Competitions. Eight Districts.
+              Flagship Competitions. Dedicated Arenas.
             </h2>
             <p className="text-sm sm:text-base text-[#536781] leading-relaxed">
-              Explore the eight confirmed competition tracks organized by the Department of Electronics & Telecommunication Engineering. Each event is anchored in a dedicated discovery district with its own dedicated detail page.
+              Explore the confirmed competition tracks organized by the Department of Electronics & Telecommunication Engineering. Each event is anchored in a dedicated discovery district with its own dedicated detail page.
             </p>
           </motion.div>
 
@@ -148,7 +148,7 @@ export default function CompetitionsGrid() {
                     </div>
 
                     <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-[#F8FAFD] text-[#10264A] border border-[#DCE5F2]">
-                      ARENA 0{comp.districtIndex + 1}
+                      ARENA {((comp.districtIndex !== undefined && comp.districtIndex < 90 ? comp.districtIndex + 1 : idx + 1)).toString().padStart(2, '0')}
                     </span>
                   </div>
 

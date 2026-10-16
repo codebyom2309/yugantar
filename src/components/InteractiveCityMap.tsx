@@ -15,7 +15,7 @@ const ETC_CENTRAL_SPIRE = {
   districtIndex: -1,
   category: 'Host Department & Directorate',
   shortDescription:
-    'Department of Electronics and Telecommunication Engineering, Priyadarshini College of Engineering, Nagpur. The central architectural spire and administrative nexus connecting all 8 technological arenas of YUGANTAR 2026.',
+    'Department of Electronics and Telecommunication Engineering, Priyadarshini College of Engineering, Nagpur. The central architectural spire and administrative nexus connecting all 9 technological arenas of YUGANTAR 2026.',
   highlights: [
     'Department of Electronics & Telecommunication Engineering',
     'Tele-Era Department Student Forum',
@@ -107,13 +107,13 @@ export default function InteractiveCityMap() {
             {...fadeIn(0.08)}
             className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-[#10264A] tracking-tight mb-4"
           >
-            Navigate the Eight Districts.
+            Navigate the Nine Districts.
           </motion.h2>
           <motion.p
             {...fadeIn(0.14)}
             className="text-sm sm:text-base text-[#536781] leading-relaxed font-normal"
           >
-            The Department of ETC commands the central spire, interconnected with 8 floating districts representing each competition arena. Select any location pin to inspect its assigned domain.
+            The Department of ETC commands the central spire, interconnected with 9 floating districts representing each competition arena. Select any location pin to inspect its assigned domain.
           </motion.p>
         </div>
 
@@ -127,7 +127,7 @@ export default function InteractiveCityMap() {
             <div className="relative w-full aspect-[1536/1024] rounded-2xl overflow-hidden bg-gradient-to-b from-[#EDF5FC] via-[#F4F9FD] to-[#EDF5FC] border border-[#DCE5F2]">
               <Image
                 src={mapArtwork}
-                alt="Eight Festival Competition Arenas and Central ETC Spire Map"
+                alt="Nine Festival Competition Arenas and Central ETC Spire Map"
                 fill
                 priority
                 className="object-contain"
@@ -152,8 +152,8 @@ export default function InteractiveCityMap() {
                 </div>
               </button>
 
-              {/* 2. THE 8 PERIMETER PINS: 8 Competition Programs */}
-              {competitions.slice(0, 8).map((comp) => {
+              {/* 2. THE PERIMETER PINS: All Competition Programs */}
+              {competitions.slice(0, 9).map((comp) => {
                 const isActive = comp.id === activeNodeId && !isCenterSelected;
                 return (
                   <button
@@ -224,7 +224,7 @@ export default function InteractiveCityMap() {
                     href="/competitions"
                     className="w-full nexus-btn-sapphire justify-center py-2.5 text-xs font-bold gap-2"
                   >
-                    <span>Explore 8 Competitions</span>
+                    <span>Explore All Competitions</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#FF783E]" />
                   </Link>
                 </>

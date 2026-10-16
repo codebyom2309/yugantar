@@ -14,7 +14,7 @@ async function run() {
     ssl: { rejectUnauthorized: true },
   });
   const [rows] = await conn.query(
-    'SELECT slug, name, is_paid, registration_fee, qr_mode, upi_id, payee_name, require_utr, require_screenshot, registration_open FROM competitions ORDER BY slug'
+    'SELECT slug, name, is_published, is_paid, registration_fee, qr_mode, require_utr, require_screenshot, registration_open FROM competitions ORDER BY slug'
   );
   console.table(rows);
   await conn.end();

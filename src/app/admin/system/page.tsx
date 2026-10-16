@@ -142,7 +142,7 @@ export default function SystemStatusPage() {
           category: 'core',
           status: 'ok',
           message: 'Synchronized with TiDB',
-          detail: `Active published tracks: ${d.competitions?.length ?? 8} • Date: ${d.festival?.event_date ?? '19 October 2026'}`,
+          detail: `Active published tracks: ${d.competitions?.length ?? 9} • Date: ${d.festival?.event_date ?? '21 October 2026'}`,
           icon: Globe,
         });
       } else {

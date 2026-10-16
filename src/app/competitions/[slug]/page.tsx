@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import DetailHeroBannerImage from '@/components/competitions/DetailHeroBannerImage';
@@ -15,6 +16,7 @@ import {
 import {
   getPublicCompetitionBySlug,
   getFestivalSettings,
+  fetchPublicCompetitionsRaw,
   DbCompetition,
 } from '@/lib/competitions';
 import {
@@ -56,10 +58,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Mic2,
 };
 
-export async function generateStaticParams() {
-  const slugs = getAllCompetitionSlugs();
-  return [...slugs.map((slug) => ({ slug })), { slug: 'mock-placement' }];
-}
+export const instant = false;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -68,14 +67,14 @@ interface PageProps {
 function CompetitionDetailSkeleton() {
   return (
     <div className="min-h-screen bg-[#F8FAFD] flex flex-col animate-pulse">
-      <Navbar />
+      <div className="h-16 w-full border-b border-[#DCE5F2] bg-white/70" />
       <div className="pt-24 sm:pt-32 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
         <div className="h-4 w-48 bg-[#E2E8F0] rounded mb-6" />
         <div className="h-6 w-36 bg-[#E2E8F0] rounded-full mb-4" />
         <div className="h-12 w-3/4 max-w-xl bg-[#E2E8F0] rounded-xl mb-4" />
         <div className="h-64 bg-white border border-[#DCE5F2] rounded-3xl mb-8" />
       </div>
-      <Footer />
+      <div className="h-24 w-full border-t border-[#DCE5F2] bg-white/70" />
     </div>
   );
 }
@@ -84,6 +83,7 @@ import type { Metadata } from 'next';
 import { buildCompetitionEventSchema, buildBreadcrumbSchema } from '@/lib/seo-schema';
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection();
   const { slug } = await params;
   const competition = await getPublicCompetitionBySlug(slug);
 
@@ -135,6 +135,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function CompetitionDetailPage({ params }: PageProps) {
+  await connection();
   const { slug } = await params;
   const competition = await getPublicCompetitionBySlug(slug);
 
@@ -142,12 +143,16 @@ export default async function CompetitionDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const festivalSettings = await getFestivalSettings();
+  const [festivalSettings, allComps] = await Promise.all([
+    getFestivalSettings(),
+    fetchPublicCompetitionsRaw(),
+  ]);
 
   return (
     <CompetitionDetailContent
       competition={competition}
       festivalSettings={festivalSettings}
+      allComps={allComps}
     />
   );
 }
@@ -155,9 +160,11 @@ export default async function CompetitionDetailPage({ params }: PageProps) {
 function CompetitionDetailContent({
   competition,
   festivalSettings,
+  allComps = [],
 }: {
   competition: DbCompetition;
   festivalSettings: any;
+  allComps?: DbCompetition[];
 }) {
 
   const eventSchema = buildCompetitionEventSchema(competition);
@@ -171,15 +178,14 @@ function CompetitionDetailContent({
 
   // Authoritative date and registration gating
   const isRegistrationOpen = Boolean(competition.registrationOpen !== false && festivalSettings.registrationGlobalOpen !== false);
-  const eventDateDisplay = competition.eventDate || festivalSettings.date || '19 October 2026';
+  const eventDateDisplay = competition.eventDate || festivalSettings.date || '21 October 2026';
   const compGlow = getCompetitionGlow(competition.accentColor, (competition as any).themeVibe);
 
-  // Inter-competition navigation
-  const currentIndex = COMPETITIONS.findIndex((c) => c.slug === competition.slug);
-  const prevCompetition =
-    COMPETITIONS[(currentIndex - 1 + COMPETITIONS.length) % COMPETITIONS.length];
-  const nextCompetition =
-    COMPETITIONS[(currentIndex + 1) % COMPETITIONS.length];
+  // Dynamic inter-competition navigation
+  const currentIndex = allComps.findIndex((c) => c.slug === competition.slug);
+  const validIndex = currentIndex >= 0 ? currentIndex : 0;
+  const prevCompetition = allComps[(validIndex - 1 + allComps.length) % allComps.length] || competition;
+  const nextCompetition = allComps[(validIndex + 1) % allComps.length] || competition;
 
   const vis = competition.sectionVisibility || {
     hero: true,
@@ -456,7 +462,7 @@ function CompetitionDetailContent({
                 {competition.approvedDomains && competition.approvedDomains.length > 0 && (
                   <div className="p-4 rounded-2xl bg-[#FFF8F2] border border-[#FFE0CE] space-y-2">
                     <span className="text-xs font-mono font-bold uppercase text-[#E07A43] tracking-wider block">
-                      Approved Technical Domains (Strict Adherence Required)
+                      Technical Domains / Engineering Focus Areas
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {competition.approvedDomains.map((domain) => (
@@ -788,7 +794,7 @@ function CompetitionDetailContent({
               )}
 
               {/* Coordinators Section */}
-              {vis.coordinators !== false && competition.coordinators && competition.coordinators.length > 0 && (
+              {vis.coordinators !== false && (
                 <div
                   suppressHydrationWarning
                   className={`yugantar-card-interactive ${compGlow} rounded-3xl bg-white border border-[#DCE5F2] p-5 shadow-xs space-y-3 transition-all`}
@@ -802,70 +808,81 @@ function CompetitionDetailContent({
                       <Users className="w-3.5 h-3.5 text-[#8578D8]" />
                       <span>Track Coordinators</span>
                     </span>
-                    <span className="text-[10px] font-mono text-[#8CA0BA]">
-                      {competition.coordinators.length} Assigned
-                    </span>
+                    {competition.coordinators && competition.coordinators.length > 0 && (
+                      <span className="text-[10px] font-mono text-[#8CA0BA]">
+                        {competition.coordinators.length} Assigned
+                      </span>
+                    )}
                   </h3>
-                  <div className="space-y-3">
-                    {competition.coordinators.map((c) => (
-                      <div
-                        key={c.id}
-                        className="p-3 rounded-2xl bg-[#F8FAFD] border border-[#E2E8F0] space-y-2 text-xs"
-                      >
-                        <div className="flex items-center gap-3">
-                          {/* Coordinator Avatar Photo or Initials */}
-                          <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-[#DCE5F2] bg-[#EDF5FC] flex items-center justify-center shrink-0">
-                            {c.avatar_url ? (
-                              <Image
-                                src={c.avatar_url}
-                                alt={c.name}
-                                fill
-                                className="object-cover"
-                                unoptimized={c.avatar_url.startsWith('/api/') || c.avatar_url.includes('google')}
-                              />
-                            ) : (
-                              <span className="text-xs font-bold font-display text-[#4B91E8]">
-                                {c.name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .slice(0, 2)
-                                  .join('')
-                                  .toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-bold text-[#172B49] truncate">{c.name}</div>
-                            <div className="text-[11px] text-[#60728A] truncate font-medium">{c.role}</div>
-                          </div>
-                        </div>
 
-                        {/* Contact Action Pills */}
-                        {(c.phone || c.email) && (
-                          <div className="pt-2 border-t border-[#E2E8F0]/70 flex flex-wrap gap-2 text-[10px] font-mono">
-                            {c.phone && (
-                              <a
-                                href={`tel:${c.phone.replace(/[^0-9+]/g, '')}`}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white border border-[#DCE5F2] text-[#172B49] hover:text-[#4B91E8] transition-colors"
-                              >
-                                <Phone className="w-2.5 h-2.5 text-[#4B91E8]" />
-                                <span>{c.phone}</span>
-                              </a>
-                            )}
-                            {c.email && (
-                              <a
-                                href={`mailto:${c.email}`}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white border border-[#DCE5F2] text-[#60728A] hover:text-[#172B49] transition-colors truncate max-w-full"
-                              >
-                                <Mail className="w-2.5 h-2.5 text-[#8578D8]" />
-                                <span className="truncate">{c.email}</span>
-                              </a>
-                            )}
+                  {competition.coordinators && competition.coordinators.length > 0 ? (
+                    <div className="space-y-3">
+                      {competition.coordinators.map((c) => (
+                        <div
+                          key={c.id}
+                          className="p-3 rounded-2xl bg-[#F8FAFD] border border-[#E2E8F0] space-y-2 text-xs"
+                        >
+                          <div className="flex items-center gap-3">
+                            {/* Coordinator Avatar Photo or Initials */}
+                            <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-[#DCE5F2] bg-[#EDF5FC] flex items-center justify-center shrink-0">
+                              {c.avatar_url ? (
+                                <Image
+                                  src={c.avatar_url}
+                                  alt={c.name}
+                                  fill
+                                  className="object-cover"
+                                  unoptimized={c.avatar_url.startsWith('/api/') || c.avatar_url.includes('google')}
+                                />
+                              ) : (
+                                <span className="text-xs font-bold font-display text-[#4B91E8]">
+                                  {c.name
+                                    .split(' ')
+                                    .map((n) => n[0])
+                                    .slice(0, 2)
+                                    .join('')
+                                    .toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-bold text-[#172B49] truncate">{c.name}</div>
+                              <div className="text-[11px] text-[#60728A] truncate font-medium">{c.role}</div>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+
+                          {/* Contact Action Pills */}
+                          {(c.phone || c.email) && (
+                            <div className="pt-2 border-t border-[#E2E8F0]/70 flex flex-wrap gap-2 text-[10px] font-mono">
+                              {c.phone && (
+                                <a
+                                  href={`tel:${c.phone.replace(/[^0-9+]/g, '')}`}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white border border-[#DCE5F2] text-[#172B49] hover:text-[#4B91E8] transition-colors"
+                                >
+                                  <Phone className="w-2.5 h-2.5 text-[#4B91E8]" />
+                                  <span>{c.phone}</span>
+                                </a>
+                              )}
+                              {c.email && (
+                                <a
+                                  href={`mailto:${c.email}`}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white border border-[#DCE5F2] text-[#60728A] hover:text-[#172B49] transition-colors truncate max-w-full"
+                                >
+                                  <Mail className="w-2.5 h-2.5 text-[#8578D8]" />
+                                  <span className="truncate">{c.email}</span>
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-3.5 rounded-2xl bg-[#F8FAFD] border border-dashed border-[#DCE5F2] text-center space-y-1">
+                      <GraduationCap className="w-4 h-4 text-[#8CA0BA] mx-auto" />
+                      <p className="text-xs font-semibold text-[#172B49]">Faculty Advisory Assigned</p>
+                      <p className="text-[11px] text-[#60728A]">Direct faculty coordinator contacts will be published prior to technical reporting.</p>
+                    </div>
+                  )}
                 </div>
               )}
 

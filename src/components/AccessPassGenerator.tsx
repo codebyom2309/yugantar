@@ -96,7 +96,7 @@ export default function AccessPassGenerator({ eventDate }: { eventDate?: string 
     // 6. Footer Info Row
     ctx.fillStyle = '#5F6F89';
     ctx.font = 'bold 15px "Space Grotesk", monospace';
-    ctx.fillText(`DATE: ${(eventDate || '19 October 2026').toUpperCase()}`, 60, 490);
+    ctx.fillText(`DATE: ${(eventDate || '21 October 2026').toUpperCase()}`, 60, 490);
     ctx.fillText('VENUE: PCE CAMPUS, NAGPUR', 380, 490);
     ctx.fillText('DEPT: ELECTRONICS & TELECOM', 730, 490);
 

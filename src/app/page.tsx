@@ -8,6 +8,7 @@ import FestivalJourney from '@/components/FestivalJourney';
 import OrganizersSection from '@/components/OrganizersSection';
 import FaqSection from '@/components/FaqSection';
 import ClosingCta from '@/components/ClosingCta';
+import TurboBitsHomeBanner from '@/components/TurboBitsHomeBanner';
 import Footer from '@/components/Footer';
 import { getFestivalSettings } from '@/lib/competitions';
 
@@ -53,7 +54,7 @@ async function HomeContent() {
       {/* Section A: Festival & Theme Introduction */}
       <CityIntroduction festival={festival} />
 
-      {/* Section B: Preview of the Eight Competitions (direct links to detail pages) */}
+      {/* Section B: Preview of the Nine Competitions (direct links to detail pages) */}
       <CompetitionsGrid />
 
       {/* Section C: Preview of the Interactive City / District Map (direct link to /districts) */}
@@ -67,6 +68,9 @@ async function HomeContent() {
 
       {/* Section F: Frequently Asked Questions (direct link to /faq) */}
       <FaqSection />
+
+      {/* TurboBits Student Tech Team Discovery Section */}
+      <TurboBitsHomeBanner />
 
       {/* Closing Call to Action */}
       <ClosingCta festival={festival} />

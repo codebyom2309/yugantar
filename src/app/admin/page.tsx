@@ -235,7 +235,7 @@ export default function AdminDashboardPage() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
-                Festival Scheduled: {data?.festivalDate || '19 October 2026'}
+                Festival Scheduled: {data?.festivalDate || '21 October 2026'}
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 ACTIVE EDITION

@@ -4,6 +4,28 @@ import { getRegistrationFormBySlug } from '@/data/registrationForms';
 import { COMPETITIONS } from '@/data/events';
 import { randomUUID } from 'crypto';
 import { signPassToken, PassMemberInfo } from '@/lib/passToken';
+import { getDepartmentDiscountRule } from '@/lib/competitions';
+import { extractNumericFee } from '@/lib/upiPayment';
+
+// ---------------------------------------------------------------------------
+// Helpers & Semester Normalization
+// ---------------------------------------------------------------------------
+
+function normalizeSemester(sem: string): string {
+  if (!sem) return '';
+  const clean = String(sem).trim().toUpperCase().replace(/^(SEMESTER|SEM)\s*/i, '');
+  const map: Record<string, string> = {
+    '1': 'I', '1ST': 'I', 'I': 'I',
+    '2': 'II', '2ND': 'II', 'II': 'II',
+    '3': 'III', '3RD': 'III', 'III': 'III',
+    '4': 'IV', '4TH': 'IV', 'IV': 'IV',
+    '5': 'V', '5TH': 'V', 'V': 'V',
+    '6': 'VI', '6TH': 'VI', 'VI': 'VI',
+    '7': 'VII', '7TH': 'VII', 'VII': 'VII',
+    '8': 'VIII', '8TH': 'VIII', 'VIII': 'VIII',
+  };
+  return map[clean] || clean;
+}
 
 // ---------------------------------------------------------------------------
 // POST /api/register — Submit registration for a competition
@@ -58,6 +80,7 @@ export async function POST(request: NextRequest) {
 
     // 2b. Authoritative server-side registration gating (Global & Track)
     let isPaid = false;
+    let configuredFeeRaw = '';
     let requireUtr = false;
     let requireScreenshot = false;
     let compWhatsApp: string | null = null;
@@ -67,15 +90,22 @@ export async function POST(request: NextRequest) {
     let saveFullResponses = false;
     let sendToSpreadsheet = true;
     let globalWhatsApp: string | null = null;
+    let allowedSemesters: string[] = [];
+
+    let registrationMode: 'TEST' | 'LIVE' = 'TEST';
 
     try {
       const siteSettings = await db.query<{ setting_key: string; setting_value: string }>(
-        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('registration_global_open', 'registration_status_message', 'registration_storage_mode', 'save_minimal_metadata', 'save_full_responses', 'send_to_spreadsheet', 'global_whatsapp_link')"
+        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('registration_global_open', 'registration_status_message', 'registration_storage_mode', 'save_minimal_metadata', 'save_full_responses', 'send_to_spreadsheet', 'global_whatsapp_link', 'registration_environment_mode')"
       );
       const settingsMap: Record<string, string> = {};
       siteSettings.forEach((r) => {
         settingsMap[r.setting_key] = r.setting_value;
       });
+
+      if (settingsMap.registration_environment_mode === 'LIVE') {
+        registrationMode = 'LIVE';
+      }
 
       if (settingsMap.registration_storage_mode) {
         storageMode = settingsMap.registration_storage_mode;
@@ -114,12 +144,22 @@ export async function POST(request: NextRequest) {
         require_screenshot: number;
         whatsapp_link: string | null;
         confirmation_instructions: string | null;
+        allowed_semesters: unknown;
       }>(
-        'SELECT registration_open, registration_deadline, is_paid, registration_fee, require_utr, require_screenshot, whatsapp_link, confirmation_instructions FROM competitions WHERE slug = ? OR slug = ? LIMIT 1',
+        'SELECT registration_open, registration_deadline, is_paid, registration_fee, require_utr, require_screenshot, whatsapp_link, confirmation_instructions, allowed_semesters FROM competitions WHERE slug = ? OR slug = ? LIMIT 1',
         [canonicalSlug, competitionSlug]
       );
       if (compRows.length > 0) {
         const comp = compRows[0];
+        if (comp.allowed_semesters) {
+          try {
+            const raw = comp.allowed_semesters;
+            allowedSemesters = Array.isArray(raw) ? raw : JSON.parse(raw as string);
+          } catch {
+            allowedSemesters = [];
+          }
+        }
+        configuredFeeRaw = comp.registration_fee || '';
         const feeStr = (comp.registration_fee || '').trim().toLowerCase();
         const hasFee = feeStr !== '' && feeStr !== 'free' && feeStr !== '₹0' && feeStr !== '0';
         // A paid competition must NOT silently become free if its payment configuration is missing
@@ -154,6 +194,10 @@ export async function POST(request: NextRequest) {
         // Fallback to static COMPETITIONS configuration to prevent accidental free status
         const staticComp = COMPETITIONS.find((c) => c.slug === canonicalSlug || c.slug === competitionSlug);
         if (staticComp) {
+          if (staticComp.slug === 'mini-project-competition') {
+            allowedSemesters = ['III', 'VI'];
+          }
+          configuredFeeRaw = staticComp.registrationFee || '';
           isPaid = Boolean(staticComp.isPaid || (staticComp.registrationFee && staticComp.registrationFee.toLowerCase() !== 'free'));
           requireUtr = isPaid ? (staticComp.requireUtr !== false) : false;
           requireScreenshot = isPaid ? (staticComp.requireScreenshot !== false) : false;
@@ -213,9 +257,40 @@ export async function POST(request: NextRequest) {
 
       if (value && field.type === 'url') {
         try {
-          new URL(value);
+          if (value.startsWith('/')) {
+            // Internal relative media proxy URL (e.g. Filebase S3 vault /api/media/filebase?key=...)
+            new URL(value, 'https://yugantar.pce.edu.in');
+          } else {
+            new URL(value);
+          }
         } catch {
           errors[field.key] = 'Please enter a valid URL (starting with http:// or https://).';
+        }
+      }
+    }
+
+    // 3b. Authoritative Server-Side Semester Eligibility Validation
+    if (allowedSemesters && allowedSemesters.length > 0) {
+      const normAllowed = allowedSemesters.map((s) => normalizeSemester(s));
+      const semesterKeys = Object.keys(safeFormValues).filter((k) =>
+        k.toLowerCase().includes('semester')
+      );
+      for (const k of semesterKeys) {
+        const semVal = safeFormValues[k];
+        if (semVal && typeof semVal === 'string' && semVal.trim() !== '') {
+          const normSem = normalizeSemester(semVal);
+          if (!normAllowed.includes(normSem)) {
+            return NextResponse.json(
+              {
+                status: 'failed',
+                error: `Semester "${semVal}" is not eligible for ${formConfig.competitionName}. Permitted semesters: ${allowedSemesters.join(', ')}.`,
+                errors: {
+                  [k]: `Semester not permitted. Eligible semesters: ${allowedSemesters.join(', ')}`,
+                },
+              },
+              { status: 400 }
+            );
+          }
         }
       }
     }
@@ -313,6 +388,42 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Pricing & Department Concession Calculation (authoritative server-side evaluation)
+    let normalFee = 0;
+    let discountAmount = 0;
+    let discountRuleName: string | null = null;
+    let finalFee = 0;
+
+    if (isPaid) {
+      normalFee = parseFloat(extractNumericFee(configuredFeeRaw) || '0') || 0;
+      finalFee = normalFee;
+
+      try {
+        const discountRule = await getDepartmentDiscountRule();
+        if (
+          discountRule &&
+          discountRule.enabled &&
+          normalFee > 0 &&
+          leaderCollege.trim().toUpperCase() === discountRule.institution.trim().toUpperCase() &&
+          leaderBranch.trim().toUpperCase() === discountRule.department.trim().toUpperCase()
+        ) {
+          const isApplicable =
+            discountRule.applicableCompetitions.includes('all') ||
+            discountRule.applicableCompetitions.includes(canonicalSlug) ||
+            discountRule.applicableCompetitions.includes(competitionSlug);
+
+          if (isApplicable) {
+            const pct = discountRule.discountPercentage || 50;
+            discountAmount = Math.round((normalFee * pct) / 100);
+            finalFee = Math.max(0, normalFee - discountAmount);
+            discountRuleName = `${discountRule.institution} ${discountRule.department} ${pct}% Concession`;
+          }
+        }
+      } catch (discErr) {
+        console.error('Error applying department discount rule on server:', discErr);
+      }
+    }
+
     // 4. Generate persistent registration ID, secure verification token, and stateless pass token
     const registrationId = randomUUID();
     const verificationToken = 'yug_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -341,8 +452,10 @@ export async function POST(request: NextRequest) {
           team_name, team_size, form_data,
           payment_id, payment_proof_url,
           google_form_id, submission_status, verification_token,
-          payment_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          payment_status,
+          normal_fee, discount_amount, discount_rule, final_fee,
+          registration_mode
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           registrationId,
           formConfig.competitionSlug,
@@ -362,6 +475,11 @@ export async function POST(request: NextRequest) {
           isPaid ? 'pending' : 'confirmed',
           verificationToken,
           initialPaymentStatus,
+          normalFee,
+          discountAmount,
+          discountRuleName,
+          finalFee,
+          registrationMode,
         ],
       );
       dbSaveSuccess = true;
@@ -384,9 +502,15 @@ export async function POST(request: NextRequest) {
     let googleSubmitError: string | null = null;
     let confirmationEvidence: string | null = null;
 
-    if (!sendToSpreadsheet) {
+    const isPlaceholderForm =
+      formConfig.googleFormId.includes('mini-project') ||
+      formConfig.formResponseUrl.includes('mini-project');
+
+    if (!sendToSpreadsheet || isPlaceholderForm) {
       googleSubmitSuccess = true;
-      confirmationEvidence = 'Spreadsheet workflow bypassed by administrator setting (direct festival registration)';
+      confirmationEvidence = isPlaceholderForm
+        ? 'Direct authoritative festival database registration (independent track)'
+        : 'Spreadsheet workflow bypassed by administrator setting (direct festival registration)';
     } else {
       try {
         const googleFormData = new URLSearchParams();
@@ -456,11 +580,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Update status in database
-    const finalStatus = googleSubmitSuccess
+    // Primary authoritative persistence is TiDB Cloud.
+    // If database persistence succeeded, registration is active ('submitted' or 'confirmed').
+    // Google Forms sync issues are recorded in submission_error without invalidating the delegate registration.
+    const finalStatus = dbSaveSuccess
       ? (isPaid ? 'submitted' : 'confirmed')
-      : googleSubmitError && !googleSubmitError.includes('Network')
-      ? 'failed'
-      : 'unknown';
+      : googleSubmitSuccess
+      ? (isPaid ? 'submitted' : 'confirmed')
+      : 'failed';
 
     if (dbSaveSuccess) {
       try {
@@ -470,8 +597,8 @@ export async function POST(request: NextRequest) {
            WHERE id = ?`,
           [
             finalStatus,
-            googleSubmitError,
-            googleSubmitSuccess ? new Date() : null,
+            googleSubmitSuccess ? null : (googleSubmitError || 'Google Forms sync pending'),
+            new Date(),
             registrationId,
           ],
         );
@@ -487,22 +614,23 @@ export async function POST(request: NextRequest) {
       {
         status: finalStatus,
         registrationId,
+        registrationMode,
         passToken,
         verificationToken,
         paymentStatus: initialPaymentStatus,
+        normalFee,
+        discountAmount,
+        discountRule: discountRuleName,
+        finalFee,
         whatsappLink,
         confirmationInstructions,
         dbSaved: dbSaveSuccess,
         googleFormsVerified: googleSubmitSuccess,
-        message: googleSubmitSuccess
-          ? (isPaid
-              ? 'Registration submitted! Please save your registration pass and await payment verification.'
-              : 'Registration confirmed! Your spot is secured. Download your official delegate pass below.')
-          : finalStatus === 'failed'
-          ? 'Registration was saved in the database, but the official Google Form rejected the submission.'
-          : 'Registration was saved in the database. Google Forms confirmation timed out.',
+        message: isPaid
+          ? 'Registration submitted! Please save your registration pass and await payment verification.'
+          : 'Registration confirmed! Your spot is secured. Download your official delegate pass below.',
         evidence: confirmationEvidence || undefined,
-        error: googleSubmitError || undefined,
+        error: googleSubmitSuccess ? undefined : (googleSubmitError || undefined),
       },
       {
         headers: {

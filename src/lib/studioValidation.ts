@@ -490,7 +490,7 @@ export const REUSABLE_DESIGN_BLOCKS: ReusableDesignBlock[] = [
         id: 'block_el_foot_text',
         type: 'text',
         name: 'Footer Credits',
-        content: 'Priyadarshini College of Engineering, Digdoh Hills, Hingna Road, Nagpur - 440019 • yugantar2026.pce.ac.in',
+        content: 'Priyadarshini College of Engineering, Digdoh Hills, Hingna Road, Nagpur - 440019 • teleera.turbobits.in',
         fontFamily: 'Helvetica',
         fontSize: 9,
         fontWeight: 'normal',

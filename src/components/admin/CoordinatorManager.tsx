@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   Users,
@@ -20,6 +20,7 @@ import {
   Shield,
   Sparkles,
   AlertCircle,
+  GraduationCap,
 } from 'lucide-react';
 import { formatDriveUrl, isDriveUrl } from '@/lib/drive';
 
@@ -63,6 +64,23 @@ export default function CoordinatorManager({
   const [driveInput, setDriveInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [facultyProfiles, setFacultyProfiles] = useState<Array<{ id: string; name: string; role: string; avatar_url?: string; department?: string; email?: string; phone?: string }>>([]);
+  const [loadingFaculty, setLoadingFaculty] = useState(false);
+
+  useEffect(() => {
+    if (showModal && facultyProfiles.length === 0) {
+      setLoadingFaculty(true);
+      fetch('/api/admin/organizers/members?category=faculty')
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data.members)) {
+            setFacultyProfiles(data.members);
+          }
+        })
+        .catch((err) => console.error('Failed to load faculty profiles:', err))
+        .finally(() => setLoadingFaculty(false));
+    }
+  }, [showModal, facultyProfiles.length]);
 
   const openAddModal = () => {
     setEditingCoord(null);
@@ -469,6 +487,44 @@ export default function CoordinatorManager({
                   </div>
                 </div>
               </div>
+
+              {/* Quick Select from Existing Faculty Profiles */}
+              {facultyProfiles.length > 0 && (
+                <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                      <GraduationCap className="w-3.5 h-3.5" />
+                      <span>Select From Existing Faculty Profiles</span>
+                    </label>
+                    {loadingFaculty && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                  </div>
+                  <select
+                    onChange={(e) => {
+                      const fac = facultyProfiles.find((f) => f.id === e.target.value);
+                      if (fac) {
+                        setFormData((p) => ({
+                          ...p,
+                          name: fac.name,
+                          role: 'Faculty Coordinator',
+                          avatarUrl: fac.avatar_url || p.avatarUrl,
+                        }));
+                      }
+                    }}
+                    defaultValue=""
+                    className="admin-glass-input w-full p-2 rounded-lg text-xs"
+                  >
+                    <option value="" disabled>-- Choose a faculty advisor / HOD --</option>
+                    {facultyProfiles.map((fac) => (
+                      <option key={fac.id} value={fac.id}>
+                        {fac.name} ({fac.department || fac.role || 'Faculty'})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-500 dark:text-zinc-400">
+                    Autofills name, role, and avatar from existing faculty records without creating redundant profiles.
+                  </p>
+                </div>
+              )}
 
               {/* Name */}
               <div>

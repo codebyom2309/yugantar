@@ -18,12 +18,12 @@ export const COLLEGE_OPTIONS = [
 ] as const;
 
 export const BRANCH_OPTIONS = [
-  'CSE', 'CT', 'IT', 'AI & DS', 'ETC', 'ECE',
+  'CSE', 'CT', 'IT', 'ITC', 'AI & DS', 'ETC', 'ECE',
   'ME / MECH', 'CE / CIVIL', 'EE', 'CHEM', 'AERO',
   'BIOTECH', 'IoT', 'ROBO & AI', 'Other',
 ] as const;
 
-export const SEMESTER_OPTIONS = ['I', 'III', 'V', 'VII'] as const;
+export const SEMESTER_OPTIONS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'] as const;
 
 export const TEAM_SIZE_OPTIONS_4 = ['1', '2', '3', '4'] as const;
 export const TEAM_SIZE_OPTIONS_2 = ['1', '2'] as const;
@@ -397,6 +397,54 @@ const mockPlacement: RegistrationFormConfig = {
 };
 
 // ---------------------------------------------------------------------------
+// 9. MINI PROJECT COMPETITION
+// ---------------------------------------------------------------------------
+
+const miniProjectCompetition: RegistrationFormConfig = {
+  competitionSlug: 'mini-project-competition',
+  competitionName: 'Mini Project Competition',
+  googleFormId: 'mini-project-form',
+  googleFormUrl: 'https://docs.google.com/forms/d/e/mini-project/viewform',
+  formResponseUrl: 'https://docs.google.com/forms/d/e/mini-project/formResponse',
+  acknowledgmentEntryId: 'ack_mini_project',
+  acknowledgmentLabel: 'I acknowledge the competition guidelines, confirm our model is operational, and agree to abide by official evaluation standards.',
+  fields: [
+    // --- Leader Info ---
+    { key: 'leaderName', entryId: 'mp_leader_name', label: 'Team Leader Full Name', type: 'text', required: true, placeholder: 'Enter full name', group: 'Team Leader' },
+    { key: 'leaderPhone', entryId: 'mp_leader_phone', label: 'Team Leader WhatsApp / Contact Number', type: 'tel', required: true, placeholder: '+91 XXXXX XXXXX', pattern: '^[+]?[0-9\\s-]{10,15}$', group: 'Team Leader' },
+    { key: 'leaderEmail', entryId: 'mp_leader_email', label: 'Team Leader Email Address', type: 'email', required: true, placeholder: 'name@college.edu', group: 'Team Leader' },
+    { key: 'leaderCollege', entryId: 'mp_leader_college', label: 'Team Leader College Name', type: 'select', required: true, options: COLLEGE_OPTIONS, group: 'Team Leader' },
+    { key: 'leaderBranch', entryId: 'mp_leader_branch', label: 'Team Leader Branch', type: 'select', required: true, options: BRANCH_OPTIONS, group: 'Team Leader' },
+    { key: 'leaderSemester', entryId: 'mp_leader_sem', label: 'Team Leader Semester', type: 'select', required: true, options: SEMESTER_OPTIONS, group: 'Team Leader' },
+    // --- Project Info ---
+    { key: 'teamName', entryId: 'mp_team_name', label: 'Team Name', type: 'text', required: true, placeholder: 'Your team name', group: 'Project Details' },
+    { key: 'projectTitle', entryId: 'mp_project_title', label: 'Mini Project Title', type: 'text', required: true, placeholder: 'Title of your mini project', group: 'Project Details' },
+    { key: 'projectTheme', entryId: 'mp_project_theme', label: 'Domain / Focus Area', type: 'text', required: true, placeholder: 'e.g., Embedded Circuits, Sensors, IoT, Automation', group: 'Project Details' },
+    { key: 'projectSynopsis', entryId: 'mp_synopsis', label: 'Project Synopsis / Circuit Diagram Link', type: 'url', required: false, placeholder: 'Paste Google Drive link', helpText: 'Optional — upload circuit schematic or brief abstract.', group: 'Project Details' },
+    // --- Team Size ---
+    { key: 'teamSize', entryId: 'mp_team_size', label: 'Number of Team Members', type: 'select', required: true, options: TEAM_SIZE_OPTIONS_4, group: 'Team Composition' },
+    // --- Member 2 ---
+    { key: 'member2Name', entryId: 'mp_m2_name', label: 'Member 2 Full Name', type: 'text', required: false, showWhen: { field: 'teamSize', values: ['2', '3', '4'] }, group: 'Team Member 2' },
+    { key: 'member2College', entryId: 'mp_m2_college', label: 'Member 2 College Name', type: 'select', required: false, options: COLLEGE_OPTIONS, showWhen: { field: 'teamSize', values: ['2', '3', '4'] }, group: 'Team Member 2' },
+    { key: 'member2Branch', entryId: 'mp_m2_branch', label: 'Member 2 Branch', type: 'select', required: false, options: BRANCH_OPTIONS, showWhen: { field: 'teamSize', values: ['2', '3', '4'] }, group: 'Team Member 2' },
+    { key: 'member2Semester', entryId: 'mp_m2_sem', label: 'Member 2 Semester', type: 'select', required: false, options: SEMESTER_OPTIONS, showWhen: { field: 'teamSize', values: ['2', '3', '4'] }, group: 'Team Member 2' },
+    // --- Member 3 ---
+    { key: 'member3Name', entryId: 'mp_m3_name', label: 'Member 3 Full Name', type: 'text', required: false, showWhen: { field: 'teamSize', values: ['3', '4'] }, group: 'Team Member 3' },
+    { key: 'member3College', entryId: 'mp_m3_college', label: 'Member 3 College Name', type: 'select', required: false, options: COLLEGE_OPTIONS, showWhen: { field: 'teamSize', values: ['3', '4'] }, group: 'Team Member 3' },
+    { key: 'member3Branch', entryId: 'mp_m3_branch', label: 'Member 3 Branch', type: 'select', required: false, options: BRANCH_OPTIONS, showWhen: { field: 'teamSize', values: ['3', '4'] }, group: 'Team Member 3' },
+    { key: 'member3Semester', entryId: 'mp_m3_sem', label: 'Member 3 Semester', type: 'select', required: false, options: SEMESTER_OPTIONS, showWhen: { field: 'teamSize', values: ['3', '4'] }, group: 'Team Member 3' },
+    // --- Member 4 ---
+    { key: 'member4Name', entryId: 'mp_m4_name', label: 'Member 4 Full Name', type: 'text', required: false, showWhen: { field: 'teamSize', values: ['4'] }, group: 'Team Member 4' },
+    { key: 'member4College', entryId: 'mp_m4_college', label: 'Member 4 College Name', type: 'select', required: false, options: COLLEGE_OPTIONS, showWhen: { field: 'teamSize', values: ['4'] }, group: 'Team Member 4' },
+    { key: 'member4Branch', entryId: 'mp_m4_branch', label: 'Member 4 Branch', type: 'select', required: false, options: BRANCH_OPTIONS, showWhen: { field: 'teamSize', values: ['4'] }, group: 'Team Member 4' },
+    { key: 'member4Semester', entryId: 'mp_m4_sem', label: 'Member 4 Semester', type: 'select', required: false, options: SEMESTER_OPTIONS, showWhen: { field: 'teamSize', values: ['4'] }, group: 'Team Member 4' },
+    // --- Payment ---
+    { key: 'paymentId', entryId: 'mp_payment_id', label: 'Payment Transaction ID / UTR Number', type: 'text', required: true, placeholder: 'e.g., UPI12345678', group: 'Payment' },
+    { key: 'paymentProof', entryId: 'mp_payment_proof', label: 'Payment Proof / Screenshot Link', type: 'url', required: true, placeholder: 'Paste Google Drive / Imgur link', helpText: 'Upload your payment screenshot to Google Drive or Imgur and paste the link.', group: 'Payment' },
+  ],
+};
+
+// ---------------------------------------------------------------------------
 // EXPORTED REGISTRY
 // ---------------------------------------------------------------------------
 
@@ -409,6 +457,7 @@ export const REGISTRATION_FORMS: RegistrationFormConfig[] = [
   eGaming,
   openMic,
   mockPlacement,
+  miniProjectCompetition,
 ];
 
 export function getRegistrationFormBySlug(
@@ -418,6 +467,7 @@ export function getRegistrationFormBySlug(
     (f) =>
       f.competitionSlug === slug ||
       (slug === 'mock-placement' && f.competitionSlug === 'mock-placement-drive') ||
-      (slug === 'breadboard' && f.competitionSlug === 'breadboard-competition'),
+      (slug === 'breadboard' && f.competitionSlug === 'breadboard-competition') ||
+      (slug === 'mini-project' && f.competitionSlug === 'mini-project-competition'),
   );
 }

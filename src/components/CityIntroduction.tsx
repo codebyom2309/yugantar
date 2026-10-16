@@ -43,7 +43,7 @@ export default function CityIntroduction({ festival }: { festival?: FestivalSett
               {...fadeIn(0.08)}
               className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-[#10264A] tracking-tight leading-[1.12] mb-6"
             >
-              One city. Eight arenas. <br />
+              One city. Interconnected arenas. <br />
               <span className="font-editorial text-sunset-glow font-normal tracking-normal">
                 Infinite possibilities.
               </span>
@@ -127,7 +127,7 @@ export default function CityIntroduction({ festival }: { festival?: FestivalSett
             {/* Cropped Architectural Metropolis Visual */}
             <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden border border-[#F2DECD] shadow-sm">
               <Image
-                src="/images/nexus-city/hero-futuristic-city-clouds.webp"
+                src={festival?.homepageHeroCardImage || '/images/nexus-city/hero-futuristic-city-clouds.webp'}
                 alt="NEXUS CITY Architectural Discovery Corridors"
                 fill
                 className="object-cover"
@@ -162,7 +162,7 @@ export default function CityIntroduction({ festival }: { festival?: FestivalSett
               <div className="space-y-2.5 text-xs font-mono">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-[#FFF8F2] border border-[#F2DECD]">
                   <span className="text-[#536781]">EVENT DATE</span>
-                  <span className="font-bold text-[#10264A]">{festival?.date ? festival.date.toUpperCase() : '19 OCTOBER 2026'}</span>
+                  <span className="font-bold text-[#10264A]">{festival?.date ? festival.date.toUpperCase() : '21 OCTOBER 2026'}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-xl bg-[#FFF8F2] border border-[#F2DECD]">
                   <span className="text-[#536781]">CAMPUS VENUE</span>
@@ -179,7 +179,7 @@ export default function CityIntroduction({ festival }: { festival?: FestivalSett
                   href="/competitions"
                   className="inline-flex items-center gap-2 text-xs font-mono font-bold text-[#10264A] hover:text-[#FF783E] transition-colors"
                 >
-                  <span>Explore the Eight Discovery Districts</span>
+                  <span>Explore All Discovery Districts</span>
                   <ArrowRight className="w-3.5 h-3.5 text-[#FF783E]" />
                 </Link>
               </div>

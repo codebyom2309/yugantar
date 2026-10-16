@@ -6,6 +6,8 @@ import { verifyPassToken, PassMemberInfo } from '@/lib/passToken';
 import { COMPETITIONS } from '@/data/events';
 import { resolveActiveTemplate, extractRegistrationTokenMap } from '@/lib/studioService';
 import { renderTemplateToPdfBuffer } from '@/lib/studioPdfRenderer';
+import { getAbsoluteUrl } from '@/lib/site-url';
+import { isPassGenerationAllowed } from '@/lib/generationPolicy';
 
 interface RegistrationRecord {
   id: string;
@@ -54,6 +56,15 @@ export async function GET(
 
     const reg = rows[0];
 
+    // 1b. Enforce Pass Generation Policy
+    const passPolicy = await isPassGenerationAllowed(reg.competition_slug);
+    if (!passPolicy.allowed) {
+      return NextResponse.json(
+        { error: passPolicy.reason || 'Pass and certificate generation is currently disabled by the event administrator.' },
+        { status: 403 }
+      );
+    }
+
     // 2. Resolve team member roster:
     // First priority: verified stateless HMAC token (no full DB storage required)
     // Second priority: parsed from form_data (if full storage mode was on)
@@ -91,7 +102,7 @@ export async function GET(
     let compName = staticComp?.name || reg.competition_slug.replace(/-/g, ' ').toUpperCase();
     let compCategory: string = staticComp?.category || 'Hardware & Circuits';
     let compVenue = staticComp?.venue || 'PCE Campus, Nagpur';
-    let compDate = '19 October 2026';
+    let compDate = '21 October 2026';
 
     try {
       const compRows = await db.query<{
@@ -151,9 +162,8 @@ export async function GET(
     }
 
     // 5. Generate verification QR Code PNG buffer (Hardcoded Fallback)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yugantar2026.pce.ac.in';
     const verifyToken = reg.verification_token || reg.id;
-    const verifyUrl = `${appUrl}/verify/${verifyToken}`;
+    const verifyUrl = getAbsoluteUrl(`/verify/${verifyToken}`);
 
     const qrPngBuffer = await QRCode.toBuffer(verifyUrl, {
       type: 'png',

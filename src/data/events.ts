@@ -8,7 +8,17 @@ export interface ScheduleItem {
   activity: string;
 }
 
+export interface CoordinatorEntry {
+  id?: string;
+  name: string;
+  role: string;
+  phone?: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
+}
+
 export interface Competition {
+  coordinators?: CoordinatorEntry[];
   id: string;
   slug: string;
   name: string;
@@ -71,8 +81,8 @@ export const FESTIVAL_INFO = {
   concept: "NEXUS CITY",
   tagline: "Ideas into circuits. Innovation into action.",
   subheading: "A celebration of electronics, engineering, creative thinking and emerging technology — hosted by the Department of Electronics and Telecommunication Engineering at Priyadarshini College of Engineering, Nagpur.",
-  date: "19 October 2026",
-  isoDate: "2026-10-19T09:00:00+05:30",
+  date: "21 October 2026",
+  isoDate: "2026-10-21T09:00:00+05:30",
   venue: "Priyadarshini College of Engineering, Nagpur",
   locationShort: "PCE Campus, Nagpur",
   address: "CRPF Gate No. 3, Hingna Road, Digdoh Hills, Nagpur, Maharashtra 440019",
@@ -115,10 +125,9 @@ export const COMPETITIONS: Competition[] = [
     qrMode: "generate",
     requireUtr: true,
     requireScreenshot: true,
-    approvedDomains: ["DSD", "WSN", "ES", "DSP", "MWR"],
-    shortDescription: "Demonstrate operational hardware models, embedded systems, and applied engineering prototypes solving practical challenges.",
-    fullDescription: "A premier platform for VII semester engineers to exhibit live working prototypes, hardware solutions, and applied electronic systems before an expert panel.",
-    about: "The Project Competition is the cornerstone hardware showcase of YUGANTAR 2026. Teams present operational hardware models, embedded systems, DSP filters, or wireless sensor networks to evaluate real-world feasibility, innovation, and technical rigor.",
+        shortDescription: "Demonstrate operational hardware models, embedded systems, and applied engineering prototypes solving practical challenges.",
+    fullDescription: "Participants can showcase projects from any relevant engineering or technical subject or domain. Choose a project that demonstrates your ideas, implementation, and problem-solving skills, and follow the competition's stated submission requirements.",
+    about: "The Project Competition is the cornerstone hardware showcase of YUGANTAR 2026. Participants can showcase projects from any relevant engineering or technical subject or domain. Choose a project that demonstrates your ideas, implementation, and problem-solving skills, and follow the competition's stated submission requirements.",
     scheduleFlow: [
       { time: "09:00 AM - 10:00 AM", activity: "Reporting & Setup: Teams arrive, verify registration with coordinators, and set up hardware/software models on assigned workstations." },
       { time: "10:00 AM - 01:00 PM", activity: "Live Exhibition & Panel Evaluation: Consecutive judging panel visits. Strict 10-minute window: 7-min technical demonstration + 3-min Q&A." },
@@ -136,7 +145,7 @@ export const COMPETITIONS: Competition[] = [
     },
     rules: [
       "Setup & Hardware Requirements: Teams must bring all necessary hardware components, laptops, and extension cords required for their project. The department will only provide a standard desk and a single electrical power socket. Projects must be fully functional.",
-      "Domain Strictness: The core technology of the project must strictly fall under one of the officially specified domains (DSD, WSN, ES, DSP, MWR). Projects outside these domains will not be evaluated.",
+      "Technical Domain Scope: Participants can showcase projects from any relevant engineering or technical subject or domain. Projects must demonstrate genuine practical implementation, circuit design, and problem-solving merit while following stated submission requirements.",
       "Presentation & Conduct: Teams must display a printed A3 poster or a technical synopsis chart at their desk. Every registered team member must be present. Formal attire or college uniform is strictly mandatory.",
       "Evaluation Matrix (100 Points): Innovation (25), Complexity (30), Practical Applicability (20), Presentation & Viva (25).",
       "Disqualification: Submitting a purchased pre-built commercial kit, presenting a copied open-source project without significant modifications, or reusing a previous year's project will result in immediate disqualification.",
@@ -150,7 +159,7 @@ export const COMPETITIONS: Competition[] = [
     formatNote: "Single-round exhibition with live demonstration and 10-minute jury evaluation window.",
     highlights: [
       "Live hardware prototype demonstration",
-      "Strict evaluation across 5 approved technical domains",
+      "Open to all relevant engineering and technical domains",
       "100-point rigorous evaluation rubric",
     ],
     iconName: "Cpu",
@@ -163,18 +172,76 @@ export const COMPETITIONS: Competition[] = [
     themeVibe: "innovation",
     faqs: [
       {
-        question: "Can we submit projects outside the 5 approved domains?",
-        answer: "No. The core technology must strictly fall under DSD, WSN, ES, DSP, or MWR. Projects outside these domains will not be evaluated.",
+        question: "What technical domains or subjects are eligible?",
+        answer: "Participants can showcase projects from any relevant engineering or technical subject or domain. Choose a project that demonstrates your ideas, implementation, and problem-solving skills, and follow the competition's stated submission requirements.",
       },
       {
         question: "What equipment is provided at the workstations?",
         answer: "The department provides a standard desk and a single electrical power socket. All other hardware, laptops, adapters, and extension cords must be brought by the team.",
       },
     ],
+    coordinators: [
+        {
+            "id": "coord-proj-1",
+            "name": "Dr. (Mrs) J. M. Bhattad",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-proj-2",
+            "name": "Mr. D. G. Gahane",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-proj-3",
+            "name": "Dr(Ms). J. C. Kolte",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-proj-4",
+            "name": "Ms. P. B. Pendke",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-proj-5",
+            "name": "Khushi Pardhi",
+            "role": "Student Coordinator",
+            "phone": "+91 95524 58818",
+            "email": null
+        },
+        {
+            "id": "coord-proj-6",
+            "name": "Samsher Kode",
+            "role": "Student Coordinator",
+            "phone": "+91 93593 83375",
+            "email": null
+        },
+        {
+            "id": "coord-proj-7",
+            "name": "Om Wadaskar",
+            "role": "Student Coordinator",
+            "phone": "+91 70581 36648",
+            "email": null
+        },
+        {
+            "id": "coord-proj-8",
+            "name": "Gaurav Rajurkar",
+            "role": "Student Coordinator",
+            "phone": "+91 96579 51153",
+            "email": null
+        }
+    ],
     eligibilityPlaceholder: "VII Semester Students Only",
     teamRequirementsPlaceholder: "Maximum 4 members per team",
     rulesPlaceholder: [
-      "Must fall strictly under approved domains: DSD, WSN, ES, DSP, MWR.",
+      "Open to projects from all relevant engineering and technical subjects and domains.",
       "Fully operational hardware required; no commercial pre-built kits.",
       "Mandatory printed A3 poster or synopsis chart on desk.",
       "Formal attire or college uniform strictly required.",
@@ -257,6 +324,36 @@ export const COMPETITIONS: Competition[] = [
         answer: "A strict maximum of 8 minutes for the slide presentation, followed by 2 minutes for panel Q&A.",
       },
     ],
+    coordinators: [
+        {
+            "id": "coord-ppt-1",
+            "name": "Dr. A. K. Kondelwar",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-ppt-2",
+            "name": "Mrs. S. S. Mankar",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-ppt-3",
+            "name": "Pooja Konge",
+            "role": "Student Coordinator",
+            "phone": "+91 95793 28823",
+            "email": null
+        },
+        {
+            "id": "coord-ppt-4",
+            "name": "Dishant Chokhande",
+            "role": "Student Coordinator",
+            "phone": "+91 96895 87991",
+            "email": null
+        }
+    ],
     eligibilityPlaceholder: "VII Semester Students Only",
     teamRequirementsPlaceholder: "Maximum 4 members per team",
     rulesPlaceholder: [
@@ -331,6 +428,36 @@ export const COMPETITIONS: Competition[] = [
         question: "How do teams qualify for the breadboard round?",
         answer: "Every team that successfully draws the functionally correct circuit on paper in Round 1 within 15-30 minutes qualifies for Round 2.",
       },
+    ],
+    coordinators: [
+        {
+            "id": "coord-bb-1",
+            "name": "Dr. S. P. Washimkar",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-bb-2",
+            "name": "Dr. V. V. Panchbhai",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-bb-3",
+            "name": "Ujjwal Barange",
+            "role": "Student Coordinator",
+            "phone": "+91 79874 94482",
+            "email": null
+        },
+        {
+            "id": "coord-bb-4",
+            "name": "Rizam Ramteke",
+            "role": "Student Coordinator",
+            "phone": "+91 88057 94318",
+            "email": null
+        }
     ],
     eligibilityPlaceholder: "V Semester Students Only",
     teamRequirementsPlaceholder: "Maximum 2 members per team",
@@ -410,6 +537,36 @@ export const COMPETITIONS: Competition[] = [
         answer: "Ideathon is open to students across all semesters with teams of up to 4 members.",
       },
     ],
+    coordinators: [
+        {
+            "id": "coord-idea-1",
+            "name": "Dr. N. S. Ambatkar",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-idea-2",
+            "name": "Mr. P. R. Lakhe",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-idea-3",
+            "name": "Prathemesh Pawar",
+            "role": "Student Coordinator",
+            "phone": "+91 72767 85069",
+            "email": null
+        },
+        {
+            "id": "coord-idea-4",
+            "name": "Yatharth Kathane",
+            "role": "Student Coordinator",
+            "phone": "+91 79727 23911",
+            "email": null
+        }
+    ],
     eligibilityPlaceholder: "All Semesters",
     teamRequirementsPlaceholder: "Maximum 4 members per team",
     rulesPlaceholder: [
@@ -486,6 +643,50 @@ export const COMPETITIONS: Competition[] = [
         answer: "You must carry at least two printed hard copies of your updated resume/CV.",
       },
     ],
+    coordinators: [
+        {
+            "id": "coord-mock-1",
+            "name": "Mrs. P. J. Suryawanshi",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-mock-2",
+            "name": "Gomati Deshmukh",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-mock-3",
+            "name": "Mrs. R. R. Zalke",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-mock-4",
+            "name": "Vedant Gaikwad",
+            "role": "Student Coordinator",
+            "phone": "+91 96998 64120",
+            "email": null
+        },
+        {
+            "id": "coord-mock-5",
+            "name": "Student Coordinator",
+            "role": "Student Coordinator",
+            "phone": "+91 89991 89509",
+            "email": null
+        },
+        {
+            "id": "coord-mock-6",
+            "name": "Aachal Dhapekar",
+            "role": "Student Coordinator",
+            "phone": "+91 93733 85732",
+            "email": null
+        }
+    ],
     eligibilityPlaceholder: "V Semester Students Only",
     teamRequirementsPlaceholder: "Strictly Individual (1 person)",
     rulesPlaceholder: [
@@ -561,6 +762,36 @@ export const COMPETITIONS: Competition[] = [
         question: "What is the mandatory theme?",
         answer: "The competition theme is strictly 'E-Scrap' (electronic waste). Any poster not adhering to this theme will not be evaluated.",
       },
+    ],
+    coordinators: [
+        {
+            "id": "coord-post-1",
+            "name": "Dr. P. P. Ashtankar",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-post-2",
+            "name": "Dr. A. S. Khobragade",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-post-3",
+            "name": "Aryan Dehankar",
+            "role": "Student Coordinator",
+            "phone": "+91 73856 35401",
+            "email": null
+        },
+        {
+            "id": "coord-post-4",
+            "name": "Anshool Harinkhede",
+            "role": "Student Coordinator",
+            "phone": "+91 92845 51472",
+            "email": null
+        }
     ],
     eligibilityPlaceholder: "All Semesters",
     teamRequirementsPlaceholder: "Maximum 2 members per team",
@@ -640,6 +871,36 @@ export const COMPETITIONS: Competition[] = [
         answer: "No. All participants must ensure their own active personal mobile data connection.",
       },
     ],
+    coordinators: [
+        {
+            "id": "coord-eg-1",
+            "name": "Dr. P. U. Chati",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-eg-2",
+            "name": "Dr. C. N. Bhoyar",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-eg-3",
+            "name": "Shivam Tatole",
+            "role": "Student Coordinator",
+            "phone": "+91 78210 87589",
+            "email": null
+        },
+        {
+            "id": "coord-eg-4",
+            "name": "Tejas Dhanorkar",
+            "role": "Student Coordinator",
+            "phone": "+91 81809 32693",
+            "email": null
+        }
+    ],
     eligibilityPlaceholder: "All Semesters",
     teamRequirementsPlaceholder: "Squad of 4 members per team",
     rulesPlaceholder: [
@@ -717,6 +978,36 @@ export const COMPETITIONS: Competition[] = [
         answer: "Each performer is allotted strictly 4 to 5 minutes on stage. Exceeding the limit will result in point deductions.",
       },
     ],
+    coordinators: [
+        {
+            "id": "coord-om-1",
+            "name": "Ms. A. K. Parmar",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-om-2",
+            "name": "Dr(Ms). J. C. Kolte",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-om-3",
+            "name": "Vedant Gawande",
+            "role": "Student Coordinator",
+            "phone": "+91 84218 41958",
+            "email": null
+        },
+        {
+            "id": "coord-om-4",
+            "name": "Mohit Kawale",
+            "role": "Student Coordinator",
+            "phone": "+91 95799 30801",
+            "email": null
+        }
+    ],
     eligibilityPlaceholder: "All Semesters",
     teamRequirementsPlaceholder: "Individual (Solo Performer)",
     rulesPlaceholder: [
@@ -724,6 +1015,126 @@ export const COMPETITIONS: Competition[] = [
       "Strict time limit: 4 to 5 minutes per performer.",
       "Backing tracks (MP3 on pen drive) due 30-60 mins prior.",
       "Strict decency and non-offensive content policy.",
+    ],
+  },
+  // -------------------------------------------------------------------------
+  // 9. MINI PROJECT COMPETITION
+  // -------------------------------------------------------------------------
+  {
+    id: "mini-project-competition",
+    slug: "mini-project-competition",
+    name: "Mini Project Competition",
+    district: "Circuit Arena",
+    districtIndex: 8,
+    districtTagline: "The proving ground for early engineering prototypes, embedded circuits, and hands-on hardware innovation.",
+    category: "Hardware & Circuits",
+    tag: "Applied Hardware Exhibition",
+    venue: "3rd Floor Room No. 305",
+    eligibility: "III and VI Semester Students Only",
+    teamSizeLimit: "Maximum 4 members per team",
+    maxTeamMembers: 4,
+    isPaid: true,
+    registrationFee: "₹200 per team",
+    upiId: "teleera@oksbi",
+    payeeName: "TELE-ERA YUGANTAR 2026",
+    qrMode: "generate",
+    requireUtr: true,
+    requireScreenshot: true,
+    shortDescription: "Exhibit operational mini projects, embedded electronics, and prototype circuits designed by III & VI semester students.",
+    fullDescription: "A specialized engineering showcase for III and VI semester students to demonstrate operational mini-project models, sensor interfaces, and circuit implementations before an academic evaluation panel.",
+    about: "The Mini Project Competition provides 3rd and 6th semester engineers an authentic exhibition stage to demonstrate practical circuit design, microcontroller integration, and engineering problem-solving. Teams present operational hardware models in 3rd Floor Room No. 305.",
+    scheduleFlow: [
+      { time: "01:00 PM", activity: "Reporting & Setup: Teams report to 3rd Floor Room No. 305 and install working models on assigned benches." },
+      { time: "01:30 PM Onwards", activity: "Live Jury Evaluation: Panel visits each workstation for technical demonstration (7 mins demo + 3 mins Q&A)." },
+      { time: "03:30 PM", activity: "Score Compilation & Announcement: Scoring compiled based on circuit complexity, utility, and viva defense." },
+    ],
+    evaluationMatrix: {
+      totalPoints: "100 Points Total",
+      criteria: [
+        { name: "Circuit Design & Innovation", points: "25 points" },
+        { name: "Hardware Implementation & Neatness", points: "25 points" },
+        { name: "Practical Utility & Functionality", points: "25 points" },
+        { name: "Technical Viva & Q&A Defense", points: "25 points" },
+      ],
+    },
+    rules: [
+      "Eligibility: Strictly open to III and VI semester engineering students only.",
+      "Hardware Setup: Teams must bring all project hardware, power supplies, connecting wires, and test equipment.",
+      "Live Demonstration: The mini project model must be fully functional and demonstrated live before the jury panel.",
+      "Team Composition: Teams may comprise 1 to 4 members. Every registered member must be present in formal attire.",
+      "Academic Integrity: Plagiarized commercial off-the-shelf assemblies without original implementation will be disqualified.",
+    ],
+    expectations: [
+      "Report strictly at 01:00 PM in 3rd Floor Room No. 305 with your operational hardware model.",
+      "Demonstrate live working circuit functionality under jury examination.",
+      "Defend technical design choices, circuit diagrams, and component selection during Q&A.",
+      "Maintain bench cleanliness and electrical safety standards throughout the exhibition.",
+    ],
+    formatNote: "Single-round live prototype exhibition with 10-minute jury review (7 min demo + 3 min Q&A).",
+    highlights: [
+      "Dedicated arena in 3rd Floor Room No. 305",
+      "Strict III and VI semester eligibility tier",
+      "Comprehensive 100-point hardware rubric",
+    ],
+    iconName: "Cpu",
+    bannerImage: "/images/competitions/project-competition.webp",
+    cardImage: "/images/competitions/project-competition.webp",
+    mapCoords: { x: 50, y: 55 },
+    accentColor: "#3978F6",
+    accentSecondary: "#60A5FA",
+    accentBg: "rgba(57, 120, 246, 0.08)",
+    themeVibe: "circuit",
+    faqs: [
+      {
+        question: "Who is eligible to participate in the Mini Project Competition?",
+        answer: "Participation is strictly restricted to students currently enrolled in III Semester or VI Semester.",
+      },
+      {
+        question: "What is the maximum team size?",
+        answer: "Teams can have between 1 and 4 members.",
+      },
+      {
+        question: "What will be provided at the venue?",
+        answer: "A standard workbench and electrical socket will be provided. Teams must bring their own components, extension cords, and test equipment.",
+      },
+    ],
+    coordinators: [
+        {
+            "id": "coord-mini-1",
+            "name": "Dr. P. P. Ashtankar",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-mini-2",
+            "name": "Dr(Ms). J. C. Kolte",
+            "role": "Faculty Coordinator",
+            "phone": null,
+            "email": null
+        },
+        {
+            "id": "coord-mini-3",
+            "name": "Summit Bhagat",
+            "role": "Student Coordinator",
+            "phone": "+91 89992 60789",
+            "email": null
+        },
+        {
+            "id": "coord-mini-4",
+            "name": "Aditya Sumatkar",
+            "role": "Student Coordinator",
+            "phone": "+91 90494 62518",
+            "email": null
+        }
+    ],
+    eligibilityPlaceholder: "III & VI Semester Students Only",
+    teamRequirementsPlaceholder: "1 to 4 Members per team",
+    rulesPlaceholder: [
+      "Strictly III & VI semester students only.",
+      "Operational hardware models mandatory.",
+      "Venue: 3rd Floor Room No. 305 at 1:00 PM.",
+      "Live 10-minute jury evaluation (7-min demo + 3-min viva).",
     ],
   },
 ];
@@ -790,7 +1201,7 @@ export const FESTIVAL_JOURNEY = [
     title: "District Navigation",
     subtitle: "Explore Your Arenas",
     description: "Navigate to your assigned district—from hardware laboratories and research seminar halls to the corporate interview suites.",
-    details: "Each of the 8 competition tracks operates in a specialized venue across the engineering complex, fully equipped with test benches, projection suites, or gaming arenas."
+    details: "Each of the 9 competition tracks operates in a specialized venue across the engineering complex, fully equipped with test benches, projection suites, or gaming arenas."
   },
   {
     step: "03",
@@ -823,7 +1234,7 @@ export const ORGANIZERS = [
     name: "Department Faculty Advisory Board",
     role: "Academic Mentorship & Jury Board",
     department: "Department of Electronics & Telecommunication Engineering",
-    description: "Distinguished professors, laboratory heads, and senior academicians providing technical oversight, evaluation rubrics, and academic jury coordination across all eight engineering arenas.",
+    description: "Distinguished professors, laboratory heads, and senior academicians providing technical oversight, evaluation rubrics, and academic jury coordination across all nine engineering arenas.",
     badge: "Faculty Mentorship",
     leadershipNote: "Oversees academic standards, evaluation matrices, hardware safety, and technical judging."
   },
@@ -841,12 +1252,12 @@ export const FAQS = [
   {
     category: "General & Venue",
     question: "When and where is YUGANTAR 2026 taking place?",
-    answer: "YUGANTAR 2026 will be held on 19 October 2026 at Priyadarshini College of Engineering, located at CRPF Gate No. 3, Hingna Road, Digdoh Hills, Nagpur, Maharashtra 440019."
+    answer: "YUGANTAR 2026 will be held on 21 October 2026 at Priyadarshini College of Engineering, located at CRPF Gate No. 3, Hingna Road, Digdoh Hills, Nagpur, Maharashtra 440019."
   },
   {
     category: "Eligibility",
     question: "Who can participate in YUGANTAR competitions?",
-    answer: "Eligibility varies by competition according to official academic rules: Project Competition & PPT Presentation are for VII Semester students; Bread Board & Mock Placement Drive are for V Semester students; Ideathon, Poster, E-Gaming, and Open Mic are open to all semesters."
+    answer: "Eligibility varies by competition according to official academic rules: Project Competition & PPT Presentation are for VII Semester students; Bread Board & Mock Placement Drive are for V Semester students; Mini Project Competition is for III and VI Semester students; Ideathon, Poster, E-Gaming, and Open Mic are open to all semesters."
   },
   {
     category: "Registration Architecture",

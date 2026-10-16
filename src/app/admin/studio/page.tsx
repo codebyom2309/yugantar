@@ -507,7 +507,7 @@ export default function StudioLandingPage() {
               Pass & Certificate Studio
             </h1>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl mt-1">
-              Design, customize, preview, and assign registration passes and participation certificates across all 8 Arenas without rewriting code.
+              Design, customize, preview, and assign registration passes and participation certificates across all 9 Arenas without rewriting code.
             </p>
           </div>
 
@@ -595,7 +595,7 @@ export default function StudioLandingPage() {
           }`}
         >
           <Sliders className="w-4 h-4" />
-          Competition Assignments (8 Arenas)
+          Competition Assignments (9 Arenas)
         </button>
         <button
           onClick={() => setActiveTab('tokens')}
@@ -994,7 +994,7 @@ export default function StudioLandingPage() {
                 tokens: [
                   { token: '{{competition.name}}', label: 'Competition Name', sample: 'Project Competition' },
                   { token: '{{competition.venue}}', label: 'Venue Room / Lab', sample: 'PCE Campus, Nagpur' },
-                  { token: '{{competition.date}}', label: 'Festival Date', sample: '19 October 2026' },
+                  { token: '{{competition.date}}', label: 'Festival Date', sample: '21 October 2026' },
                 ],
               },
               {
@@ -1051,7 +1051,7 @@ export default function StudioLandingPage() {
       {/* ============================================================== */}
       {activeTab === 'issuance' && (
         <div className="space-y-8 animate-in fade-in duration-200">
-          {/* Section 1: 8 Arenas Credential Configuration Matrix */}
+          {/* Section 1: 9 Arenas Credential Configuration Matrix */}
           <div className="admin-glass-panel rounded-2xl border border-black/10 dark:border-white/10 p-6 space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div>
@@ -1060,7 +1060,7 @@ export default function StudioLandingPage() {
                   Arena Credential Status &amp; Generation Matrix
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Inspect active pass and certificate templates, live generation status, and template versions for all 8 competition arenas.
+                  Inspect active pass and certificate templates, live generation status, and template versions for all 9 competition arenas.
                 </p>
               </div>
               <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-500/20">

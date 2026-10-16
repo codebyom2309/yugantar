@@ -14,9 +14,9 @@ export const EVENT_INSTITUTION = {
   addressRegion: 'Maharashtra',
   postalCode: '440019',
   addressCountry: 'IN',
-  eventDate: '2026-10-19',
-  eventStartTime: '2026-10-19T09:00:00+05:30',
-  eventEndTime: '2026-10-19T18:00:00+05:30',
+  eventDate: '2026-10-21',
+  eventStartTime: '2026-10-21T09:00:00+05:30',
+  eventEndTime: '2026-10-21T18:00:00+05:30',
 };
 
 /**
@@ -69,7 +69,7 @@ export function buildWebSiteSchema() {
     name: 'YUGANTAR 2026 — Engineering the Next Era',
     alternateName: 'YUGANTAR 2026 Official Technical Festival Portal',
     description:
-      'Official technical festival portal for YUGANTAR 2026, featuring eight flagship engineering arenas, hardware challenges, research showcases, and strategy tracks at Priyadarshini College of Engineering, Nagpur.',
+      'Official technical festival portal for YUGANTAR 2026, featuring flagship engineering arenas, hardware challenges, research showcases, and strategy tracks at Priyadarshini College of Engineering, Nagpur.',
     publisher: {
       '@id': `${siteUrl}/#organization`,
     },
@@ -89,7 +89,7 @@ export function buildFestivalEventSchema() {
     '@id': `${siteUrl}/#event`,
     name: 'YUGANTAR 2026 — National Technical Festival',
     description:
-      'Annual intercollegiate technical festival organized by the Department of Electronics and Telecommunication Engineering & TELE-ERA at Priyadarshini College of Engineering, Nagpur on 19 October 2026.',
+      'Annual intercollegiate technical festival organized by the Department of Electronics and Telecommunication Engineering & TELE-ERA at Priyadarshini College of Engineering, Nagpur on 21 October 2026.',
     startDate: EVENT_INSTITUTION.eventStartTime,
     endDate: EVENT_INSTITUTION.eventEndTime,
     eventStatus: 'https://schema.org/EventScheduled',

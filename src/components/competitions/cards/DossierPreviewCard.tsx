@@ -53,7 +53,7 @@ export default function DossierPreviewCard({
           <span className="text-[#8CA0BA] block mb-0.5 font-mono text-[10px]">EVENT DATE</span>
           <span className="font-bold text-[#172B49] flex items-center gap-1.5 truncate">
             <Calendar className="w-3.5 h-3.5 text-[#2F855A] shrink-0" />
-            <span className="truncate">{data.eventDate || '19 October 2026'}</span>
+            <span className="truncate">{data.eventDate || '21 October 2026'}</span>
           </span>
         </div>
       </div>

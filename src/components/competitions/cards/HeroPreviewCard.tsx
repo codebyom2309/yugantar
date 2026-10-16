@@ -99,7 +99,7 @@ export default function HeroPreviewCard({
       <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-[#172B49] mb-4">
         <div className="inline-flex items-center gap-1.5 p-2 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2]">
           <Calendar className="w-3.5 h-3.5 text-[#4B91E8] shrink-0" />
-          <span className="truncate">{data.eventDate || '19 October 2026'}</span>
+          <span className="truncate">{data.eventDate || '21 October 2026'}</span>
         </div>
         <div className="inline-flex items-center gap-1.5 p-2 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2]">
           <MapPin className="w-3.5 h-3.5 text-[#8578D8] shrink-0" />

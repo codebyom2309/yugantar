@@ -70,16 +70,24 @@ export default function CoordinatorsPreviewCard({
               {(c.phone || c.email) && (
                 <div className="pt-2 border-t border-[#E2E8F0]/70 flex flex-wrap gap-2 text-[10px] font-mono">
                   {c.phone && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-[#DCE5F2] text-[#172B49]">
+                    <a
+                      href={`tel:${c.phone.replace(/[^0-9+]/g, '')}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-[#DCE5F2] text-[#172B49] hover:text-[#4B91E8] hover:border-[#4B91E8]/50 transition-colors"
+                      title={`Call ${c.name || 'Coordinator'}`}
+                    >
                       <Phone className="w-2.5 h-2.5 text-[#4B91E8]" />
                       <span>{c.phone}</span>
-                    </span>
+                    </a>
                   )}
                   {c.email && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-[#DCE5F2] text-[#60728A] truncate max-w-full">
+                    <a
+                      href={`mailto:${c.email}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-[#DCE5F2] text-[#60728A] hover:text-[#172B49] hover:border-[#8578D8]/50 transition-colors truncate max-w-full"
+                      title={`Email ${c.name || 'Coordinator'}`}
+                    >
                       <Mail className="w-2.5 h-2.5 text-[#8578D8]" />
                       <span className="truncate">{c.email}</span>
-                    </span>
+                    </a>
                   )}
                 </div>
               )}

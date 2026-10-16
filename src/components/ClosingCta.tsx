@@ -77,7 +77,7 @@ export default function ClosingCta({ festival }: { festival?: FestivalSettings }
               href="/competitions"
               className="nexus-btn-sunset px-8 py-4 text-sm font-bold shadow-lg justify-center gap-2"
             >
-              <span>Explore All 8 Competitions</span>
+              <span>Explore All Competitions</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 

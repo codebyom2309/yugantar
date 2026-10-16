@@ -122,7 +122,7 @@ export default function FestivalJourney({ festival }: { festival?: FestivalSetti
 
                 <div className="pt-4 border-t border-[#E2E8F0] flex items-center gap-1.5 text-xs font-mono font-semibold text-[#10264A]">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#3978F6]" />
-                  <span>{festival?.date || '19 October 2026'}</span>
+                  <span>{festival?.date || '21 October 2026'}</span>
                 </div>
               </motion.div>
             );

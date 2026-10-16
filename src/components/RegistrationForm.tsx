@@ -32,6 +32,8 @@ import type { RegistrationFormConfig, FormField } from '@/data/registrationForms
 import confetti from 'canvas-confetti';
 import QRCode from 'qrcode';
 import { buildUpiPaymentUri, extractNumericFee, validateCompetitionFee } from '@/lib/upiPayment';
+import ModernSelect from '@/components/ui/ModernSelect';
+import { getAbsoluteUrl } from '@/lib/site-url';
 
 // ---------------------------------------------------------------------------
 // Types & Constants
@@ -128,32 +130,11 @@ function SearchableCollegeSelect({
   error?: string;
   onChange: (val: string) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [isOther, setIsOther] = useState(
-    Boolean(value && !options.includes(value as any) && value !== 'Other')
-  );
+  const isOtherInitial = Boolean(value && !options.includes(value as any) && value !== 'Other');
+  const [isOther, setIsOther] = useState(isOtherInitial);
   const [customCollege, setCustomCollege] = useState(
     options.includes(value as any) ? '' : value
   );
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return options;
-    return options.filter((opt) =>
-      opt.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [options, search]);
 
   const handleSelectOption = (opt: string) => {
     if (opt === 'Other') {
@@ -163,8 +144,6 @@ function SearchableCollegeSelect({
       setIsOther(false);
       onChange(opt);
     }
-    setIsOpen(false);
-    setSearch('');
   };
 
   const handleCustomCollegeChange = (text: string) => {
@@ -172,72 +151,22 @@ function SearchableCollegeSelect({
     onChange(text || 'Other');
   };
 
+  const selectValue = isOther ? 'Other' : value;
+
   return (
-    <div className="space-y-2" ref={containerRef}>
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-4 py-3 rounded-xl bg-white border text-left text-sm transition-all flex items-center justify-between ${
-            error
-              ? 'border-red-400 bg-red-50/20'
-              : 'border-[#DCE5F2] hover:border-[#B8D5F8]'
-          } ${value ? 'text-[#172B49] font-medium' : 'text-[#8CA0BA]'}`}
-        >
-          <span className="truncate">
-            {isOther
-              ? `Other: ${customCollege || 'Custom College'}`
-              : value || 'Select or Search College / Institution...'}
-          </span>
-          <ChevronDown className="w-4 h-4 text-[#8CA0BA] shrink-0 ml-2" />
-        </button>
-
-        {isOpen && (
-          <div className="absolute z-30 left-0 right-0 mt-1.5 p-2 rounded-2xl bg-white border border-[#DCE5F2] shadow-xl max-h-60 flex flex-col animate-in fade-in zoom-in-95 duration-150">
-            <div className="relative mb-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8CA0BA]" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search colleges (PCE, VNIT, YCCE...)"
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-[#F8FAFD] border border-[#E2E8F0] focus:outline-none focus:border-[#4B91E8] text-[#172B49]"
-                autoFocus
-              />
-            </div>
-
-            <div className="overflow-y-auto space-y-1 pr-1 flex-1">
-              {filtered.map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => handleSelectOption(opt)}
-                  className={`w-full px-3 py-2 text-xs rounded-lg text-left flex items-center justify-between transition-colors ${
-                    value === opt || (opt === 'Other' && isOther)
-                      ? 'bg-[#EDF5FC] text-[#4B91E8] font-bold'
-                      : 'hover:bg-[#F8FAFD] text-[#172B49]'
-                  }`}
-                >
-                  <span>{opt}</span>
-                  {(value === opt || (opt === 'Other' && isOther)) && (
-                    <Check className="w-3.5 h-3.5 text-[#4B91E8]" />
-                  )}
-                </button>
-              ))}
-
-              {filtered.length === 0 && (
-                <div className="py-3 text-center text-xs text-[#8CA0BA]">
-                  No matching colleges. Choose &apos;Other&apos; below.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+    <div className="space-y-2">
+      <ModernSelect
+        value={selectValue}
+        options={options}
+        placeholder="Select or Search College / Institution..."
+        error={error}
+        searchable={true}
+        onChange={handleSelectOption}
+      />
 
       {isOther && (
         <div className="p-3 rounded-xl bg-[#F8FAFD] border border-[#E2E8F0] space-y-1 animate-in fade-in duration-200">
-          <label className="text-[11px] font-mono text-[#60728A] block">
+          <label className="text-[11px] font-mono text-[#60728A] block font-semibold">
             Enter your college / institution full name:
           </label>
           <input
@@ -245,7 +174,7 @@ function SearchableCollegeSelect({
             value={customCollege}
             onChange={(e) => handleCustomCollegeChange(e.target.value)}
             placeholder="e.g., Government Polytechnic, Nagpur"
-            className="w-full px-3.5 py-2 text-xs rounded-lg bg-white border border-[#DCE5F2] text-[#172B49] focus:outline-none focus:border-[#4B91E8]"
+            className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-white border border-[#DCE5F2] text-[#10264A] focus:outline-none focus:border-[#3978F6] focus:ring-2 focus:ring-[#3978F6]/20 font-medium"
           />
         </div>
       )}
@@ -354,6 +283,7 @@ function PaymentProofUploadField({
 
   const activePreview = localPreviewUrl || value;
   const isCloudinaryUrl = value && value.includes('cloudinary.com');
+  const isFilebaseUrl = value && (value.includes('filebase') || value.includes('/api/media/filebase'));
 
   return (
     <div className="space-y-2.5" id={`field-${field.key}`}>
@@ -392,7 +322,9 @@ function PaymentProofUploadField({
                   {isUploading
                     ? 'Syncing with secure vault...'
                     : isCloudinaryUrl
-                    ? '✓ Verified on Cloudinary Storage'
+                    ? '✓ Stored on Cloudinary Storage'
+                    : isFilebaseUrl
+                    ? '✓ Stored on Filebase Object Storage'
                     : '✓ Screenshot Attached'}
                 </span>
               </div>
@@ -480,7 +412,7 @@ function PaymentProofUploadField({
 
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#DCE5F2] text-[10px] font-mono text-[#60728A] mx-auto">
                 <ShieldCheck className="w-3 h-3 text-[#2F855A]" />
-                <span>Deterministic Dual Cloudinary Account Vault</span>
+                <span>Cloudinary Vault • Filebase Failover Active</span>
               </div>
             </div>
           )}
@@ -525,20 +457,38 @@ function PaymentProofUploadField({
 }
 
 // ---------------------------------------------------------------------------
-// Standard Form Field Input
+// Standard Form Field Input & Semester Normalization
 // ---------------------------------------------------------------------------
+
+export function normalizeSemester(sem: string): string {
+  if (!sem) return '';
+  const clean = String(sem).trim().toUpperCase().replace(/^(SEMESTER|SEM)\s*/i, '');
+  const map: Record<string, string> = {
+    '1': 'I', '1ST': 'I', 'I': 'I',
+    '2': 'II', '2ND': 'II', 'II': 'II',
+    '3': 'III', '3RD': 'III', 'III': 'III',
+    '4': 'IV', '4TH': 'IV', 'IV': 'IV',
+    '5': 'V', '5TH': 'V', 'V': 'V',
+    '6': 'VI', '6TH': 'VI', 'VI': 'VI',
+    '7': 'VII', '7TH': 'VII', 'VII': 'VII',
+    '8': 'VIII', '8TH': 'VIII', 'VIII': 'VIII',
+  };
+  return map[clean] || clean;
+}
 
 function FormFieldInput({
   field,
   value,
   error,
   competitionSlug,
+  allowedSemesters,
   onChange,
 }: {
   field: FormField;
   value: string;
   error?: string;
   competitionSlug: string;
+  allowedSemesters?: string[];
   onChange: (key: string, value: string) => void;
 }) {
   const baseInputClass = `w-full px-4 py-3 min-h-[48px] rounded-xl bg-white border text-sm text-[#172B49] font-medium placeholder:text-[#8CA0BA] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4B91E8]/20 focus:border-[#4B91E8] ${
@@ -607,27 +557,34 @@ function FormFieldInput({
         )}
       </label>
 
-      {field.type === 'select' && field.options ? (
-        <div className="relative">
-          <select
-            value={value}
-            onChange={(e) => onChange(field.key, e.target.value)}
-            style={{ colorScheme: 'light' }}
-            className={`${baseInputClass} appearance-none pr-10 cursor-pointer bg-white text-[#172B49]`}
-            aria-invalid={!!error}
-          >
-            <option value="" style={{ colorScheme: 'light' }} className="bg-white text-[#172B49]">
-              Select {field.label}...
-            </option>
-            {field.options.map((opt) => (
-              <option key={opt} value={opt} style={{ colorScheme: 'light' }} className="bg-white text-[#172B49]">
-                {opt}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8CA0BA] pointer-events-none" />
-        </div>
-      ) : field.type === 'textarea' ? (
+      {field.type === 'select' && field.options ? (() => {
+        const isSemester = field.key.toLowerCase().includes('semester');
+        let selectOptions = field.options;
+        if (isSemester && allowedSemesters && allowedSemesters.length > 0) {
+          const normAllowed = allowedSemesters.map(normalizeSemester);
+          selectOptions = field.options.filter((opt) => normAllowed.includes(normalizeSemester(opt)));
+        }
+        return (
+          <div className="space-y-1.5">
+            <ModernSelect
+              id={`input-${field.key}`}
+              value={value}
+              options={selectOptions}
+              onChange={(val) => onChange(field.key, val)}
+              placeholder={`Select ${field.label}...`}
+              error={error}
+              required={field.required}
+              ariaLabel={field.label}
+            />
+            {isSemester && allowedSemesters && allowedSemesters.length > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#E9F2FF] border border-[#CDE1FF] text-[11px] font-mono text-[#3978F6] font-semibold">
+                <Sparkles className="w-3 h-3 shrink-0 text-[#3978F6]" />
+                <span>Eligibility: Semesters {allowedSemesters.join(', ')} only</span>
+              </div>
+            )}
+          </div>
+        );
+      })() : field.type === 'textarea' ? (
         <textarea
           value={value}
           onChange={(e) => onChange(field.key, e.target.value)}
@@ -691,6 +648,7 @@ export interface CompetitionPaymentConfig {
   confirmationInstructions?: string;
   qrMode?: 'upload' | 'generate' | string;
   payeeName?: string;
+  allowedSemesters?: string[];
 }
 
 export default function RegistrationForm({
@@ -726,6 +684,27 @@ export default function RegistrationForm({
   const submitLockRef = useRef(false);
   const autoDownloadTriggeredRef = useRef(false);
 
+  // Auto-prune ineligible semesters if restricted by festival administration
+  useEffect(() => {
+    if (competition?.allowedSemesters && competition.allowedSemesters.length > 0) {
+      const normAllowed = competition.allowedSemesters.map(normalizeSemester);
+      setValues((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        Object.keys(next).forEach((k) => {
+          if (k.toLowerCase().includes('semester')) {
+            const v = next[k];
+            if (v && !normAllowed.includes(normalizeSemester(v))) {
+              delete next[k];
+              changed = true;
+            }
+          }
+        });
+        return changed ? next : prev;
+      });
+    }
+  }, [competition?.allowedSemesters]);
+
   // Authoritative fee validation: ensures no silent ₹1 or ₹300 substitutions,
   // prevents misleading QRs, and strictly validates numeric INR amounts
   const feeValidation = useMemo(() => {
@@ -737,19 +716,86 @@ export default function RegistrationForm({
     );
   }, [isPaid, competition?.registrationFee, competition?.upiId, values.teamSize, defaultTeamSize]);
 
+  // Load festival department discount rule
+  const [discountRule, setDiscountRule] = useState<{
+    enabled: boolean;
+    institution: string;
+    department: string;
+    discountPercentage: number;
+    applicableCompetitions: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/competitions')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.festival?.departmentDiscountRule) {
+          setDiscountRule(d.festival.departmentDiscountRule);
+        }
+      })
+      .catch((err) => console.warn('Failed to load department discount rule:', err));
+  }, []);
+
+  const leaderCollege = (
+    values.leaderCollege ||
+    values.collegeName ||
+    values.candidateCollege ||
+    values.squadLeaderCollege ||
+    ''
+  ).trim();
+
+  const leaderBranch = (
+    values.leaderBranch ||
+    values.branch ||
+    values.candidateBranch ||
+    values.squadLeaderBranch ||
+    ''
+  ).trim();
+
+  const discountEligibility = useMemo(() => {
+    const normalFee = typeof feeValidation.numericAmount === 'number'
+      ? feeValidation.numericAmount
+      : (parseFloat(String(feeValidation.numericAmount || '0')) || 0);
+    if (!isPaid || normalFee <= 0 || !discountRule || !discountRule.enabled) {
+      return { eligible: false, normalFee, discountAmount: 0, finalFee: normalFee, ruleName: '', discountPercentage: 0 };
+    }
+
+    const matchesCollege = leaderCollege.toUpperCase() === (discountRule.institution || '').trim().toUpperCase();
+    const matchesBranch = leaderBranch.toUpperCase() === (discountRule.department || '').trim().toUpperCase();
+    const isApplicableComp =
+      (discountRule.applicableCompetitions || []).includes('all') ||
+      (discountRule.applicableCompetitions || []).includes(config.competitionSlug);
+
+    if (matchesCollege && matchesBranch && isApplicableComp) {
+      const pct = discountRule.discountPercentage || 50;
+      const discountAmount = Math.round((normalFee * pct) / 100);
+      const finalFee = Math.max(0, normalFee - discountAmount);
+      return {
+        eligible: true,
+        normalFee,
+        discountAmount,
+        finalFee,
+        ruleName: `${discountRule.institution} ${discountRule.department} ${pct}% Concession`,
+        discountPercentage: pct,
+      };
+    }
+
+    return { eligible: false, normalFee, discountAmount: 0, finalFee: normalFee, ruleName: '', discountPercentage: 0 };
+  }, [isPaid, discountRule, feeValidation.numericAmount, leaderCollege, leaderBranch, config.competitionSlug]);
+
   // Compute canonical UPI URI using standard URLSearchParams generator
   const upiPaymentUri = useMemo(() => {
     if (!isPaid || !feeValidation.isValid || !competition?.upiId) return '';
     const cleanUpiId = competition.upiId.trim();
     const payee = (competition.payeeName || 'TELE-ERA YUGANTAR 2026').trim();
-    const feeAmount = competition.isFeeFixed !== false ? feeValidation.numericAmount : undefined;
+    const feeAmount = competition.isFeeFixed !== false ? discountEligibility.finalFee : undefined;
     return buildUpiPaymentUri({
       upiId: cleanUpiId,
       payeeName: payee,
       amount: feeAmount,
       transactionNote: `${config.competitionName} Registration`,
     });
-  }, [isPaid, feeValidation, competition?.upiId, competition?.payeeName, competition?.isFeeFixed, config.competitionName]);
+  }, [isPaid, feeValidation, discountEligibility.finalFee, competition?.upiId, competition?.payeeName, competition?.isFeeFixed, config.competitionName]);
 
   // Robust, single-click pass downloader with automatic Blob download & object URL revocation
   const handleDownloadPass = useCallback(async (regId: string, token?: string) => {
@@ -1211,7 +1257,7 @@ export default function RegistrationForm({
     const regId = submissionResult?.registrationId || '';
     const token = submissionResult?.passToken;
     const digitalPassUrl = `/pass/${regId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-    const fullPassUrl = typeof window !== 'undefined' ? `${window.location.origin}${digitalPassUrl}` : digitalPassUrl;
+    const fullPassUrl = getAbsoluteUrl(digitalPassUrl);
     const rawWhatsapp = submissionResult?.whatsappLink || competition?.whatsappLink || '';
     const hasValidWhatsapp = Boolean(rawWhatsapp && (rawWhatsapp.startsWith('http://') || rawWhatsapp.startsWith('https://')));
 
@@ -1672,6 +1718,7 @@ export default function RegistrationForm({
                   value={values[field.key] || ''}
                   error={errors[field.key]}
                   competitionSlug={config.competitionSlug}
+                  allowedSemesters={competition?.allowedSemesters}
                   onChange={handleFieldChange}
                 />
               </React.Fragment>
@@ -1700,10 +1747,39 @@ export default function RegistrationForm({
                     </div>
                     {feeValidation.isValid && (
                       <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#E07A43] text-white shadow-2xs">
-                        Fee: {feeValidation.displayFee}
+                        Fee: {discountEligibility.eligible ? `₹${discountEligibility.finalFee}` : feeValidation.displayFee}
                       </span>
                     )}
                   </div>
+
+                  {/* Special Department Concession Banner */}
+                  {discountEligibility.eligible && (
+                    <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-900 space-y-1.5 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between font-bold text-xs">
+                        <span className="flex items-center gap-1.5 text-emerald-800">
+                          <Sparkles className="w-4 h-4 text-emerald-600" />
+                          <span>Department Privilege: {discountEligibility.ruleName}</span>
+                        </span>
+                        <span className="font-mono bg-emerald-600 text-white px-2 py-0.5 rounded-full text-[10px]">
+                          {discountEligibility.discountPercentage}% CONCESSION
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-emerald-500/20 font-mono">
+                        <div>
+                          <span className="text-[10px] text-emerald-700 block">Normal Fee:</span>
+                          <span className="line-through text-slate-500">₹{discountEligibility.normalFee}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-emerald-700 block">Applied Discount:</span>
+                          <span className="font-bold text-emerald-700">-₹{discountEligibility.discountAmount}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-emerald-700 block">Payable Amount:</span>
+                          <span className="font-bold text-blue-700 text-sm">₹{discountEligibility.finalFee}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                     <div className="p-3 rounded-xl bg-white border border-[#FFE0CE]">
@@ -1711,8 +1787,10 @@ export default function RegistrationForm({
                       <span className="font-bold text-[#172B49] block truncate">{competition?.name || config.competitionName}</span>
                     </div>
                     <div className="p-3 rounded-xl bg-white border border-[#FFE0CE]">
-                      <span className="text-[10px] font-mono uppercase text-[#7E93AC] block">Configured Fee</span>
-                      <span className="font-bold text-[#E07A43] block">{feeValidation.displayFee}</span>
+                      <span className="text-[10px] font-mono uppercase text-[#7E93AC] block">Payable Amount</span>
+                      <span className="font-bold text-[#E07A43] block">
+                        {discountEligibility.eligible ? `₹${discountEligibility.finalFee}` : feeValidation.displayFee}
+                      </span>
                     </div>
                     <div className="p-3 rounded-xl bg-white border border-[#FFE0CE]">
                       <span className="text-[10px] font-mono uppercase text-[#7E93AC] block">Requirements</span>
@@ -1768,10 +1846,10 @@ export default function RegistrationForm({
                           />
                           <div className="mt-2 space-y-0.5">
                             <span className="text-[11px] font-mono font-bold text-[#10264A] block">
-                              {feeValidation.numericAmount ? `₹${feeValidation.numericAmount}` : feeValidation.displayFee}
+                              {discountEligibility.eligible ? `₹${discountEligibility.finalFee}` : (feeValidation.numericAmount ? `₹${feeValidation.numericAmount}` : feeValidation.displayFee)}
                             </span>
                             <span className="text-[10px] font-mono text-[#536781] block">
-                              {competition?.qrMode === 'upload' ? 'Official Department QR' : 'Dynamic UPI QR'}
+                              {discountEligibility.eligible ? 'Concession Applied UPI QR' : (competition?.qrMode === 'upload' ? 'Official Department QR' : 'Dynamic UPI QR')}
                             </span>
                           </div>
                         </div>
@@ -1919,6 +1997,7 @@ export default function RegistrationForm({
                       value={values[field.key] || ''}
                       error={errors[field.key]}
                       competitionSlug={config.competitionSlug}
+                      allowedSemesters={competition?.allowedSemesters}
                       onChange={handleFieldChange}
                     />
                   ))}

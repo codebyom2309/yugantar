@@ -11,6 +11,7 @@ const TRACK_TAGS = [
   { name: 'Research Symposia', icon: Presentation, color: 'bg-sky-50 text-sky-700 border-sky-200 hover:sky-300' },
   { name: 'Esports Arena (BGMI/FF)', icon: Gamepad2, color: 'bg-rose-50 text-rose-700 border-rose-200 hover:border-rose-300' },
   { name: 'Acoustic Open Mic', icon: Mic, color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-300' },
+  { name: 'Mini Project Arena', icon: Layers, color: 'bg-teal-50 text-teal-700 border-teal-200 hover:border-teal-300' },
   { name: '₹50,000+ Prize Pool', icon: Trophy, color: 'bg-amber-50 text-amber-800 border-amber-300 hover:border-amber-400 font-bold' },
 ];
 
@@ -24,7 +25,7 @@ export default function InnovationStream() {
           <span className="px-2 py-0.5 rounded bg-[#243B64] text-white text-[10px]">
             CONVEYOR TRACK
           </span>
-          <span>EXPLORE THE 8 COMPETITION DISTRICTS</span>
+          <span>EXPLORE THE 9 COMPETITION DISTRICTS</span>
         </div>
         <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-[#4B638A] font-medium">
           <Sparkles className="w-3 h-3 text-[#F4A477]" />

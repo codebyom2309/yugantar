@@ -115,6 +115,7 @@ async function AboutContent() {
 
   const turboBitsTeam = members.filter((m) => m.category === 'turbo_bits');
   const facultyLeads = members.filter((m) => m.category === 'faculty');
+  const studentCoordinators = members.filter((m) => m.category === 'core_committee');
 
   // Find HOD vs other faculty
   const hodMember = facultyLeads.find(
@@ -185,7 +186,7 @@ async function AboutContent() {
             </h1>
 
             <p className="text-xs sm:text-sm lg:text-base text-[#536781] leading-relaxed mb-5 font-normal max-w-2xl">
-              Organized by the {festival.department} and TELE-ERA at {festival.college}. {festival.name} unites future engineers, innovators, and creators across eight architectural districts of NEXUS CITY to build, compete, and lead.
+              Organized by the {festival.department} and TELE-ERA at {festival.college}. {festival.name} unites future engineers, innovators, and creators across the architectural districts of NEXUS CITY to build, compete, and lead.
             </p>
 
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-mono text-[#10264A]">
@@ -459,178 +460,148 @@ async function AboutContent() {
             </div>
           </section>
 
-          {/* Section 5: Student Organizing Team (TurboBits) - Mobile First Redesign */}
-          {turboBitsTeam.length > 0 && (
-            <section id="turbo-bits-team" className="space-y-6 sm:space-y-8">
-              <div className="max-w-3xl">
+          {/* Section 5: Student Coordinators (Core Committee) */}
+          <section id="student-coordinators" className="space-y-6 sm:space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div className="max-w-2xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF2FF] border border-[#BFDBFE] text-xs font-mono font-bold text-[#2563EB] uppercase tracking-wider mb-2.5">
-                  <Code2 className="w-3.5 h-3.5" />
-                  <span>STUDENT TECHNICAL &amp; OPERATIONS TEAM</span>
+                  <Users className="w-3.5 h-3.5" />
+                  <span>STUDENT COORDINATORS · FORUM &amp; OPERATIONS</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-[#10264A] tracking-tight">
-                  TurboBits Student Organizing Team
+                  Student Coordinators
                 </h2>
-                <p className="text-xs sm:text-sm text-[#536781] mt-1.5 leading-relaxed">
-                  Hosted by the Department of Electronics &amp; Telecommunication Engineering at Priyadarshini College of Engineering (PCE) in association with the TELE-ERA Student Forum. The TurboBits team is the dedicated student engineering, design, and operations unit building the digital systems, laboratory infrastructure, and live event coordination for YUGANTAR 2026.
+                <p className="text-xs sm:text-sm text-[#536781] mt-1.5 leading-relaxed font-normal">
+                  Student leaders from TELE-ERA and the Department of Electronics &amp; Telecommunication Engineering coordinating technical challenge tracks, registrations, and venue operations for YUGANTAR 2026.
                 </p>
               </div>
 
-              {/* Responsive Team Grid: Lead is prominently featured, followed by member cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-                {[...turboBitsTeam]
-                  .sort((a, b) => {
-                    const aLead = Boolean((a as any).is_lead || (a.role || '').toLowerCase().includes('lead') || (a.role || '').toLowerCase().includes('head'));
-                    const bLead = Boolean((b as any).is_lead || (b.role || '').toLowerCase().includes('lead') || (b.role || '').toLowerCase().includes('head'));
-                    if (aLead && !bLead) return -1;
-                    if (!aLead && bLead) return 1;
-                    return (a.display_order ?? 0) - (b.display_order ?? 0);
-                  })
-                  .map((member: DbOrganizerMember, idx: number) => {
-                  const hasGithub = member.github_url && member.github_url.trim().length > 0;
-                  const hasLinkedin = member.linkedin_url && member.linkedin_url.trim().length > 0;
-                  const roleLower = (member.role || '').toLowerCase();
-                  const isLead = Boolean((member as any).is_lead || roleLower.includes('lead') || roleLower.includes('head'));
-                  const crop = parseCropData(member.crop_data);
+              {/* Dedicated TurboBits Team Link Pill */}
+              <Link
+                href="/turbobits"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white hover:bg-[#F8FAFD] border border-[#DCE5F2] hover:border-[#3978F6]/40 text-xs font-mono font-bold text-[#10264A] hover:text-[#3978F6] transition-all shadow-2xs shrink-0"
+              >
+                <Code2 className="w-3.5 h-3.5 text-[#3978F6]" />
+                <span>Meet TurboBits (Tech Team)</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#FF783E]" />
+              </Link>
+            </div>
 
-                  return (
-                    <div
-                      key={member.id ? `${member.id}-${idx}` : `tb-${idx}`}
-                      suppressHydrationWarning
-                      className={`turbobits-card ${isLead ? 'glow-cyan' : 'glow-blue'} rounded-3xl flex flex-col justify-between transition-all duration-300 group ${
-                        isLead
-                          ? 'col-span-1 sm:col-span-2 lg:col-span-3 p-6 sm:p-8 bg-gradient-to-br from-white via-white to-[#F0F6FF] border-2 border-[#3978F6]/60 shadow-[0_0_24px_rgba(57,120,246,0.18)]'
-                          : 'p-5 sm:p-6 bg-white border border-[#DCE5F2] shadow-xs'
-                      }`}
-                    >
-                      <div className={isLead ? 'space-y-4' : 'space-y-3.5'}>
-                        {/* Member Header with Avatar, Name, and Role */}
-                        <div className={`flex ${isLead ? 'items-center sm:items-start gap-5 sm:gap-6' : 'items-start gap-4'}`}>
-                          <div className={`relative ${getCropMaskClass(crop.shape)} overflow-hidden shrink-0 flex items-center justify-center transition-all ${
-                            isLead
-                              ? 'w-22 h-22 sm:w-28 sm:h-28 border-3 border-[#3978F6] shadow-lg ring-4 ring-[#3978F6]/20 bg-[#E9F2FF]'
-                              : 'w-16 h-16 sm:w-18 sm:h-18 border-2 border-[#DCE5F2] bg-[#E9F2FF] shadow-2xs group-hover:border-[#3978F6]/70'
-                          }`}>
-                            {member.avatar_url ? (
-                              <img
-                                src={member.avatar_url}
-                                alt={member.name}
-                                style={getCropImageStyle(crop)}
-                                className="pointer-events-none select-none transition-transform duration-300 group-hover:scale-105"
-                              />
+            {studentCoordinators.length === 0 ? (
+              <div className="p-8 rounded-3xl bg-white border border-dashed border-[#DCE5F2] text-center space-y-2">
+                <Users className="w-8 h-8 text-[#8CA0BA] mx-auto" />
+                <p className="text-sm font-semibold text-[#10264A]">Student Coordinators Being Finalized</p>
+                <p className="text-xs text-[#536781] max-w-md mx-auto">
+                  Student coordinators across all challenge arenas and operations will be announced by the department forum.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {studentCoordinators
+                  .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+                  .map((member: DbOrganizerMember, idx: number) => {
+                    const hasGithub = member.github_url && member.github_url.trim().length > 0;
+                    const hasLinkedin = member.linkedin_url && member.linkedin_url.trim().length > 0;
+                    const crop = parseCropData(member.crop_data);
+                    const hasPhoto = Boolean(member.avatar_url && member.avatar_url.trim().length > 0);
+
+                    return (
+                      <div
+                        key={member.id ? `${member.id}-${idx}` : `coord-${idx}`}
+                        suppressHydrationWarning
+                        className="yugantar-card-interactive glow-blue p-4 rounded-2xl bg-white border border-[#DCE5F2] shadow-2xs hover:border-[#3978F6]/50 transition-all flex flex-col justify-between group"
+                      >
+                        <div className="space-y-3">
+                          {/* Card Header: Avatar or Polished Monogram */}
+                          <div className="flex items-start gap-3">
+                            {hasPhoto ? (
+                              <div className={`relative ${getCropMaskClass(crop.shape)} w-12 h-12 overflow-hidden shrink-0 border border-[#DCE5F2] bg-[#E9F2FF] flex items-center justify-center shadow-2xs group-hover:border-[#3978F6]/60 transition-colors`}>
+                                <img
+                                  src={member.avatar_url!}
+                                  alt={member.name}
+                                  style={getCropImageStyle(crop)}
+                                  className="pointer-events-none select-none transition-transform duration-300 group-hover:scale-105"
+                                />
+                              </div>
                             ) : (
-                              <span className={`font-display text-[#3978F6] font-bold ${isLead ? 'text-2xl sm:text-3xl' : 'text-lg'}`}>
-                                {(member.name || 'TB')
+                              <div className="w-10 h-10 rounded-xl bg-[#EDF5FC] text-[#3978F6] font-display font-bold text-xs flex items-center justify-center shrink-0 border border-[#DCE5F2] shadow-2xs">
+                                {(member.name || 'SC')
                                   .split(' ')
                                   .map((n) => n[0])
                                   .slice(0, 2)
                                   .join('')
                                   .toUpperCase()}
-                              </span>
+                              </div>
                             )}
-                          </div>
 
-                          <div className="min-w-0 flex-1 space-y-1.5">
-                            <div className="flex flex-wrap items-center gap-2">
-                              {isLead ? (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#3978F6] text-white text-xs font-mono font-extrabold uppercase tracking-wider shadow-xs">
-                                  <span>⚡ TurboBits Lead</span>
-                                </span>
-                              ) : (
-                                <span className="inline-block px-2.5 py-0.5 rounded-md bg-[#EBF2FF] text-[#2563EB] text-[10px] font-mono font-bold uppercase tracking-wider border border-[#2563EB]/20">
-                                  {member.role || 'Coordinator'}
-                                </span>
-                              )}
-
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-display font-bold text-[#10264A] text-sm leading-snug truncate group-hover:text-[#3978F6] transition-colors">
+                                {member.name}
+                              </h4>
+                              <p className="text-xs font-mono font-medium text-[#3978F6] truncate">
+                                {member.role || 'Student Coordinator'}
+                              </p>
                               {member.forum_designation && (
-                                <div className="text-[10px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60 inline-flex items-center gap-1">
-                                  <span>{member.forum_designation}</span>
-                                </div>
+                                <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/50 inline-block truncate mt-0.5">
+                                  {member.forum_designation}
+                                </span>
                               )}
                             </div>
-
-                            <h3 className={`font-display font-black text-[#10264A] leading-snug break-words ${
-                              isLead ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg'
-                            }`}>
-                              {member.name}
-                            </h3>
-                            <p className={`font-mono font-bold text-[#3978F6] leading-snug break-words ${
-                              isLead ? 'text-sm sm:text-base text-[#10264A]' : 'text-xs'
-                            }`}>
-                              {member.role}
-                            </p>
                           </div>
-                        </div>
 
-                        {/* Department / Committee Badge */}
-                        <div className="flex items-center gap-2 text-[11px] text-[#7E93AC] font-mono">
-                          <Layers className="w-3.5 h-3.5 text-[#3978F6]" />
-                          <span className="truncate">{member.department || 'ETC Department, PCE'}</span>
-                        </div>
+                          {/* Department or Scope */}
+                          <div className="text-[11px] font-mono text-[#7E93AC] truncate">
+                            {member.department || 'PCE · ETC'}
+                          </div>
 
-                        {/* Bio / Responsibility Scope */}
-                        {member.bio && (
-                          <div className={`p-3 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2]/80 leading-relaxed text-[#536781] ${
-                            isLead ? 'text-xs sm:text-sm' : 'text-xs'
-                          }`}>
-                            <p className="font-normal text-[11px] sm:text-xs">
+                          {/* Optional Bio */}
+                          {member.bio && (
+                            <p className="text-[11px] text-[#536781] line-clamp-2 leading-relaxed">
                               {member.bio}
                             </p>
+                          )}
+                        </div>
+
+                        {/* Card Footer: Social / Order if present */}
+                        {(hasGithub || hasLinkedin || showOrganizerOrder) && (
+                          <div className="pt-2.5 mt-2.5 border-t border-[#DCE5F2]/70 flex items-center justify-between text-[10px] font-mono">
+                            {showOrganizerOrder && (
+                              <span className="text-[#7E93AC]">
+                                #{member.display_order + 1}
+                              </span>
+                            )}
+                            <div className="flex items-center gap-1.5 ml-auto">
+                              {hasGithub && (
+                                <a
+                                  href={member.github_url!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1 rounded-lg text-[#536781] hover:text-[#10264A] hover:bg-[#F8FAFD]"
+                                  aria-label="GitHub"
+                                >
+                                  <GithubSocialIcon className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                              {hasLinkedin && (
+                                <a
+                                  href={member.linkedin_url!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1 rounded-lg text-[#536781] hover:text-[#3978F6] hover:bg-[#F8FAFD]"
+                                  aria-label="LinkedIn"
+                                >
+                                  <LinkedinSocialIcon className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
-
-                      {/* Footer: Social Links (Only rendered when configured) */}
-                      <div className="pt-4 mt-4 border-t border-[#DCE5F2] flex items-center justify-between">
-                        {showOrganizerOrder ? (
-                          <span className="text-[10px] font-mono text-[#7E93AC] font-semibold">
-                            Order #{member.display_order + 1}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-mono text-[#7E93AC]/60">
-                            PCE · ETC
-                          </span>
-                        )}
-
-                        <div className="flex items-center gap-1.5 ml-auto">
-                          {hasGithub && (
-                            <a
-                              href={member.github_url!}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#F8FAFD] hover:bg-[#E9F2FF] border border-[#DCE5F2] hover:border-[#3978F6]/40 text-[#536781] hover:text-[#10264A] text-xs font-mono font-semibold transition-all shadow-2xs"
-                              aria-label={`${member.name}'s GitHub Profile`}
-                              title="GitHub Profile"
-                            >
-                              <GithubSocialIcon className="w-3.5 h-3.5" />
-                              <span className="text-[10px]">GitHub</span>
-                            </a>
-                          )}
-                          {hasLinkedin && (
-                            <a
-                              href={member.linkedin_url!}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#F8FAFD] hover:bg-[#E9F2FF] border border-[#DCE5F2] hover:border-[#3978F6]/40 text-[#536781] hover:text-[#3978F6] text-xs font-mono font-semibold transition-all shadow-2xs"
-                              aria-label={`${member.name}'s LinkedIn Profile`}
-                              title="LinkedIn Profile"
-                            >
-                              <LinkedinSocialIcon className="w-3.5 h-3.5" />
-                              <span className="text-[10px]">LinkedIn</span>
-                            </a>
-                          )}
-                          {!hasGithub && !hasLinkedin && (
-                            <span className="text-[10px] font-mono text-[#7E93AC]">
-                              Verified Student Coordinator
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
-            </section>
-          )}
+            )}
+          </section>
 
           {/* Section 6: Department Heritage & Campus Coordinates */}
           <section id="campus" className="rounded-3xl bg-white border border-[#DCE5F2] p-6 sm:p-10 lg:p-12 shadow-xs">
@@ -684,7 +655,7 @@ async function AboutContent() {
                     href="/competitions"
                     className="nexus-btn-primary w-full py-2.5 text-xs font-mono font-bold tracking-wider uppercase gap-2 flex items-center justify-center"
                   >
-                    <span>View All 8 Competitions</span>
+                    <span>View All Competitions</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
@@ -703,7 +674,7 @@ async function AboutContent() {
                 Join Us at YUGANTAR 2026
               </h3>
               <p className="text-xs sm:text-sm text-[#536781] leading-relaxed max-w-lg mx-auto font-normal">
-                Explore the eight competition tracks and prepare your team for a landmark day of engineering innovation at PCE Nagpur.
+                Explore all confirmed competition tracks and prepare your team for a landmark day of engineering innovation at PCE Nagpur.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                 <Link

@@ -25,8 +25,10 @@ import {
   Layers,
   Building2,
   Users,
+  Phone,
+  AlertTriangle,
 } from 'lucide-react';
-import type { FestivalSettings } from '@/lib/competitions';
+import type { FestivalSettings, DbCompetition } from '@/lib/competitions';
 
 const TIMELINE_METADATA = [
   {
@@ -47,9 +49,9 @@ const TIMELINE_METADATA = [
   },
   {
     icon: Layers,
-    venue: '8 Specialized Competition Arenas Across Campus',
+    venue: '9 Specialized Competition Arenas Across Campus',
     badge: 'STAGE 03 · COMPETITION',
-    timing: '10:00 AM - 02:00 PM',
+    timing: '10:30 AM - 04:30 PM (Parallel Competition Tracks)',
     highlights: ['Timed circuit wiring & prototype defense', 'Live Q&A viva with faculty & industry juries', 'Scoring matrix compilation'],
     accent: '#FF783E',
   },
@@ -60,6 +62,112 @@ const TIMELINE_METADATA = [
     timing: '02:30 PM - 04:30 PM',
     highlights: ['Distinguished keynote address', 'Announcement of champion podiums & cash prizes', 'Certificate conferral ceremony'],
     accent: '#10B981',
+  },
+];
+
+const PARALLEL_SCHEDULE_TRACKS = [
+  {
+    slotTitle: 'Morning Technical Tracks',
+    timeRange: '10:30 AM – 01:00 PM',
+    badgeColor: 'bg-[#EDF5FC] text-[#3978F6] border-[#D2E4FF]',
+    items: [
+      {
+        slug: 'ppt-presentation',
+        name: 'PPT Presentation Competition',
+        time: '10:30 AM Onwards',
+        venue: '2nd Floor Meeting Room',
+        faculty: 'Dr. A. K. Kondelwar, Mrs. S. S. Mankar',
+        student: 'Pooja Konge, Dishant Chokhande',
+        phone: '+91 95793 28823',
+      },
+      {
+        slug: 'project-competition',
+        name: 'Project Competition',
+        time: '10:30 AM Onwards',
+        venue: '2nd Floor DSD / WSN / ES / DSP / MWR Lab',
+        faculty: 'Dr. (Mrs) J. M. Bhattad, Mr. D. G. Gahane, Dr(Ms). J. C. Kolte, Ms. P. B. Pendke',
+        student: 'Khushi Pardhi, Samsher Kode, Om Wadaskar, Gaurav Rajurkar',
+        phone: '+91 95524 58818',
+      },
+      {
+        slug: 'e-gaming',
+        name: 'E-Gaming Arena',
+        time: '10:30 AM Onwards',
+        venue: 'Room No. 302 & 307',
+        faculty: 'Dr. P. U. Chati, Dr. C. N. Bhoyar',
+        student: 'Shivam Tatole, Tejas Dhanorkar',
+        phone: '+91 78210 87589',
+      },
+      {
+        slug: 'poster-competition',
+        name: 'Poster Competition',
+        time: '11:00 AM Onwards',
+        venue: 'Room No. 304',
+        faculty: 'Dr. P. P. Ashtankar, Dr. A. S. Khobragade',
+        student: 'Aryan Dehankar, Anshool Harinkhede',
+        phone: '+91 73856 35401',
+      },
+      {
+        slug: 'open-mic',
+        name: 'Open Mic Concourse',
+        time: '11:00 AM Onwards',
+        venue: 'Aeronautical Seminar Hall',
+        faculty: 'Ms. A. K. Parmar, Dr(Ms). J. C. Kolte',
+        student: 'Vedant Gawande, Mohit Kawale',
+        phone: '+91 84218 41958',
+      },
+    ],
+  },
+  {
+    slotTitle: 'Mid-Day Prototype Session',
+    timeRange: '01:00 PM – 02:00 PM',
+    badgeColor: 'bg-[#FFF4EA] text-[#FF783E] border-[#FFE0CE]',
+    items: [
+      {
+        slug: 'mini-project-competition',
+        name: 'Mini Project Competition',
+        time: '01:00 PM Onwards',
+        venue: '3rd Floor Room No. 305',
+        faculty: 'Dr. P. P. Ashtankar, Dr(Ms). J. C. Kolte',
+        student: 'Summit Bhagat, Aditya Sumatkar',
+        phone: '+91 89992 60789',
+      },
+    ],
+  },
+  {
+    slotTitle: 'Afternoon Circuit & Placement Tracks',
+    timeRange: '02:00 PM Onwards',
+    badgeColor: 'bg-[#F2EFFD] text-[#8578D8] border-[#E0DAF8]',
+    items: [
+      {
+        slug: 'mock-placement-drive',
+        name: 'Mock Placement Drive',
+        time: '02:00 PM Onwards',
+        venue: 'Room 303 + GD Room + Meeting RoomHall',
+        faculty: 'Mrs. P. J. Suryawanshi, Gomati Deshmukh, Mrs. R. R. Zalke',
+        student: 'Vedant Gaikwad, Aachal Dhapekar',
+        phone: '+91 96998 64120',
+      },
+      {
+        slug: 'breadboard-competition',
+        name: 'Bread Board Competition',
+        time: '02:00 PM Onwards',
+        venue: '2nd Floor EW Lab',
+        faculty: 'Mrs. V. N. Mahawadiwar, Mrs. P. R. Ninawe',
+        student: 'Pratik Kamble, Shweta Singh',
+        phone: '+91 95454 75647',
+      },
+      {
+        slug: 'ideathon',
+        name: 'Ideathon Challenge',
+        time: '02:00 PM Onwards',
+        venue: '1st Floor Aeronautical Seminar Hall',
+        faculty: 'Dr. N. S. Ambatkar, Mr. P. R. Lakhe',
+        student: 'Prathemesh Pawar, Yatharth Kathane',
+        phone: '+91 72767 85069',
+        flaggedNotice: 'Source schedule lists "2.00AM" (flagged for review; scheduled as 2:00 PM parallel track)',
+      },
+    ],
   },
 ];
 
@@ -292,6 +400,122 @@ export default function JourneyClient() {
                           </div>
 
                         </div>
+
+                        {/* STAGE 03: Parallel Competition Arenas Schedule */}
+                        {index === 2 && (
+                          <div className="mt-6 pt-6 border-t border-[#DCE5F2] space-y-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div>
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF783E] block mb-0.5">
+                                  OFFICIAL FESTIVAL SCHEDULE · 21 OCTOBER 2026
+                                </span>
+                                <h3 className="text-base sm:text-lg font-display font-extrabold text-[#10264A]">
+                                  Nine Parallel Competition Tracks
+                                </h3>
+                              </div>
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E9F2FF] border border-[#D2E4FF] text-xs font-mono font-bold text-[#3978F6] self-start sm:self-auto">
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>21 October 2026</span>
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-[#536781] leading-relaxed">
+                              Each competition track operates in its designated department venue. Multiple events run concurrently throughout the day—report directly to your assigned arena at the scheduled start time.
+                            </p>
+
+                            <div className="space-y-6">
+                              {PARALLEL_SCHEDULE_TRACKS.map((slot, sIdx) => (
+                                <div key={sIdx} className="space-y-3">
+                                  <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-[#DCE5F2]">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full bg-[#3978F6]" />
+                                      <h4 className="text-xs sm:text-sm font-display font-bold text-[#10264A]">
+                                        {slot.slotTitle}
+                                      </h4>
+                                    </div>
+                                    <span className={`px-2.5 py-0.5 rounded-lg border text-[11px] font-mono font-bold ${slot.badgeColor}`}>
+                                      {slot.timeRange}
+                                    </span>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {slot.items.map((track) => (
+                                      <div
+                                        key={track.slug}
+                                        className="p-3.5 rounded-2xl bg-[#F8FAFD] border border-[#DCE5F2] hover:border-[#3978F6]/40 transition-all flex flex-col justify-between space-y-3 shadow-2xs group"
+                                      >
+                                        <div className="space-y-2">
+                                          <div className="flex items-start justify-between gap-2">
+                                            <Link
+                                              href={`/competitions/${track.slug}`}
+                                              className="font-display font-bold text-xs sm:text-sm text-[#10264A] group-hover:text-[#3978F6] transition-colors leading-snug"
+                                            >
+                                              {track.name}
+                                            </Link>
+                                            <span className="shrink-0 px-2 py-0.5 rounded bg-white border border-[#DCE5F2] font-mono text-[10px] font-bold text-[#3978F6]">
+                                              {track.time}
+                                            </span>
+                                          </div>
+
+                                          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#536781]">
+                                            <MapPin className="w-3.5 h-3.5 text-[#FF783E] shrink-0" />
+                                            <span className="truncate">{track.venue}</span>
+                                          </div>
+
+                                          {track.flaggedNotice && (
+                                            <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-[10px] font-mono text-amber-900 flex items-start gap-1.5">
+                                              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                                              <span>{track.flaggedNotice}</span>
+                                            </div>
+                                          )}
+
+                                          <div className="pt-2 border-t border-[#DCE5F2]/70 space-y-1 text-[11px]">
+                                            <div>
+                                              <span className="text-[10px] font-mono text-[#7E93AC] uppercase block">Faculty:</span>
+                                              <span className="text-[#10264A] font-medium leading-tight block">{track.faculty}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-[10px] font-mono text-[#7E93AC] uppercase block">Student Contact:</span>
+                                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                                <span className="text-[#10264A] font-medium">{track.student}</span>
+                                                {track.phone && (
+                                                  <a
+                                                    href={`tel:${track.phone.replace(/[^0-9+]/g, '')}`}
+                                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-[#DCE5F2] text-[#3978F6] hover:text-[#10264A] font-mono text-[10px] font-bold transition-colors"
+                                                  >
+                                                    <Phone className="w-2.5 h-2.5" />
+                                                    <span>{track.phone}</span>
+                                                  </a>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="pt-2 border-t border-[#DCE5F2]/60 flex items-center justify-between text-[11px]">
+                                          <Link
+                                            href={`/competitions/${track.slug}`}
+                                            className="text-[#3978F6] font-mono font-bold hover:underline inline-flex items-center gap-1 text-[10px] uppercase"
+                                          >
+                                            <span>Arena Details</span>
+                                            <ArrowRight className="w-3 h-3" />
+                                          </Link>
+                                          <Link
+                                            href={`/competitions/${track.slug}/register`}
+                                            className="text-[#FF783E] font-mono font-bold hover:underline inline-flex items-center gap-1 text-[10px] uppercase"
+                                          >
+                                            <span>Register</span>
+                                            <ChevronRight className="w-3 h-3" />
+                                          </Link>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Bottom Card Action */}
                         <div className="mt-5 pt-4 border-t border-[#DCE5F2] flex flex-wrap items-center justify-between gap-3 text-xs">

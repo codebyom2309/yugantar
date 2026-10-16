@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search') || '';
   const dateFilter = searchParams.get('date') || '';
   const isAll = searchParams.get('all') === 'true';
+  const modeParam = searchParams.get('mode') || 'LIVE'; // Default to LIVE participant view
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = isAll ? 5000 : Math.min(parseInt(searchParams.get('limit') || '25', 10), 100);
   const offset = isAll ? 0 : (page - 1) * limit;
@@ -36,6 +37,12 @@ export async function GET(request: NextRequest) {
   try {
     let where = 'WHERE 1=1';
     const params: (string | number)[] = [];
+
+    if (modeParam === 'LIVE') {
+      where += " AND (registration_mode = 'LIVE')";
+    } else if (modeParam === 'TEST') {
+      where += " AND (registration_mode = 'TEST' OR registration_mode IS NULL)";
+    }
 
     if (competition) { where += ' AND competition_slug = ?'; params.push(competition); }
     if (statusFilter) { where += ' AND submission_status = ?'; params.push(statusFilter); }
@@ -70,8 +77,8 @@ export async function GET(request: NextRequest) {
     const safeLimit = Math.max(1, limit);
     const safeOffset = Math.max(0, offset);
 
-    // Run count, page data, and settings concurrently in parallel
-    const [countRows, rows, settingRows] = await Promise.all([
+    // Run count, page data, mode stats, and settings concurrently in parallel
+    const [countRows, rows, settingRows, modeStatRows] = await Promise.all([
       db.query<{ total: number }>(`SELECT COUNT(*) as total FROM registrations ${where}`, params),
       db.query<{
         id: string; competition_slug: string; leader_name: string; leader_email: string;
@@ -80,21 +87,33 @@ export async function GET(request: NextRequest) {
         payment_proof_url: string | null; submission_status: string; submission_error: string | null;
         submitted_at: string | null; created_at: string; verification_token: string | null;
         payment_status: string | null; verified_by: string | null; verified_at: string | null;
-        form_data: string | null;
+        form_data: string | null; registration_mode: string;
+        normal_fee: number | null; discount_amount: number | null; discount_rule: string | null; final_fee: number | null;
       }>(
         `SELECT id, competition_slug, leader_name, leader_email, leader_phone, leader_college,
                 leader_branch, leader_semester, team_name, team_size, payment_id, payment_proof_url,
                 submission_status, submission_error, submitted_at, created_at, verification_token,
-                payment_status, verified_by, verified_at, form_data
+                payment_status, verified_by, verified_at, form_data, registration_mode,
+                normal_fee, discount_amount, discount_rule, final_fee
          FROM registrations ${where} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
         params
       ),
       db.query<{ setting_value: string }>(
         "SELECT setting_value FROM site_settings WHERE setting_key = 'registration_storage_mode' LIMIT 1"
       ),
+      db.query<{ registration_mode: string; count: number }>(
+        "SELECT COALESCE(registration_mode, 'TEST') as registration_mode, COUNT(*) as count FROM registrations GROUP BY registration_mode"
+      ),
     ]);
     const total = countRows?.[0]?.total || 0;
     const storageMode = settingRows?.[0]?.setting_value || 'minimal';
+
+    let liveCount = 0;
+    let testCount = 0;
+    (modeStatRows || []).forEach(r => {
+      if (r.registration_mode === 'LIVE') liveCount += Number(r.count);
+      else testCount += Number(r.count);
+    });
 
     return NextResponse.json(
       {
@@ -104,6 +123,12 @@ export async function GET(request: NextRequest) {
         limit: safeLimit,
         totalPages: isAll ? 1 : Math.ceil(total / safeLimit),
         storageMode,
+        activeMode: modeParam,
+        countsByMode: {
+          live: liveCount,
+          test: testCount,
+          all: liveCount + testCount,
+        },
       },
       {
         headers: {

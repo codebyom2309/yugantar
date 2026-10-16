@@ -47,9 +47,9 @@ const ETC_CENTRAL_SPIRE = {
   district: 'Central Spire (ETC Dept)',
   districtIndex: -1,
   category: 'Host Department & Directorate',
-  districtTagline: 'The institutional beacon and administrative nexus connecting all eight technological arenas.',
+  districtTagline: 'The institutional beacon and administrative nexus connecting all nine technological arenas.',
   shortDescription:
-    'Department of Electronics and Telecommunication Engineering, Priyadarshini College of Engineering, Nagpur. The central architectural spire and administrative nexus connecting all 8 technological arenas of YUGANTAR 2026.',
+    'Department of Electronics and Telecommunication Engineering, Priyadarshini College of Engineering, Nagpur. The central architectural spire and administrative nexus connecting all 9 technological arenas of YUGANTAR 2026.',
   highlights: [
     'Department of Electronics & Telecommunication Engineering',
     'TELE-ERA Department Student Forum (Host Forum)',
@@ -159,7 +159,7 @@ export default function DistrictsClient() {
             </div>
 
             <h1 className="text-2xl sm:text-4xl lg:text-5xl font-display font-extrabold tracking-tight text-[#10264A] mb-3 text-balance leading-tight">
-              The Eight Districts of <br />
+              The Nine Districts of <br />
               <span className="font-editorial text-sunset-glow font-normal tracking-normal text-3xl sm:text-5xl lg:text-6xl">
                 NEXUS CITY.
               </span>
@@ -180,7 +180,7 @@ export default function DistrictsClient() {
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 backdrop-blur-xs border border-[#DCE5F2] shadow-2xs text-[#536781]">
                 <Layers className="w-3.5 h-3.5 text-emerald-600" />
-                <span>8 Arenas + 1 Central Citadel</span>
+                <span>{competitions.length} Arenas + 1 Central Citadel</span>
               </span>
             </div>
           </div>
@@ -211,7 +211,7 @@ export default function DistrictsClient() {
               <div className="relative w-full aspect-[1536/1024] rounded-2xl overflow-hidden bg-gradient-to-b from-[#EDF5FC] via-[#F4F9FD] to-[#EDF5FC] border border-[#DCE5F2] shadow-inner">
                 <Image
                   src={mapArtwork}
-                  alt="NEXUS CITY Eight Competition Districts and Central ETC Spire Map"
+                  alt="NEXUS CITY Nine Competition Districts and Central ETC Spire Map"
                   fill
                   priority
                   className="object-contain"
@@ -242,8 +242,8 @@ export default function DistrictsClient() {
                   )}
                 </button>
 
-                {/* 2. Hotspots for the 8 Competition Programs */}
-                {competitions.slice(0, 8).map((comp, idx) => {
+                {/* 2. Hotspots for the 9 Competition Programs */}
+                {competitions.map((comp, idx) => {
                   const isActive = comp.id === activeNodeId && !isCenterSelected;
                   return (
                     <button
@@ -310,8 +310,8 @@ export default function DistrictsClient() {
                     <span className="truncate font-semibold">ETC Citadel</span>
                   </button>
 
-                  {/* 8 Competitions Chips */}
-                  {competitions.slice(0, 8).map((comp, idx) => {
+                  {/* 9 Competitions Chips */}
+                  {competitions.map((comp, idx) => {
                     const isActive = comp.id === activeNodeId && !isCenterSelected;
                     return (
                       <button
@@ -396,7 +396,7 @@ export default function DistrictsClient() {
                       href="/competitions"
                       className="nexus-btn-primary w-full py-3 text-xs font-mono font-bold tracking-wider uppercase gap-2 shadow-xs justify-center flex items-center"
                     >
-                      <span>Explore All 8 Competitions</span>
+                      <span>Explore All Competitions</span>
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>

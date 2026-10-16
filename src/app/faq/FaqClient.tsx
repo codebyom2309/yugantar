@@ -242,7 +242,7 @@ export default function FaqClient() {
               href="/competitions"
               className="nexus-btn-primary px-5 py-2.5 text-xs font-mono font-bold tracking-wider uppercase shrink-0 gap-1.5 shadow-sm"
             >
-              <span>Explore 8 Arenas</span>
+              <span>Explore Competitions</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>

@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import sharp from 'sharp';
 import { PassTemplate, StudioElement, TextElement, FieldElement, QrElement, ShapeElement, ImageElement } from '@/types/studio';
 import { resolveTokens, getSampleTokenValues } from '@/lib/studioTokens';
+import { getAbsoluteUrl } from '@/lib/site-url';
 
 // Hex color to pdf-lib RGB helper
 function hexToRgb(hex?: string | null) {
@@ -326,11 +327,11 @@ export async function renderTemplateToPdfBuffer(
 
       case 'qr': {
         const qrElem = element as QrElement;
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yugantar2026.pce.ac.in';
-
-        let targetUrl = `${appUrl}/verify/${verificationOverride?.passToken || tokenValues['{{registration.verifyToken}}'] || 'sample-pass-token'}`;
+        const passToken = verificationOverride?.passToken || tokenValues['{{registration.verifyToken}}'] || 'sample-pass-token';
+        const certToken = verificationOverride?.certToken || tokenValues['{{certificate.id}}'] || 'sample-cert-token';
+        let targetUrl = getAbsoluteUrl(`/verify/${passToken}`);
         if (qrElem.qrType === 'cert_verification') {
-          targetUrl = `${appUrl}/verify/${verificationOverride?.certToken || tokenValues['{{certificate.id}}'] || 'sample-cert-token'}`;
+          targetUrl = getAbsoluteUrl(`/verify/${certToken}`);
         } else if (qrElem.qrType === 'custom_url' && qrElem.customUrl) {
           targetUrl = qrElem.customUrl;
         }

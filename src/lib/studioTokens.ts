@@ -257,7 +257,7 @@ export const DATA_TOKEN_CATEGORIES: DataTokenCategory[] = [
         name: 'Festival Date',
         description: 'Date of the competition event',
         dataType: 'string',
-        sampleValue: '19 October 2026',
+        sampleValue: '21 October 2026',
         category: 'Competition',
         isCommon: true,
       },
@@ -358,7 +358,7 @@ export const DATA_TOKEN_CATEGORIES: DataTokenCategory[] = [
         name: 'Issue Date',
         description: 'Formal date of certificate award',
         dataType: 'date',
-        sampleValue: '19 October 2026',
+        sampleValue: '21 October 2026',
         category: 'Certificate',
         isCommon: true,
       },
@@ -422,7 +422,7 @@ export function getSampleTokenValues(competitionSlug?: string): Record<string, s
     '{{competition.name}}': comp?.name || 'Inter-Collegiate Project Competition',
     '{{competition.category}}': comp?.category || 'Hardware & Circuits',
     '{{competition.venue}}': comp?.venue || 'PCE Campus, Digdoh Hills, Nagpur',
-    '{{competition.date}}': '19 October 2026',
+    '{{competition.date}}': '21 October 2026',
     '{{competition.reportingTime}}': '08:30 AM IST',
     '{{competition.titleSpecific}}': 'Autonomous Micro-Grid Power Controller',
     '{{payment.status}}': 'Verified',
@@ -431,7 +431,7 @@ export function getSampleTokenValues(competitionSlug?: string): Record<string, s
     '{{certificate.id}}': 'CERT-YUG-2026-9481',
     '{{certificate.recipient}}': 'Aarav Deshmukh',
     '{{certificate.rank}}': '1st Place Winner',
-    '{{certificate.issueDate}}': '19 October 2026',
+    '{{certificate.issueDate}}': '21 October 2026',
     '{{certificate.issuer}}': 'Tele-Era Student Forum & Dept. of ETC',
   };
 }
@@ -457,7 +457,7 @@ export function exportTokenDocumentation(competitionSlug?: string): string {
   if (comp) {
     doc += `Event: ${comp.name} (${comp.slug})\nCategory: ${comp.category}\n\n`;
   } else {
-    doc += `Scope: Global (Applicable to all 8 Arenas)\n\n`;
+    doc += `Scope: Global (Applicable to all 9 Arenas)\n\n`;
   }
 
   doc += `Use these exact placeholder tokens in your Canva text blocks or background specifications:\n\n`;

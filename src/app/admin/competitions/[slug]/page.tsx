@@ -180,7 +180,7 @@ export default function CompetitionEditorPage({
   const [previewParticipantFlow, setPreviewParticipantFlow] = useState(false);
   const [adminCopiedId, setAdminCopiedId] = useState(false);
 
-  const [festivalDate, setFestivalDate] = useState('19 October 2026');
+  const [festivalDate, setFestivalDate] = useState('21 October 2026');
 
   const handleDownloadQrPng = () => {
     const dataUrl = form.qrMode === 'upload' ? form.qrCodeUrl : generatedQrDataUrl;

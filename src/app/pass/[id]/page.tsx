@@ -21,6 +21,10 @@ import {
 } from 'lucide-react';
 import type { Metadata } from 'next';
 import { verifyPassToken, PassTokenPayload, PassMemberInfo } from '@/lib/passToken';
+import { getAbsoluteUrl } from '@/lib/site-url';
+import { isPassGenerationAllowed } from '@/lib/generationPolicy';
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: 'Digital Delegate Pass | YUGANTAR 2026',
@@ -65,15 +69,7 @@ function PassSkeleton() {
   );
 }
 
-export default function PassPage({ params, searchParams }: PassPageProps) {
-  return (
-    <Suspense fallback={<PassSkeleton />}>
-      <PassContent params={params} searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function PassContent({ params, searchParams }: PassPageProps) {
+export default async function PassPage({ params, searchParams }: PassPageProps) {
   await connection();
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
@@ -110,7 +106,7 @@ async function PassContent({ params, searchParams }: PassPageProps) {
   let compName = reg.competition_slug.replace(/-/g, ' ').toUpperCase();
   let compCategory = 'Hardware & Circuits';
   let compVenue = 'Priyadarshini College of Engineering, Nagpur';
-  let compDate = '19 October 2026';
+  let compDate = '21 October 2026';
   let accentColor = '#4B91E8';
 
   try {
@@ -170,10 +166,9 @@ async function PassContent({ params, searchParams }: PassPageProps) {
   const isPending = !isConfirmed && (reg.submission_status === 'pending' || reg.submission_status === 'submitted' || reg.payment_status === 'pending');
   const isRejected = reg.submission_status === 'failed' || reg.payment_status === 'rejected';
 
-  // Generate QR Code URL pointing to /verify/[token]
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yugantar2026.pce.ac.in';
+  // Generate dynamic QR Code URL pointing to /verify/[token] on canonical domain
   const verifyToken = reg.verification_token || reg.id;
-  const verifyUrl = `${appUrl}/verify/${verifyToken}`;
+  const verifyUrl = getAbsoluteUrl(`/verify/${verifyToken}`);
 
   let qrDataUrl = '';
   try {
@@ -188,6 +183,9 @@ async function PassContent({ params, searchParams }: PassPageProps) {
   } catch (qrErr) {
     console.error('Failed to generate pass QR:', qrErr);
   }
+
+  // Check server-side pass generation policy
+  const passPolicy = await isPassGenerationAllowed(reg.competition_slug);
 
   const passReference = `YUG-26-${reg.id.substring(0, 8).toUpperCase()}`;
 
@@ -211,24 +209,49 @@ async function PassContent({ params, searchParams }: PassPageProps) {
             <ExternalLink className="w-3.5 h-3.5" />
             <span>Verify Live</span>
           </Link>
-          <a
-            href={`/api/pass/${reg.id}/pdf?download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`}
-            download={`YUGANTAR-2026-PASS-${reg.id.substring(0, 8).toUpperCase()}.pdf`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#172B49] text-white text-xs font-mono font-bold hover:bg-[#233C63] transition shadow-xs cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-[#F5A16F]" />
-            <span>Download PDF</span>
-          </a>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[#DCE5F2] text-[#172B49] text-xs font-mono font-bold hover:bg-[#EDF5FC] transition shadow-xs cursor-pointer"
-            data-print-trigger
-          >
-            <Printer className="w-3.5 h-3.5 text-[#4B91E8]" />
-            <span className="hidden sm:inline">Print</span>
-          </button>
+          {passPolicy.allowed ? (
+            <a
+              href={`/api/pass/${reg.id}/pdf?download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`}
+              download={`YUGANTAR-2026-PASS-${reg.id.substring(0, 8).toUpperCase()}.pdf`}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#172B49] text-white text-xs font-mono font-bold hover:bg-[#233C63] transition shadow-xs cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-[#F5A16F]" />
+              <span>Download PDF</span>
+            </a>
+          ) : (
+            <span
+              title="Pass download is currently disabled by administrator"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-200 text-slate-500 text-xs font-mono font-bold cursor-not-allowed"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-400" />
+              <span>Download Disabled</span>
+            </span>
+          )}
+          {passPolicy.allowed && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[#DCE5F2] text-[#172B49] text-xs font-mono font-bold hover:bg-[#EDF5FC] transition shadow-xs cursor-pointer"
+              data-print-trigger
+            >
+              <Printer className="w-3.5 h-3.5 text-[#4B91E8]" />
+              <span className="hidden sm:inline">Print</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Generation Policy Notice Banner if Disabled */}
+      {!passPolicy.allowed && (
+        <div className="w-full max-w-xl mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-mono flex items-start gap-3 shadow-xs">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-bold block uppercase tracking-wide">Pass Generation Inactive</span>
+            <p className="text-[11px] leading-relaxed">
+              {passPolicy.reason || 'Pass and certificate generation is currently disabled by the event administrator.'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Main Pass Container — Cloud White Theme with Navy Typography */}
       <div

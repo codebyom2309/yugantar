@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import type { Metadata } from 'next';
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: 'Credential Verification | YUGANTAR 2026',
   description: 'Official YUGANTAR 2026 Delegate Credential and Certificate Verification Portal.',
@@ -126,7 +128,7 @@ async function VerifyContent({ params }: VerifyPageProps) {
   let compName = compSlug.replace(/-/g, ' ').toUpperCase();
   let compCategory = 'Technical';
   let compVenue = 'Priyadarshini College of Engineering, Nagpur';
-  let compDate = '19 October 2026';
+  let compDate = '21 October 2026';
 
   if (compSlug) {
     try {
@@ -161,7 +163,7 @@ async function VerifyContent({ params }: VerifyPageProps) {
           month: 'long',
           year: 'numeric',
         })
-      : '19 October 2026';
+      : '21 October 2026';
 
     return (
       <div className="min-h-screen bg-[#F8FAFD] text-[#172B49] flex flex-col items-center justify-center p-4 sm:p-6">

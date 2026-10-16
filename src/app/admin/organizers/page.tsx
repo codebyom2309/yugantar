@@ -40,7 +40,7 @@ import {
 } from '@/lib/cropUtils';
 
 export default function OrganizersPage() {
-  const [activeTab, setActiveTab] = useState<'bodies' | 'turbo_bits' | 'faculty'>('bodies');
+  const [activeTab, setActiveTab] = useState<'bodies' | 'turbo_bits' | 'core_committee' | 'faculty'>('bodies');
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
 
   // Organizing Bodies State
@@ -256,11 +256,11 @@ export default function OrganizersPage() {
   };
 
   // --- Member Handlers ---
-  const openCreateMember = (defaultCategory: 'turbo_bits' | 'faculty') => {
+  const openCreateMember = (defaultCategory: 'turbo_bits' | 'faculty' | 'core_committee') => {
     setEditingMember(null);
     setMemberForm({
       name: '',
-      role: defaultCategory === 'turbo_bits' ? 'Student Lead' : 'Faculty Advisor',
+      role: defaultCategory === 'turbo_bits' ? 'Student Lead' : defaultCategory === 'core_committee' ? 'Student Coordinator' : 'Faculty Advisor',
       category: defaultCategory,
       department: 'Department of Electronics & Telecommunication Engineering',
       bio: '',
@@ -392,6 +392,7 @@ export default function OrganizersPage() {
   };
 
   const turboBitsList = members.filter((m) => m.category === 'turbo_bits');
+  const coreCommitteeList = members.filter((m) => m.category === 'core_committee');
   const facultyList = members.filter((m) => m.category === 'faculty');
 
   if (loading) {
@@ -413,7 +414,7 @@ export default function OrganizersPage() {
             <span>Organizers &amp; Committees Management</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-            Manage institutional organizing bodies, faculty heads, and the Turbo Bits student team shown on the public About page.
+            Manage institutional organizing bodies, faculty heads, and student coordinators shown on the public site.
           </p>
         </div>
 
@@ -429,9 +430,9 @@ export default function OrganizersPage() {
         </div>
       </div>
 
-      {/* View Switcher: 3 Categories */}
+      {/* View Switcher: 4 Categories */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex p-1 rounded-xl bg-black/5 dark:bg-white/10 text-xs font-semibold">
+        <div className="flex flex-wrap p-1 rounded-xl bg-black/5 dark:bg-white/10 text-xs font-semibold gap-1">
           <button
             type="button"
             onClick={() => setActiveTab('bodies')}
@@ -446,6 +447,18 @@ export default function OrganizersPage() {
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('core_committee')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'core_committee'
+                ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5 text-blue-500" />
+            <span>Student Coordinators ({coreCommitteeList.length})</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('turbo_bits')}
             className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'turbo_bits'
@@ -454,7 +467,7 @@ export default function OrganizersPage() {
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Turbo Bits Student Team ({turboBitsList.length})</span>
+            <span>Turbo Bits ({turboBitsList.length})</span>
           </button>
           <button
             type="button"
@@ -504,6 +517,17 @@ export default function OrganizersPage() {
           </button>
         )}
 
+        {activeTab === 'core_committee' && (
+          <button
+            type="button"
+            onClick={() => openCreateMember('core_committee')}
+            className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Student Coordinator</span>
+          </button>
+        )}
+
         {activeTab === 'turbo_bits' && (
           <button
             type="button"
@@ -511,7 +535,7 @@ export default function OrganizersPage() {
             className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add Student Member</span>
+            <span>Add TurboBits Member</span>
           </button>
         )}
 
@@ -848,6 +872,108 @@ export default function OrganizersPage() {
               </div>
             </div>
           )}
+
+          {/* TAB 4: STUDENT COORDINATORS (CORE COMMITTEE) */}
+          {activeTab === 'core_committee' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-slate-800 dark:text-zinc-200 flex items-start gap-3">
+                <Users className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white">
+                    Student Coordinators ({coreCommitteeList.length} Coordinators)
+                  </h4>
+                  <p className="text-[11px] opacity-80 mt-0.5">
+                    General student coordinators displayed on the About &amp; Organizers page in compact cards. Supports photos or clean text-only monogram cards without broken image boxes.
+                  </p>
+                </div>
+              </div>
+
+              {coreCommitteeList.length === 0 ? (
+                <div className="p-8 text-center rounded-2xl admin-glass-panel border border-black/10 dark:border-white/10 space-y-3">
+                  <Users className="w-8 h-8 text-slate-400 mx-auto" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">No Student Coordinators added yet</p>
+                  <p className="text-xs text-slate-500">Click &ldquo;Add Student Coordinator&rdquo; to add student organizers for the About page.</p>
+                  <button
+                    type="button"
+                    onClick={() => openCreateMember('core_committee')}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Student Coordinator</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {coreCommitteeList.map((coord) => (
+                    <div
+                      key={coord.id}
+                      className="p-3.5 rounded-xl admin-glass-panel border border-black/10 dark:border-white/10 space-y-2 relative group hover:border-blue-500/40 transition-all"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {coord.avatar_url ? (
+                            <div className="relative w-9 h-9 rounded-full overflow-hidden border border-blue-500/30 bg-black/5 dark:bg-white/5 shrink-0">
+                              <Image
+                                src={coord.avatar_url}
+                                alt={coord.name}
+                                fill
+                                className="object-cover"
+                                unoptimized={coord.avatar_url.startsWith('/api/') || coord.avatar_url.includes('google')}
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-blue-500 font-bold text-xs font-mono">
+                              {coord.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              {coord.name}
+                            </h4>
+                            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium block truncate">
+                              {coord.role}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => openEditMember(coord)}
+                            className="p-1 rounded text-slate-400 hover:text-blue-500 cursor-pointer"
+                            title="Edit coordinator"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMember(coord.id)}
+                            className="p-1 rounded text-slate-400 hover:text-rose-500 cursor-pointer"
+                            title="Delete coordinator"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {coord.department && (
+                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 truncate">
+                          {coord.department}
+                        </p>
+                      )}
+
+                      <div className="pt-1.5 border-t border-black/5 dark:border-white/10 flex items-center justify-between text-[9px] font-mono text-slate-400">
+                        <span>Order #{coord.display_order}</span>
+                        <span className={coord.avatar_url ? 'text-emerald-500 font-medium' : 'text-blue-500 font-medium'}>
+                          {coord.avatar_url ? 'Has Photo' : 'Text-Only Card'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Side: Live Mobile Preview of the About Page */}
@@ -1092,8 +1218,8 @@ export default function OrganizersPage() {
                 <Users className="w-4 h-4 text-blue-500" />
                 <span>
                   {editingMember
-                    ? `Edit ${memberForm.category === 'turbo_bits' ? 'Turbo Bits Member' : 'Faculty Lead'}`
-                    : `Add ${memberForm.category === 'turbo_bits' ? 'Turbo Bits Member' : 'Faculty Lead'}`}
+                    ? `Edit ${memberForm.category === 'turbo_bits' ? 'Turbo Bits Member' : memberForm.category === 'core_committee' ? 'Student Coordinator' : 'Faculty Lead'}`
+                    : `Add ${memberForm.category === 'turbo_bits' ? 'Turbo Bits Member' : memberForm.category === 'core_committee' ? 'Student Coordinator' : 'Faculty Lead'}`}
                 </span>
               </h3>
               <button
@@ -1144,11 +1270,22 @@ export default function OrganizersPage() {
                     onChange={(e) => setMemberForm({ ...memberForm, category: e.target.value as any })}
                     className="w-full px-3 py-2 rounded-xl admin-glass-panel text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
                   >
+                    <option value="core_committee">Student Coordinators (About &amp; Organizers)</option>
                     <option value="turbo_bits">Turbo Bits Student Team</option>
-                    <option value="faculty">Faculty Leadership & Advisors</option>
+                    <option value="faculty">Faculty Leadership &amp; Advisors</option>
                   </select>
                 </div>
               </div>
+
+              {/* Coordinator notice */}
+              {memberForm.category === 'core_committee' && (
+                <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-slate-800 dark:text-zinc-200">
+                  <span className="text-xs font-bold block text-blue-600 dark:text-blue-400">Student Coordinator Card</span>
+                  <span className="text-[11px] text-slate-500 dark:text-zinc-400 block mt-0.5">
+                    Will appear in the Student Coordinators section on the About page. You can upload an image or leave it blank to automatically display a clean, professional monogram card.
+                  </span>
+                </div>
+              )}
 
               {/* TurboBits Lead Designation Toggle */}
               {memberForm.category === 'turbo_bits' && (

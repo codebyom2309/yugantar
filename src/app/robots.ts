@@ -11,6 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: [
           '/',
           '/about',
+          '/turbobits',
           '/competitions',
           '/competitions/*',
           '/districts',

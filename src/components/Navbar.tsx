@@ -6,11 +6,13 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ArrowUpRight, LayoutGrid, Sparkles } from 'lucide-react';
 import { fetchClientFestivalData } from '@/lib/client-festival-data';
+import { COMPETITIONS } from '@/data/events';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [eventDateLabel, setEventDateLabel] = useState('19 OCTOBER 2026 · PCE NAGPUR');
+  const [eventDateLabel, setEventDateLabel] = useState('21 OCTOBER 2026 · PCE NAGPUR');
+  const [compCount, setCompCount] = useState<number>(COMPETITIONS.length || 9);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -24,6 +26,9 @@ export default function Navbar() {
   useEffect(() => {
     fetchClientFestivalData()
       .then((d) => {
+        if (d.competitions && d.competitions.length > 0) {
+          setCompCount(d.competitions.length);
+        }
         if (d.festival?.event_date) {
           setEventDateLabel(
             `${d.festival.event_date.toUpperCase()} · ${
@@ -43,6 +48,7 @@ export default function Navbar() {
     { label: 'Districts Map', href: '/districts' },
     { label: 'Journey', href: '/journey' },
     { label: 'About & Organizers', href: '/about' },
+    { label: 'TurboBits', href: '/turbobits' },
     { label: 'FAQ', href: '/faq' },
   ];
 
@@ -56,7 +62,7 @@ export default function Navbar() {
       <div className="w-full max-w-xl lg:max-w-6xl mx-auto flex items-center justify-center">
         
         {/* =======================================================================
-            UNIFIED FLOATING GLASS CAPSULE (Brand + 2026 + 8 Arenas + Menu)
+            UNIFIED FLOATING GLASS CAPSULE (Brand + 2026 + 9 Arenas + Menu)
             Single coherent container matching user reference perfectly
             ======================================================================= */}
         <div
@@ -120,15 +126,15 @@ export default function Navbar() {
             })}
           </nav>
 
-          {/* Right Action Cluster: 8 Arenas Pill + Circular Menu Button */}
+          {/* Right Action Cluster: Arenas Pill + Circular Menu Button */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* 8 Arenas Pill */}
+            {/* Arenas Pill */}
             <Link
               href="/competitions"
               className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white/95 hover:bg-white text-[#15294A] border border-white shadow-2xs text-[11px] sm:text-xs font-mono font-bold tracking-tight transition-all group shrink-0"
             >
               <LayoutGrid className="w-3.5 h-3.5 text-[#FF874D] group-hover:rotate-45 transition-transform duration-300" />
-              <span className="whitespace-nowrap">8 Arenas</span>
+              <span className="whitespace-nowrap">{compCount} Arenas</span>
             </Link>
 
             {/* Circular Hamburger Button */}
@@ -207,7 +213,7 @@ export default function Navbar() {
                 className="w-full nexus-btn-sapphire justify-center py-2.5 px-4 text-xs font-bold gap-2"
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#FF874D]" />
-                <span>Explore 8 Competitions</span>
+                <span>Explore {compCount} Competitions</span>
               </Link>
             </div>
           </div>

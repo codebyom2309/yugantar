@@ -21,6 +21,7 @@ import { getRegistrationFormBySlug } from '@/data/registrationForms';
 import type { Metadata } from 'next';
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection();
   const { slug } = await params;
   return {
     title: 'Competition Registration',
@@ -34,11 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-// Generate static params for all 8 competition registration routes
-export async function generateStaticParams() {
-  const slugs = getAllCompetitionSlugs();
-  return [...slugs.map((slug) => ({ slug })), { slug: 'mock-placement' }];
-}
+export const instant = false;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -47,7 +44,7 @@ interface PageProps {
 function RegistrationSkeleton() {
   return (
     <div className="min-h-screen bg-[#F8FAFD] flex flex-col animate-pulse">
-      <Navbar />
+      <div className="h-16 w-full border-b border-[#DCE5F2] bg-white/70" />
       <div className="pt-24 sm:pt-28 pb-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
         <div className="h-4 w-48 bg-[#E2E8F0] rounded mb-5" />
         <div className="h-6 w-32 bg-[#E2E8F0] rounded-full mb-3" />
@@ -55,20 +52,12 @@ function RegistrationSkeleton() {
         <div className="h-4 w-96 bg-[#E2E8F0] rounded mb-8" />
         <div className="h-96 bg-white border border-[#DCE5F2] rounded-2xl" />
       </div>
-      <Footer />
+      <div className="h-24 w-full border-t border-[#DCE5F2] bg-white/70" />
     </div>
   );
 }
 
-export default function RegistrationPage({ params }: PageProps) {
-  return (
-    <Suspense fallback={<RegistrationSkeleton />}>
-      <RegistrationContent params={params} />
-    </Suspense>
-  );
-}
-
-async function RegistrationContent({ params }: PageProps) {
+export default async function RegistrationPage({ params }: PageProps) {
   await connection();
   const { slug } = await params;
 
@@ -85,7 +74,7 @@ async function RegistrationContent({ params }: PageProps) {
   const isRegistrationOpen = Boolean(
     competition.registrationOpen !== false && festivalSettings.registrationGlobalOpen !== false
   );
-  const eventDateDisplay = competition.eventDate || festivalSettings.date || '19 October 2026';
+  const eventDateDisplay = competition.eventDate || festivalSettings.date || '21 October 2026';
   const compGlow = getCompetitionGlow(competition.accentColor, (competition as any).themeVibe);
 
   return (
@@ -286,7 +275,7 @@ async function RegistrationContent({ params }: PageProps) {
                   href="/competitions"
                   className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#F8FAFD] hover:bg-[#EDF5FC] text-[#60728A] hover:text-[#172B49] text-xs font-mono font-medium transition-colors border border-[#DCE5F2]"
                 >
-                  View All 8 Arenas
+                  View All Arenas
                 </Link>
               </div>
             </div>

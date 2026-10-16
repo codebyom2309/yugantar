@@ -5,6 +5,7 @@ import {
   issueCertificate,
   issueBatchCertificates,
 } from '@/lib/certificateService';
+import { isCertificateGenerationAllowed } from '@/lib/generationPolicy';
 
 async function requireAdmin() {
   const session = await auth();
@@ -47,7 +48,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const adminEmail = session?.user?.email || 'admin@yugantar2026.pce.ac.in';
+    const adminEmail = session?.user?.email || 'admin@teleera.turbobits.in';
+
+    const targetSlug = Array.isArray(body.items) ? body.competitionSlug : body.competitionSlug;
+    const certPolicy = await isCertificateGenerationAllowed(targetSlug);
+    if (!certPolicy.allowed) {
+      return NextResponse.json(
+        { error: certPolicy.reason || 'Pass and certificate generation is currently disabled by the event administrator.' },
+        { status: 403 }
+      );
+    }
 
     // Batch issuance mode
     if (Array.isArray(body.items)) {

@@ -180,19 +180,17 @@ async function main() {
     );
 
     if (existingCoords.length === 0) {
-      const defaultCoords = [
-        { name: 'Lead Student Coordinator', role: 'Student Coordinator', email: `teleera.${c.slug}@pce.edu.in`, phone: '+91 98765 43210' },
-        { name: 'Faculty Advisor', role: 'Faculty Coordinator', email: `faculty.${c.slug}@pce.edu.in`, phone: '+91 712 281 0000' },
-      ];
-
-      for (let i = 0; i < defaultCoords.length; i++) {
-        const coord = defaultCoords[i];
+      const coordsToSeed = (c.coordinators && c.coordinators.length > 0) ? c.coordinators : [];
+      for (let i = 0; i < coordsToSeed.length; i++) {
+        const coord = coordsToSeed[i];
         await connection.execute(`
           INSERT INTO competition_coordinators (id, competition_slug, name, role, email, phone, display_order, is_public, is_active)
           VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)
-        `, [randomUUID(), c.slug, coord.name, coord.role, coord.email, coord.phone, i]);
+        `, [randomUUID(), c.slug, coord.name, coord.role, coord.email || null, coord.phone || null, i]);
       }
-      console.log(`    → Seeded initial coordinators for ${c.slug}`);
+      if (coordsToSeed.length > 0) {
+        console.log(`    → Seeded ${coordsToSeed.length} official coordinators for ${c.slug}`);
+      }
     }
   }
 

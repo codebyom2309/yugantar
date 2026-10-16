@@ -187,7 +187,7 @@ export default function CompetitionsClient() {
               className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 border border-[#FFE0CE] text-[11px] sm:text-xs font-mono font-bold text-[#FF783E] uppercase tracking-wider mb-3.5 shadow-2xs backdrop-blur-sm"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>YUGANTAR 2026 · EIGHT DISCOVERY DISTRICTS</span>
+              <span>YUGANTAR 2026 · DISCOVERY DISTRICTS</span>
             </motion.div>
 
             {/* Main Page Heading */}
@@ -195,7 +195,7 @@ export default function CompetitionsClient() {
               {...fadeIn(0.14)}
               className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold tracking-tight text-[#10264A] mb-3 sm:mb-4 leading-tight"
             >
-              Eight Technical Arenas. <br className="hidden sm:inline" />
+              Technical Arenas. <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#10264A] via-[#3978F6] to-[#FF783E]">
                 Engineered for Discovery.
               </span>
@@ -206,7 +206,7 @@ export default function CompetitionsClient() {
               {...fadeIn(0.2)}
               className="text-xs sm:text-sm lg:text-base text-[#536781] leading-relaxed mb-6 font-normal max-w-2xl"
             >
-              Organized by the Department of Electronics and Telecommunication Engineering and the TELE-ERA Student Forum at Priyadarshini College of Engineering, Nagpur. Explore all eight confirmed competition tracks below.
+              Organized by the Department of Electronics and Telecommunication Engineering and the TELE-ERA Student Forum at Priyadarshini College of Engineering, Nagpur. Explore all confirmed competition tracks below.
             </motion.p>
 
             {/* Quick Metrics Cards */}
@@ -215,12 +215,12 @@ export default function CompetitionsClient() {
               className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-4 border-t border-[#DCE5F2]"
             >
               <div className="p-3 rounded-2xl bg-white/85 backdrop-blur-md border border-[#DCE5F2] shadow-2xs">
-                <span className="block text-lg sm:text-xl font-display font-extrabold text-[#10264A]">08</span>
+                <span className="block text-lg sm:text-xl font-display font-extrabold text-[#10264A]">{competitions.length < 10 ? `0${competitions.length}` : competitions.length}</span>
                 <span className="text-[11px] font-mono text-[#536781]">Official Arenas</span>
               </div>
               <div className="p-3 rounded-2xl bg-[#FFF8F2]/90 backdrop-blur-md border border-[#FFE0CE] shadow-2xs">
                 <span className="block text-lg sm:text-xl font-display font-extrabold text-[#FF783E]">
-                  {festival?.date ? festival.date.split(' ').slice(0, 2).join(' ').toUpperCase() : '19 OCT'}
+                  {festival?.date ? festival.date.split(' ').slice(0, 2).join(' ').toUpperCase() : '21 OCT'}
                 </span>
                 <span className="text-[11px] font-mono text-[#536781]">Event Date</span>
               </div>
@@ -290,7 +290,7 @@ export default function CompetitionsClient() {
             </div>
 
             <span className="text-xs font-mono font-bold text-[#FF783E] bg-[#FFF4EA] border border-[#FFE0CE] px-3 py-1.5 rounded-full hidden sm:inline-block">
-              {filteredCompetitions.length} of 8 Arenas
+              {filteredCompetitions.length} of {competitions.length} Arenas
             </span>
           </div>
 
@@ -332,7 +332,7 @@ export default function CompetitionsClient() {
                     {/* Top Badges */}
                     <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
                       <span className="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md text-[10px] font-mono font-bold text-[#10264A] border border-white/60 shadow-xs">
-                        ARENA 0{comp.districtIndex + 1}
+                        ARENA {((comp.districtIndex !== undefined && comp.districtIndex < 90 ? comp.districtIndex + 1 : idx + 1)).toString().padStart(2, '0')}
                       </span>
 
                       <span

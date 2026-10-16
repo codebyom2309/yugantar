@@ -16,10 +16,15 @@ export default function DeparturesTicker() {
 
   const [currentTimeStr, setCurrentTimeStr] = useState('');
 
+  const [compCount, setCompCount] = useState<number>(8);
+
   useEffect(() => {
     fetchClientFestivalData()
       .then((d) => {
         if (d.festival) setFestival(d.festival);
+        if (d.competitions && Array.isArray(d.competitions) && d.competitions.length > 0) {
+          setCompCount(d.competitions.length);
+        }
       })
       .catch(() => {});
   }, []);
@@ -85,12 +90,12 @@ export default function DeparturesTicker() {
 
           <div className="hidden sm:flex items-center gap-2 bg-[#04142B] px-2.5 py-1 rounded border border-[#163665]">
             <span className="text-[#82C9F4] text-[10px]">DATE</span>
-            <span className="font-semibold text-[#FFF4E5]">{festival.date ? festival.date.toUpperCase() : '19 OCT 2026'}</span>
+            <span className="font-semibold text-[#FFF4E5]">{festival.date ? festival.date.toUpperCase() : '21 OCT 2026'}</span>
           </div>
 
           <div className="hidden md:flex items-center gap-1.5 text-[#82C9F4]">
             <Sparkles className="w-3 h-3 text-[#FF681F]" />
-            <span className="text-[11px] font-semibold">8 CONFIRMED COMPETITIONS</span>
+            <span className="text-[11px] font-semibold">{compCount} CONFIRMED COMPETITIONS</span>
           </div>
         </div>
 

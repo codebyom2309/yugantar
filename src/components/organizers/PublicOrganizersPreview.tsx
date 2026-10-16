@@ -72,6 +72,7 @@ export default function PublicOrganizersPreview({
 
   const turboBitsMembers = visibleMembers.filter((m) => m.category === 'turbo_bits');
   const facultyMembers = visibleMembers.filter((m) => m.category === 'faculty');
+  const coreCommitteeMembers = visibleMembers.filter((m) => m.category === 'core_committee');
 
   return (
     <div data-theme="public-light" className="w-full bg-[#F8FAFD] text-[#172B49] p-4 space-y-6 font-sans select-none">
@@ -202,7 +203,47 @@ export default function PublicOrganizersPreview({
         </div>
       )}
 
-      {/* 3. Turbo Bits Student Organizing Team */}
+      {/* 3. Student Coordinators (Core Committee) */}
+      {coreCommitteeMembers.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between border-b border-[#DCE5F2] pb-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#172B49]">
+              <Users className="w-3.5 h-3.5 text-[#3978F6]" />
+              <span>Student Coordinators ({coreCommitteeMembers.length})</span>
+            </div>
+            <span className="text-[10px] font-mono text-[#8CA0BA]">About Page</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {coreCommitteeMembers.map((member, i) => (
+              <div
+                key={member.id ? `${member.id}-${i}` : `${member.name}-${i}`}
+                className="p-2.5 rounded-xl bg-white border border-[#DCE5F2] shadow-2xs flex items-center gap-2"
+              >
+                {member.avatar_url ? (
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#DCE5F2] bg-[#EDF5FC] shrink-0">
+                    <img
+                      src={member.avatar_url}
+                      alt={member.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-[#EDF5FC] border border-[#DCE5F2] flex items-center justify-center shrink-0 text-[#3978F6] font-bold text-[10px] font-mono">
+                    {member.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-[11px] font-bold text-[#172B49] truncate">{member.name}</h4>
+                  <p className="text-[9px] font-mono text-[#3978F6] truncate">{member.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 4. Turbo Bits Student Organizing Team */}
       <div className="space-y-3">
         <div className="flex items-center justify-between border-b border-[#DCE5F2] pb-1.5">
           <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#172B49]">

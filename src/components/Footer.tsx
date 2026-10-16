@@ -69,7 +69,7 @@ export default function Footer({ festival: initialFestival }: { festival?: Festi
             tagline: f.tagline || f.event_tagline || prev?.tagline || FESTIVAL_INFO.tagline,
             subheading: f.subheading || f.event_subheading || prev?.subheading || FESTIVAL_INFO.subheading,
             date: f.date || f.event_date || prev?.date || FESTIVAL_INFO.date,
-            isoDate: f.isoDate || f.event_iso_date || prev?.isoDate || '2026-10-19',
+            isoDate: f.isoDate || f.event_iso_date || prev?.isoDate || '2026-10-21',
             venue: f.venue || f.event_venue || prev?.venue || FESTIVAL_INFO.venue,
             locationShort: f.locationShort || f.event_location_short || prev?.locationShort || FESTIVAL_INFO.locationShort,
             address: f.address || (f.event_address ? String(f.event_address) : '') || prev?.address || FESTIVAL_INFO.address,
@@ -258,7 +258,7 @@ export default function Footer({ festival: initialFestival }: { festival?: Festi
               <li>
                 <Link href="/competitions" className="hover:text-[#FF783E] transition-colors flex items-center gap-1.5">
                   <ChevronRight className="w-3 h-3 text-[#7E93AC]" />
-                  <span>All 8 Competitions Overview</span>
+                  <span>All Competitions Overview</span>
                 </Link>
               </li>
               <li>
@@ -277,6 +277,12 @@ export default function Footer({ festival: initialFestival }: { festival?: Festi
                 <Link href="/about" className="hover:text-[#FF783E] transition-colors flex items-center gap-1.5">
                   <ChevronRight className="w-3 h-3 text-[#7E93AC]" />
                   <span>About & Organizing Forums</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/turbobits" className="hover:text-[#FF783E] transition-colors flex items-center gap-1.5">
+                  <ChevronRight className="w-3 h-3 text-[#7E93AC]" />
+                  <span>TurboBits Student Tech Team</span>
                 </Link>
               </li>
               <li>
@@ -359,6 +365,21 @@ export default function Footer({ festival: initialFestival }: { festival?: Festi
           <p className="text-xs text-[#536781] text-center sm:text-left font-normal">
             © {currentYear} {eventName} · {departmentName}, {collegeName}.
           </p>
+
+          {/* Authoritative TurboBits Attribution */}
+          <div className="inline-flex items-center gap-1.5 text-xs font-mono text-[#536781]">
+            <span>Developed with</span>
+            <span className="text-[#FF783E] text-sm leading-none select-none inline-block" aria-label="love">
+              ♥
+            </span>
+            <span>by</span>
+            <Link
+              href="/turbobits"
+              className="font-bold text-[#10264A] hover:text-[#3978F6] underline underline-offset-4 decoration-[#3978F6]/30 hover:decoration-[#3978F6] transition-colors"
+            >
+              Team TurboBits
+            </Link>
+          </div>
 
           <button
             onClick={scrollToTop}

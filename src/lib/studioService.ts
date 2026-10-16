@@ -247,7 +247,7 @@ export function extractRegistrationTokenMap(
     '{{competition.name}}': comp?.name || reg.competition_slug,
     '{{competition.category}}': comp?.category || 'Hardware & Circuits',
     '{{competition.venue}}': comp?.venue || 'PCE Campus, Nagpur',
-    '{{competition.date}}': '19 October 2026',
+    '{{competition.date}}': comp?.eventDate || '21 October 2026',
     '{{competition.reportingTime}}': '08:30 AM IST',
     '{{competition.titleSpecific}}':
       parsedFormData['projectTitle'] ||
@@ -263,7 +263,7 @@ export function extractRegistrationTokenMap(
     '{{certificate.id}}': `CERT-YUG-2026-${(reg.id || '0000').slice(0, 6).toUpperCase()}`,
     '{{certificate.recipient}}': reg.leader_name || 'Participant Name',
     '{{certificate.rank}}': 'Participant',
-    '{{certificate.issueDate}}': '19 October 2026',
+    '{{certificate.issueDate}}': comp?.eventDate || '21 October 2026',
     '{{certificate.issuer}}': 'Tele-Era Student Forum & Dept. of ETC',
   };
 }

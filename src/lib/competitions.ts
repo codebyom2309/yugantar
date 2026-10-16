@@ -60,6 +60,16 @@ export interface DbCompetition extends Competition {
   }[];
 }
 
+export interface DepartmentDiscountRule {
+  enabled: boolean;
+  institution: string;
+  department: string;
+  discountPercentage: number;
+  applicableCompetitions: string[];
+  effectiveFrom?: string;
+  effectiveTo?: string;
+}
+
 export interface FestivalSettings {
   name: string;
   edition: string;
@@ -80,6 +90,7 @@ export interface FestivalSettings {
   heroArtworkMobile?: string;
   logoEmblem?: string;
   districtsMap?: string;
+  homepageHeroCardImage?: string;
   footerDescription?: string;
   footerEmail?: string;
   footerPhone?: string;
@@ -89,6 +100,7 @@ export interface FestivalSettings {
   footerCollegeUrl?: string;
   footerCustomLinks?: Array<{ label: string; url: string }>;
   showOrganizerOrder?: boolean;
+  departmentDiscountRule?: DepartmentDiscountRule;
 }
 
 export interface DbOrganizerMember {
@@ -122,7 +134,56 @@ export async function fetchPublicCompetitionsRaw(): Promise<DbCompetition[]> {
     );
 
     if (rows && rows.length > 0) {
-      return rows.map((r) => mapDbRowToCompetition(r));
+      const comps = rows.map((r) => mapDbRowToCompetition(r));
+
+      // Fetch public coordinators for all published competitions
+      try {
+        const coords = await db.query<{
+          id: string;
+          competition_slug: string;
+          name: string;
+          role: string;
+          email: string | null;
+          phone: string | null;
+          avatar_url: string | null;
+        }>(
+          `SELECT id, competition_slug, name, role, email, phone, avatar_url
+           FROM competition_coordinators
+           WHERE is_active = 1 AND is_public = 1
+           ORDER BY display_order ASC`
+        );
+
+        const coordsBySlug = new Map<string, Array<{
+          id: string;
+          name: string;
+          role: string;
+          email: string | null;
+          phone: string | null;
+          avatar_url: string | null;
+        }>>();
+
+        for (const c of coords) {
+          if (!coordsBySlug.has(c.competition_slug)) {
+            coordsBySlug.set(c.competition_slug, []);
+          }
+          coordsBySlug.get(c.competition_slug)!.push({
+            id: c.id,
+            name: c.name,
+            role: c.role,
+            email: c.email,
+            phone: c.phone,
+            avatar_url: c.avatar_url,
+          });
+        }
+
+        for (const comp of comps) {
+          comp.coordinators = coordsBySlug.get(comp.slug) || [];
+        }
+      } catch (coordErr) {
+        console.warn('Failed to attach coordinators to public competitions:', coordErr);
+      }
+
+      return comps;
     }
   } catch (err) {
     console.error('Database query for public competitions failed, using static fallback:', err);
@@ -234,6 +295,7 @@ export async function fetchFestivalSettingsRaw(): Promise<FestivalSettings> {
         heroArtworkMobile: map.hero_artwork_mobile || FESTIVAL_ASSETS.heroArtworkMobile,
         logoEmblem: map.logo_emblem || FESTIVAL_ASSETS.logoEmblem,
         districtsMap: map.districts_map || FESTIVAL_ASSETS.districtsMap,
+        homepageHeroCardImage: map.homepage_hero_card_image || '/images/nexus-city/hero-futuristic-city-clouds.webp',
         footerDescription: map.footer_description,
         footerEmail: map.footer_email,
         footerPhone: map.footer_phone,
@@ -250,6 +312,14 @@ export async function fetchFestivalSettingsRaw(): Promise<FestivalSettings> {
           }
         })(),
         showOrganizerOrder: map.show_organizer_order === '1',
+        departmentDiscountRule: (() => {
+          if (!map.department_discount_rules) return undefined;
+          try {
+            return JSON.parse(map.department_discount_rules);
+          } catch {
+            return undefined;
+          }
+        })(),
       };
     }
   } catch (err) {
@@ -421,6 +491,24 @@ const getCachedPublicFaqs = unstable_cache(
 
 export async function getFestivalSettings(): Promise<FestivalSettings> {
   return getCachedFestivalSettings();
+}
+
+export async function getDepartmentDiscountRule(): Promise<DepartmentDiscountRule | null> {
+  try {
+    const settings = await getCachedFestivalSettings();
+    if (settings.departmentDiscountRule) {
+      return settings.departmentDiscountRule;
+    }
+  } catch (err) {
+    console.error('Failed to get cached department discount rule:', err);
+  }
+  return {
+    enabled: true,
+    institution: 'PCE',
+    department: 'ITC',
+    discountPercentage: 50,
+    applicableCompetitions: ['all'],
+  };
 }
 
 export async function getPublicOrganizers() {

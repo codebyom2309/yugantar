@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import QRCode from 'qrcode';
+import { getAbsoluteUrl } from '@/lib/site-url';
 import {
   ClipboardList,
   Search,
@@ -54,6 +55,11 @@ interface Registration {
   payment_status?: string | null;
   verified_by?: string | null;
   verified_at?: string | null;
+  normal_fee?: number | null;
+  discount_amount?: number | null;
+  discount_rule?: string | null;
+  final_fee?: number | null;
+  registration_mode?: 'LIVE' | 'TEST' | string;
 }
 
 const SLUG_LABELS: Record<string, string> = {
@@ -98,6 +104,8 @@ export default function RegistrationsPage() {
   const [dateFilterIso, setDateFilterIso] = useState('');
   const [storageMode, setStorageMode] = useState<string>('minimal');
   const [spreadsheetsMap, setSpreadsheetsMap] = useState<Record<string, string>>({});
+  const [modeFilter, setModeFilter] = useState<'LIVE' | 'TEST' | 'ALL'>('LIVE');
+  const [countsByMode, setCountsByMode] = useState<{ live: number; test: number; all: number }>({ live: 0, test: 0, all: 0 });
 
   // View Layout Mode: auto (responsive cards on mobile, table on desktop) or explicit
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
@@ -133,6 +141,7 @@ export default function RegistrationsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: page.toString(), limit: '25' });
+      if (modeFilter) params.set('mode', modeFilter);
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (competition) params.set('competition', competition);
       if (statusFilter) params.set('status', statusFilter);
@@ -146,6 +155,7 @@ export default function RegistrationsPage() {
         setTotal(d.total || 0);
         setTotalPages(d.totalPages || 1);
         if (d.storageMode) setStorageMode(d.storageMode);
+        if (d.countsByMode) setCountsByMode(d.countsByMode);
       } else {
         setRegistrations([]);
         setTotal(0);
@@ -162,7 +172,7 @@ export default function RegistrationsPage() {
         setLoading(false);
       }
     }
-  }, [page, debouncedSearch, competition, statusFilter, paymentStatusFilter, dateFilterIso]);
+  }, [page, modeFilter, debouncedSearch, competition, statusFilter, paymentStatusFilter, dateFilterIso]);
 
   useEffect(() => {
     fetchRegistrations();
@@ -326,9 +336,8 @@ export default function RegistrationsPage() {
   const handleOpenQrModal = async (reg: Registration) => {
     setQrModalReg(reg);
     try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://yugantar2026.pce.ac.in';
       const verifyToken = reg.verification_token || reg.id;
-      const verifyUrl = `${origin}/verify/${verifyToken}`;
+      const verifyUrl = getAbsoluteUrl(`/verify/${verifyToken}`);
       const url = await QRCode.toDataURL(verifyUrl, {
         width: 260,
         margin: 1,
@@ -358,6 +367,7 @@ export default function RegistrationsPage() {
       'Verified By',
       'Verified At',
       'Accreditation Status',
+      'Registration Mode',
       'Date Created',
       'Verification Token',
     ];
@@ -378,6 +388,7 @@ export default function RegistrationsPage() {
       r.verified_by || '',
       r.verified_at ? new Date(r.verified_at).toLocaleString() : '',
       r.submission_status,
+      r.registration_mode || 'LIVE',
       new Date(r.created_at).toLocaleString(),
       r.verification_token || '',
     ]);
@@ -397,6 +408,7 @@ export default function RegistrationsPage() {
     setIsExportingAll(true);
     try {
       const params = new URLSearchParams({ all: 'true' });
+      if (modeFilter) params.set('mode', modeFilter);
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (competition) params.set('competition', competition);
       if (statusFilter) params.set('status', statusFilter);
@@ -534,6 +546,88 @@ export default function RegistrationsPage() {
           </button>
         </div>
       </div>
+
+      {/* Registration Environment & Campaign Filter Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-2xl admin-glass-panel border border-black/10 dark:border-white/10 shadow-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => {
+              setModeFilter('LIVE');
+              setPage(1);
+            }}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              modeFilter === 'LIVE'
+                ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-500/20'
+                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span>LIVE Participants</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              modeFilter === 'LIVE' ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/10 text-slate-700 dark:text-zinc-300'
+            }`}>
+              {countsByMode.live}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setModeFilter('TEST');
+              setPage(1);
+            }}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              modeFilter === 'TEST'
+                ? 'bg-amber-600 text-white shadow-sm shadow-amber-500/20'
+                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
+            <span>Test Data (Internal QA)</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              modeFilter === 'TEST' ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/10 text-slate-700 dark:text-zinc-300'
+            }`}>
+              {countsByMode.test}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setModeFilter('ALL');
+              setPage(1);
+            }}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              modeFilter === 'ALL'
+                ? 'bg-slate-800 dark:bg-zinc-700 text-white shadow-sm'
+                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+            }`}
+          >
+            <span>All Records</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              modeFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/10 text-slate-700 dark:text-zinc-300'
+            }`}>
+              {countsByMode.all}
+            </span>
+          </button>
+        </div>
+
+        <div className="text-[11px] font-mono text-slate-500 dark:text-zinc-400 px-2">
+          {modeFilter === 'LIVE' && 'Viewing official attendee submissions only'}
+          {modeFilter === 'TEST' && 'Viewing isolated QA testing data'}
+          {modeFilter === 'ALL' && 'Viewing combined dataset (LIVE + TEST)'}
+        </div>
+      </div>
+
+      {modeFilter === 'TEST' && (
+        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2.5">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <span className="text-[11px] leading-relaxed">
+            <strong>Internal Test Mode View Active:</strong> Showing {total} internal test records. These submissions are strictly isolated from official participant attendance and payment reconciliation.
+          </span>
+        </div>
+      )}
 
       {/* Quick Summary Pill Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
@@ -770,9 +864,20 @@ export default function RegistrationsPage() {
                       )}
                     </button>
                     <div>
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
-                        {r.leader_name}
-                      </h3>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
+                          {r.leader_name}
+                        </h3>
+                        {r.registration_mode === 'TEST' ? (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                            TEST DATA
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                            LIVE
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[11px] font-mono text-slate-500 dark:text-zinc-400 block mt-0.5">
                         {r.leader_email}
                       </span>
@@ -983,7 +1088,18 @@ export default function RegistrationsPage() {
                       {/* Candidate info */}
                       <td className="py-3 px-4">
                         <div>
-                          <span className="font-semibold text-slate-900 dark:text-white block">{r.leader_name}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-slate-900 dark:text-white block">{r.leader_name}</span>
+                            {r.registration_mode === 'TEST' ? (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                                TEST
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                                LIVE
+                              </span>
+                            )}
+                          </div>
                           <span className="text-slate-500 dark:text-zinc-400 text-[10px] font-mono">{r.leader_email}</span>
                           {r.team_name && (
                             <span className="text-[10px] text-blue-600 dark:text-blue-400 block font-mono">
@@ -1341,9 +1457,20 @@ export default function RegistrationsPage() {
                   <ClipboardList className="w-4 h-4 text-blue-500 shrink-0" />
                   <span>Candidate Registration Record</span>
                 </h3>
-                <p className="text-xs font-mono text-slate-500 dark:text-zinc-400 mt-0.5 truncate max-w-[240px] sm:max-w-none">
-                  ID: {selectedReg.id}
-                </p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="text-xs font-mono text-slate-500 dark:text-zinc-400">
+                    ID: {selectedReg.id}
+                  </span>
+                  {selectedReg.registration_mode === 'TEST' ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                      INTERNAL TEST DATA
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      LIVE OFFICIAL PARTICIPANT
+                    </span>
+                  )}
+                </div>
               </div>
               <button
                 type="button"
@@ -1455,6 +1582,18 @@ export default function RegistrationsPage() {
               <DetailRow label="Team / Squad Name" value={selectedReg.team_name || 'Individual Entry'} />
               <DetailRow label="Team Size" value={String(selectedReg.team_size || 1)} />
               <DetailRow label="Payment UTR ID" value={selectedReg.payment_id || '—'} mono />
+              {selectedReg.normal_fee !== undefined && selectedReg.normal_fee !== null && (
+                <DetailRow label="Normal Registration Fee" value={`₹${selectedReg.normal_fee}`} mono />
+              )}
+              {selectedReg.discount_amount !== undefined && selectedReg.discount_amount !== null && selectedReg.discount_amount > 0 && (
+                <DetailRow
+                  label="Department Concession"
+                  value={`-₹${selectedReg.discount_amount} (${selectedReg.discount_rule || 'Special Waiver'})`}
+                />
+              )}
+              {selectedReg.final_fee !== undefined && selectedReg.final_fee !== null && (
+                <DetailRow label="Final Payable Fee" value={`₹${selectedReg.final_fee}`} mono />
+              )}
               <DetailRow label="Date Recorded" value={new Date(selectedReg.created_at).toLocaleString()} />
 
               {selectedReg.verification_token && (

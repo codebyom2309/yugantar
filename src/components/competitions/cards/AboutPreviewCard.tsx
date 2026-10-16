@@ -59,7 +59,7 @@ export default function AboutPreviewCard({
       {data.approvedDomains && data.approvedDomains.length > 0 && (
         <div className="p-3.5 rounded-2xl bg-[#FFF8F2] border border-[#FFE0CE] space-y-2">
           <span className="text-[10px] font-mono font-bold uppercase text-[#E07A43] tracking-wider block">
-            Approved Technical Domains (Strict Adherence Required)
+            Technical Domains / Engineering Focus Areas
           </span>
           <div className="flex flex-wrap gap-1.5">
             {data.approvedDomains.map((domain, i) => (

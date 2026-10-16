@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     template: "%s | YUGANTAR 2026",
   },
   description:
-    "Official portal for YUGANTAR 2026, the premier intercollegiate technical festival organized by the Department of Electronics and Telecommunication Engineering & TELE-ERA at Priyadarshini College of Engineering, Nagpur. 19 October 2026.",
+    "Official portal for YUGANTAR 2026, the premier intercollegiate technical festival organized by the Department of Electronics and Telecommunication Engineering & TELE-ERA at Priyadarshini College of Engineering, Nagpur. 21 October 2026.",
   keywords: [
     "YUGANTAR",
     "YUGANTAR 2026",
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "YUGANTAR 2026 — Engineering the Next Era",
     description:
-      "Join us on 19 October 2026 at Priyadarshini College of Engineering, Nagpur for eight flagship competitions across hardware, research, strategy, and esports.",
+      "Join us on 21 October 2026 at Priyadarshini College of Engineering, Nagpur for flagship engineering competitions across hardware, research, strategy, and esports.",
     url: siteUrl,
     siteName: "YUGANTAR 2026",
     images: [
@@ -85,7 +85,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "YUGANTAR 2026 — Engineering the Next Era",
     description:
-      "Join us on 19 October 2026 at Priyadarshini College of Engineering, Nagpur for eight flagship engineering competitions.",
+      "Join us on 21 October 2026 at Priyadarshini College of Engineering, Nagpur for flagship engineering competitions.",
     images: ["/images/nexus-city/hero-panoramic-city.webp"],
   },
   verification: {

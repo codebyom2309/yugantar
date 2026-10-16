@@ -8,14 +8,14 @@ import { getAbsoluteUrl } from '@/lib/site-url';
 export const metadata: Metadata = {
   title: 'Flagship Technical Competitions & Arenas',
   description:
-    'Explore all eight flagship engineering arenas of YUGANTAR 2026 at Priyadarshini College of Engineering, Nagpur — Project Competition, Ideathon, Bread Board, PPT Presentation, Mock Placement, Poster, E-Gaming, and Open Mic.',
+    'Explore all flagship engineering arenas of YUGANTAR 2026 at Priyadarshini College of Engineering, Nagpur — hardware circuits, research presentations, ideathon, mock placements, and esports.',
   alternates: {
     canonical: '/competitions',
   },
   openGraph: {
     title: 'Flagship Technical Competitions — YUGANTAR 2026 | PCE Nagpur',
     description:
-      'Explore all eight flagship engineering arenas of YUGANTAR 2026 at Priyadarshini College of Engineering, Nagpur.',
+      'Explore all flagship engineering arenas of YUGANTAR 2026 at Priyadarshini College of Engineering, Nagpur.',
     url: '/competitions',
     images: [
       {
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Flagship Technical Competitions — YUGANTAR 2026',
     description:
-      'Eight engineering arenas across hardware, research, career, and esports at Priyadarshini College of Engineering, Nagpur.',
+      'Flagship engineering arenas across hardware, research, career, and esports at Priyadarshini College of Engineering, Nagpur.',
     images: ['/images/nexus-city/hero-panoramic-city.webp'],
   },
 };
@@ -47,7 +47,7 @@ export default async function CompetitionsPage() {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: 'YUGANTAR 2026 Engineering Competitions',
-    description: 'Eight flagship technological arenas at Priyadarshini College of Engineering, Nagpur.',
+    description: 'Flagship technological arenas at Priyadarshini College of Engineering, Nagpur.',
     numberOfItems: competitions.length,
     itemListElement: competitions.map((comp, idx) => ({
       '@type': 'ListItem',

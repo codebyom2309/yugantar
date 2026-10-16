@@ -17,8 +17,9 @@ import {
   Sparkles,
   ShieldCheck,
   Clock,
+  Code2,
 } from 'lucide-react';
-import { FESTIVAL_INFO, FESTIVAL_ASSETS } from '@/data/events';
+import { FESTIVAL_INFO, FESTIVAL_ASSETS, COMPETITIONS } from '@/data/events';
 import type { FestivalSettings } from '@/lib/competitions';
 import { fetchClientFestivalData } from '@/lib/client-festival-data';
 
@@ -40,17 +41,21 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
     districtsMap: FESTIVAL_ASSETS.districtsMap,
   });
 
+  const [compCount, setCompCount] = useState<number>(COMPETITIONS.length || 9);
+
   useEffect(() => {
     setMounted(true);
     if (initialFestival) {
       setFestival(initialFestival);
-    } else {
-      fetchClientFestivalData()
-        .then((d) => {
-          if (d.festival) setFestival(d.festival);
-        })
-        .catch(() => {});
     }
+    fetchClientFestivalData()
+      .then((d) => {
+        if (d.festival && !initialFestival) setFestival(d.festival);
+        if (d.competitions && Array.isArray(d.competitions) && d.competitions.length > 0) {
+          setCompCount(d.competitions.length);
+        }
+      })
+      .catch(() => {});
   }, [initialFestival]);
 
   // Video Autoplay & Failure Fallback Handling
@@ -336,14 +341,14 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
                 </div>
               </div>
 
-              {/* Card 3: Eight Arenas */}
+              {/* Card 3: Dynamic Arenas Count */}
               <div className="hero-glass-card tech-bracket-tl px-1.5 py-2 sm:p-2.5 text-center flex flex-col items-center justify-between group min-w-0">
                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#FFF2E8]/90 text-[#FF783E] border border-[#FFDFC9] flex items-center justify-center shrink-0 mb-1 transition-transform duration-250 group-hover:scale-105">
                   <Cpu className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </div>
                 <div className="w-full">
                   <span className="text-[11px] sm:text-sm font-display font-extrabold text-[#0B1B36] block leading-tight truncate">
-                    8 Arenas
+                    {compCount} Arenas
                   </span>
                   <span className="text-[7.5px] sm:text-[9.5px] font-mono text-[#52647E] block mt-0.5 truncate">
                     Hardware & Tech
@@ -359,36 +364,51 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
               </div>
             </motion.div>
 
-            {/* 7. Action CTAs: Primary Midnight Sapphire Pill with Edge Glow + Glassmorphic Secondary */}
+            {/* 7. Action CTA Trio: Primary Edge-Glow Button + Clean Paired Secondary Actions */}
             <motion.div
               {...fadeIn(0.4)}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto mb-2 lg:mb-0"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto mb-2 lg:mb-0 pt-1"
             >
               {/* Primary: Deep Midnight Pill with Restrained Electric-Blue Edge Lighting */}
               <Link
                 href="/competitions"
-                className="hero-edge-glow-cta pl-4 sm:pl-5 pr-1.5 sm:pr-2 py-1.5 sm:py-2 text-xs sm:text-sm font-bold gap-2.5 sm:gap-3 group shadow-xl justify-between sm:justify-start rounded-full inline-flex items-center"
+                className="hero-edge-glow-cta pl-4 sm:pl-5 pr-1.5 sm:pr-2 py-2 sm:py-2.5 text-xs sm:text-sm font-bold gap-2.5 sm:gap-3 group shadow-xl justify-between sm:justify-start rounded-full inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[#FF783E] text-sm sm:text-base select-none">✦</span>
-                  <span className="text-white tracking-tight">Explore 8 Competitions</span>
+                  <span className="text-white tracking-tight">Explore {compCount} Competitions</span>
                 </div>
-                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-[#2563EB] border border-white/30 flex items-center justify-center text-white transition-transform duration-200 group-hover:translate-x-1 shadow-xs shrink-0">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#2563EB] border border-white/30 flex items-center justify-center text-white transition-transform duration-200 group-hover:translate-x-1 shadow-xs shrink-0">
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               </Link>
 
-              {/* Secondary: Glassmorphic Button with Dark Play Icon */}
-              <button
-                type="button"
-                onClick={() => setTrailerOpen(true)}
-                className="hero-glass-trailer px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold gap-2 cursor-pointer justify-center sm:justify-start rounded-full inline-flex items-center"
-              >
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#0B1B36] text-white flex items-center justify-center shadow-xs shrink-0">
-                  <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-[#FF783E] text-[#FF783E] ml-0.5" />
-                </div>
-                <span className="text-[#0B1B36]">Watch Trailer</span>
-              </button>
+              {/* Secondary Pair: Neatly matched on desktop and 2-col balanced on mobile */}
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3 w-full sm:w-auto">
+                {/* Secondary: Glassmorphic Button with Dark Play Icon */}
+                <button
+                  type="button"
+                  onClick={() => setTrailerOpen(true)}
+                  className="hero-glass-trailer px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold gap-2 cursor-pointer justify-center rounded-full inline-flex items-center transition-all duration-200 hover:brightness-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                >
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#0B1B36] text-white flex items-center justify-center shadow-xs shrink-0">
+                    <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-[#FF783E] text-[#FF783E] ml-0.5" />
+                  </div>
+                  <span className="text-[#0B1B36] tracking-tight whitespace-nowrap">Watch Trailer</span>
+                </button>
+
+                {/* Tertiary: Meet TurboBits Shortcut Link */}
+                <Link
+                  href="/turbobits"
+                  className="hero-glass-trailer px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold gap-2 cursor-pointer justify-center rounded-full inline-flex items-center transition-all duration-200 hover:brightness-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 group/tb"
+                  title="Meet the TurboBits engineering team behind YUGANTAR 2026"
+                >
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#0B1B36] text-white flex items-center justify-center shadow-xs shrink-0 group-hover/tb:scale-105 transition-transform">
+                    <Code2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#38BDF8]" />
+                  </div>
+                  <span className="text-[#0B1B36] tracking-tight whitespace-nowrap">Meet TurboBits</span>
+                </Link>
+              </div>
             </motion.div>
 
             {/* 8. Mobile & Tablet Live Countdown Glass Deck with Stats Strip */}
@@ -435,7 +455,7 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
               <p className="text-xs text-white/70 leading-relaxed mb-3">
                 {festival.registrationStatusMessage ||
                   (festival.registrationGlobalOpen
-                    ? 'Delegate registrations are live for all eight innovation competitions with instant TiDB Cloud verification.'
+                    ? 'Delegate registrations are live for all innovation competitions with instant TiDB Cloud verification.'
                     : 'Delegate registrations are in staging phase. Official links will activate shortly.')}
               </p>
 
@@ -443,7 +463,7 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
                 href="/competitions"
                 className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-mono font-bold tracking-wider uppercase transition-all duration-200"
               >
-                <span>{festival.registrationGlobalOpen ? 'Explore & Register Now' : 'Preview 8 Arenas'}</span>
+                <span>{festival.registrationGlobalOpen ? 'Explore & Register Now' : `Preview ${compCount} Arenas`}</span>
                 <ArrowRight className="w-3.5 h-3.5 text-[#FF783E]" />
               </Link>
             </motion.div>
@@ -478,7 +498,7 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
             </h3>
 
             <p className="text-sm text-[#475569] leading-relaxed mb-6">
-              Experience the convergence of eight engineering districts, hardware circuits, research defense, and intercollegiate competition at Priyadarshini College of Engineering, Nagpur.
+              Experience the convergence of innovation districts, hardware circuits, research defense, and intercollegiate competition at Priyadarshini College of Engineering, Nagpur.
             </p>
 
             <div className="relative aspect-video rounded-2xl overflow-hidden mb-6 border border-[#D2E4F7] shadow-inner bg-[#0B1B36]">
@@ -493,7 +513,7 @@ export default function Hero({ festival: initialFestival }: { festival?: Festiva
                   21 OCTOBER 2026 · NAGPUR
                 </span>
                 <span className="text-lg font-display font-bold text-white">
-                  Eight Competitions. One Epic Stage.
+                  Technical Arenas. One Epic Stage.
                 </span>
               </div>
             </div>

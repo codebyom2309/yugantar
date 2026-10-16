@@ -105,7 +105,7 @@ export default function AboutSection({ date }: { date?: string } = {}) {
               <div className="space-y-3 pt-2 text-xs font-mono">
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/90 border border-[#E8D4B8] shadow-2xs">
                   <span className="text-[#163665] font-semibold">EVENT DATE</span>
-                  <span className="font-bold text-[#082750]">{(date || '19 October 2026').toUpperCase()}</span>
+                  <span className="font-bold text-[#082750]">{(date || '21 October 2026').toUpperCase()}</span>
                 </div>
 
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/90 border border-[#E8D4B8] shadow-2xs">
@@ -124,7 +124,7 @@ export default function AboutSection({ date }: { date?: string } = {}) {
                   href="#competitions"
                   className="inline-flex items-center gap-2 text-xs font-mono font-bold text-[#FF681F] hover:text-[#082750] transition-colors"
                 >
-                  <span>Explore the 8 Confirmed Competitions</span>
+                  <span>Explore Confirmed Competitions</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </a>
               </div>

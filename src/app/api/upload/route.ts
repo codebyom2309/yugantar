@@ -52,6 +52,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Read file buffer once so both Cloudinary and Filebase fallback can utilize it
+    const arrayBuffer = await file.arrayBuffer();
+    const fileBuffer = Buffer.from(arrayBuffer);
+
     // Determine deterministic Cloudinary Account assignment
     const isAccountA = ACCOUNT_A_SLUGS.has(competitionSlug);
     const assignedAccount = isAccountA ? 'A' : 'B';
@@ -68,60 +72,112 @@ export async function POST(request: NextRequest) {
       ? process.env.CLOUDINARY_A_API_SECRET
       : process.env.CLOUDINARY_B_API_SECRET;
 
-    if (!cloudName || !apiKey || !apiSecret) {
-      return NextResponse.json(
-        {
-          error: `Cloudinary Account ${assignedAccount} credentials are not configured on the server. Please paste a direct Google Drive link instead.`,
-          requiresExternalLink: true,
-        },
-        { status: 503 },
-      );
+    let cloudinarySuccess = false;
+    let cResult: any = null;
+    let cloudinaryErrMsg: string | null = null;
+
+    // -------------------------------------------------------------------------
+    // 1. Primary Attempt: Cloudinary Signed Upload
+    // -------------------------------------------------------------------------
+    const simulateFailure = request.headers.get('x-simulate-cloudinary-failure') === 'true';
+    if (simulateFailure) {
+      cloudinaryErrMsg = 'Simulated Cloudinary API timeout/failure for failover audit';
+      console.warn(`[Upload] Simulated Cloudinary failure triggered via header. Activating Filebase fallback...`);
+    } else if (cloudName && apiKey && apiSecret) {
+      try {
+        const timestamp = Math.floor(Date.now() / 1000);
+        const folder = `yugantar-2026/${competitionSlug || 'general'}`;
+        const stringToSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
+        const signature = crypto.createHash('sha1').update(stringToSign).digest('hex');
+
+        const cloudinaryFormData = new FormData();
+        const blob = new Blob([fileBuffer], { type: file.type });
+        cloudinaryFormData.append('file', blob, file.name);
+        cloudinaryFormData.append('api_key', apiKey);
+        cloudinaryFormData.append('timestamp', timestamp.toString());
+        cloudinaryFormData.append('folder', folder);
+        cloudinaryFormData.append('signature', signature);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s bounded timeout
+
+        const uploadResponse = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+          {
+            method: 'POST',
+            body: cloudinaryFormData,
+            signal: controller.signal,
+          },
+        );
+        clearTimeout(timeoutId);
+
+        if (uploadResponse.ok) {
+          cResult = await uploadResponse.json();
+          cloudinarySuccess = true;
+        } else {
+          const errorData = await uploadResponse.json().catch(() => null);
+          cloudinaryErrMsg = errorData?.error?.message || `HTTP ${uploadResponse.status} from Cloudinary`;
+          console.warn(`[Upload] Cloudinary Account ${assignedAccount} upload failed (${cloudinaryErrMsg}). Activating Filebase fallback...`);
+        }
+      } catch (cErr: any) {
+        cloudinaryErrMsg = cErr?.name === 'AbortError' ? 'Cloudinary upload timed out after 10s' : (cErr?.message || 'Network error');
+        console.warn(`[Upload] Cloudinary failed with exception (${cloudinaryErrMsg}). Activating Filebase fallback...`);
+      }
+    } else {
+      cloudinaryErrMsg = `Cloudinary Account ${assignedAccount} credentials not configured on server`;
+      console.warn(`[Upload] ${cloudinaryErrMsg}. Activating Filebase fallback...`);
     }
 
-    // Server-Side Signed Upload
-    const timestamp = Math.floor(Date.now() / 1000);
-    const folder = `yugantar-2026/${competitionSlug || 'general'}`;
-    const stringToSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
-    const signature = crypto.createHash('sha1').update(stringToSign).digest('hex');
+    if (cloudinarySuccess && cResult) {
+      return NextResponse.json({
+        success: true,
+        url: cResult.secure_url || cResult.url,
+        publicId: cResult.public_id,
+        storageProvider: 'cloudinary',
+        account: assignedAccount,
+        format: cResult.format,
+        bytes: cResult.bytes || file.size,
+        fallbackUsed: false,
+      });
+    }
 
-    const cloudinaryFormData = new FormData();
-    cloudinaryFormData.append('file', file);
-    cloudinaryFormData.append('api_key', apiKey);
-    cloudinaryFormData.append('timestamp', timestamp.toString());
-    cloudinaryFormData.append('folder', folder);
-    cloudinaryFormData.append('signature', signature);
+    // -------------------------------------------------------------------------
+    // 2. Fallback Attempt: Filebase S3 Object Storage
+    // -------------------------------------------------------------------------
+    console.log('[Upload] Attempting Filebase fallback storage for payment screenshot...');
+    try {
+      const { uploadToFilebase } = await import('@/lib/storage');
+      const fbResult = await uploadToFilebase(fileBuffer, file.name, {
+        folder: `payment-proofs/${competitionSlug || 'general'}`,
+        mimeType: file.type,
+      });
 
-    const uploadResponse = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
-      {
-        method: 'POST',
-        body: cloudinaryFormData,
-      },
-    );
-
-    if (!uploadResponse.ok) {
-      const errorData = await uploadResponse.json().catch(() => null);
-      console.error(`[Upload] Cloudinary Account ${assignedAccount} error:`, errorData);
+      console.log(`[Upload] Filebase fallback succeeded: key=${fbResult.publicId}`);
+      return NextResponse.json({
+        success: true,
+        url: fbResult.url,
+        publicId: fbResult.publicId,
+        storageProvider: 'filebase',
+        account: 'Filebase-S3-Vault',
+        format: file.type.split('/')[1] || 'image',
+        bytes: fbResult.sizeBytes,
+        fallbackUsed: true,
+        primaryFailureReason: cloudinaryErrMsg,
+      });
+    } catch (fbErr: any) {
+      console.error('[Upload] Both Cloudinary and Filebase storage failed:', {
+        cloudinaryError: cloudinaryErrMsg,
+        filebaseError: fbErr?.message,
+      });
       return NextResponse.json(
         {
-          error:
-            errorData?.error?.message ||
-            `Upload failed on Cloudinary Account ${assignedAccount}. You may paste a Google Drive link instead.`,
+          error: 'Upload failed: Both primary Cloudinary and fallback Filebase storage providers failed to store the payment screenshot. Please check your network and retry your upload.',
+          primaryError: cloudinaryErrMsg,
+          fallbackError: fbErr?.message || 'Filebase S3 failure',
         },
         { status: 502 },
       );
     }
-
-    const cResult = await uploadResponse.json();
-
-    return NextResponse.json({
-      success: true,
-      url: cResult.secure_url,
-      publicId: cResult.public_id,
-      account: assignedAccount,
-      format: cResult.format,
-      bytes: cResult.bytes,
-    });
   } catch (err: any) {
     console.error('[Upload] Route exception:', err);
     return NextResponse.json(

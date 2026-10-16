@@ -4,6 +4,7 @@ import { getCertificateByCodeOrId } from '@/lib/certificateService';
 import { resolveActiveTemplate, getTemplateById } from '@/lib/studioService';
 import { renderTemplateToPdfBuffer } from '@/lib/studioPdfRenderer';
 import { COMPETITIONS } from '@/data/events';
+import { isCertificateGenerationAllowed } from '@/lib/generationPolicy';
 
 export async function GET(
   request: NextRequest,
@@ -13,7 +14,16 @@ export async function GET(
     const { id } = await context.params;
     const url = new URL(request.url);
 
-    // 1. Fetch certificate record from issued_certificates
+    // 1a. Enforce Global Certificate Generation Policy
+    const globalPolicy = await isCertificateGenerationAllowed();
+    if (!globalPolicy.allowed) {
+      return NextResponse.json(
+        { error: globalPolicy.reason || 'Pass and certificate generation is currently disabled by the event administrator.' },
+        { status: 403 }
+      );
+    }
+
+    // 1b. Fetch certificate record from issued_certificates
     const cert = await getCertificateByCodeOrId(id);
     if (!cert) {
       return NextResponse.json(
@@ -22,12 +32,23 @@ export async function GET(
       );
     }
 
+    // 1c. Enforce Competition-Level Policy if competition_slug is present
+    if (cert.competition_slug) {
+      const trackPolicy = await isCertificateGenerationAllowed(cert.competition_slug);
+      if (!trackPolicy.allowed) {
+        return NextResponse.json(
+          { error: trackPolicy.reason || 'Certificate generation is disabled for this competition.' },
+          { status: 403 }
+        );
+      }
+    }
+
     // 2. Fetch competition metadata
     const staticComp = COMPETITIONS.find((c) => c.slug === cert.competition_slug);
     let compName = staticComp?.name || cert.competition_slug.replace(/-/g, ' ').toUpperCase();
     let compCategory = staticComp?.category || 'Technical Arena';
     let compVenue = staticComp?.venue || 'PCE Campus, Nagpur';
-    let compDate = '19 October 2026';
+    let compDate = '21 October 2026';
 
     try {
       const compRows = await db.query<{
@@ -73,7 +94,7 @@ export async function GET(
           month: 'long',
           year: 'numeric',
         })
-      : '19 October 2026';
+      : '21 October 2026';
 
     // 5. Build dynamic token dictionary for certificate
     const tokenMap: Record<string, string> = {
