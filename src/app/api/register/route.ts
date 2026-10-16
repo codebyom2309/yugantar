@@ -160,8 +160,8 @@ export async function POST(request: NextRequest) {
             allowedSemesters = [];
           }
         }
-        if (canonicalSlug === 'mini-project-competition' || competitionSlug === 'mini-project-competition') {
-          allowedSemesters = ['I', 'V'];
+        if (allowedSemesters.length === 0 && (canonicalSlug === 'mini-project-competition' || competitionSlug === 'mini-project-competition')) {
+          allowedSemesters = ['III', 'V'];
         }
         configuredFeeRaw = comp.registration_fee || '';
         const feeStr = (comp.registration_fee || '').trim().toLowerCase();
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
         const staticComp = COMPETITIONS.find((c) => c.slug === canonicalSlug || c.slug === competitionSlug);
         if (staticComp) {
           if (staticComp.slug === 'mini-project-competition' || canonicalSlug === 'mini-project-competition') {
-            allowedSemesters = ['I', 'V'];
+            allowedSemesters = ['III', 'V'];
           }
           configuredFeeRaw = staticComp.registrationFee || '';
           isPaid = Boolean(staticComp.isPaid || (staticComp.registrationFee && staticComp.registrationFee.toLowerCase() !== 'free'));

@@ -29,7 +29,7 @@ import {
   Printer,
   Download,
 } from 'lucide-react';
-import type { RegistrationFormConfig, FormField } from '@/data/registrationForms';
+import { SEMESTER_OPTIONS, type RegistrationFormConfig, type FormField } from '@/data/registrationForms';
 import confetti from 'canvas-confetti';
 import QRCode from 'qrcode';
 import { buildUpiPaymentUri, extractNumericFee, validateCompetitionFee } from '@/lib/upiPayment';
@@ -564,7 +564,10 @@ function FormFieldInput({
         let selectOptions = field.options;
         if (isSemester && allowedSemesters && allowedSemesters.length > 0) {
           const normAllowed = allowedSemesters.map(normalizeSemester);
-          selectOptions = field.options.filter((opt) => normAllowed.includes(normalizeSemester(opt)));
+          selectOptions = SEMESTER_OPTIONS.filter((opt) => normAllowed.includes(normalizeSemester(opt)));
+          if (selectOptions.length === 0) {
+            selectOptions = allowedSemesters as any;
+          }
         }
 
         const isCustomDomain = isDomain && Boolean(value && !selectOptions.includes(value as any));
@@ -637,7 +640,7 @@ function FormFieldInput({
         />
       )}
 
-      {field.helpText && !error && (
+      {field.helpText && !error && !(field.key.toLowerCase().includes('semester') && allowedSemesters && allowedSemesters.length > 0) && (
         <p className="flex items-start gap-1.5 text-[11px] text-[#7E93AC] leading-snug">
           <Info className="w-3 h-3 mt-0.5 shrink-0" />
           {field.helpText}

@@ -69,6 +69,7 @@ export interface Competition {
   requireUtr?: boolean;
   requireScreenshot?: boolean;
   whatsappLink?: string;
+  allowedSemesters?: string[];
   // Backwards compatibility helpers
   eligibilityPlaceholder: string;
   teamRequirementsPlaceholder: string;
@@ -1030,7 +1031,8 @@ export const COMPETITIONS: Competition[] = [
     category: "Hardware & Circuits",
     tag: "Applied Hardware Exhibition",
     venue: "3rd Floor Room No. 305",
-    eligibility: "Semester I and Semester V Students Only",
+    eligibility: "Semester 3 & V Students Only",
+    allowedSemesters: ["III", "V"],
     teamSizeLimit: "Maximum 4 members per team",
     maxTeamMembers: 4,
     isPaid: true,
@@ -1040,9 +1042,9 @@ export const COMPETITIONS: Competition[] = [
     qrMode: "generate",
     requireUtr: true,
     requireScreenshot: true,
-    shortDescription: "Exhibit operational mini projects, embedded electronics, and prototype circuits designed by Semester I & V students.",
-    fullDescription: "A specialized inter-collegiate engineering showcase for Semester I and Semester V students to demonstrate operational mini-project models, sensor interfaces, and circuit implementations before an academic evaluation panel.",
-    about: "The Inter-Collegiate Mini Project Competition provides 1st and 5th semester engineers an authentic exhibition stage to demonstrate practical circuit design, microcontroller integration, and engineering problem-solving. Teams present operational hardware models in 3rd Floor Room No. 305.",
+    shortDescription: "Exhibit operational mini projects, embedded electronics, and prototype circuits designed by Semester III & V students.",
+    fullDescription: "A specialized inter-collegiate engineering showcase for Semester III and Semester V students to demonstrate operational mini-project models, sensor interfaces, and circuit implementations before an academic evaluation panel.",
+    about: "The Inter-Collegiate Mini Project Competition provides 3rd and 5th semester engineers an authentic exhibition stage to demonstrate practical circuit design, microcontroller integration, and engineering problem-solving. Teams present operational hardware models in 3rd Floor Room No. 305.",
     scheduleFlow: [
       { time: "01:00 PM", activity: "Reporting & Setup: Teams report to 3rd Floor Room No. 305 and install working models on assigned benches." },
       { time: "01:30 PM Onwards", activity: "Live Jury Evaluation: Panel visits each workstation for technical demonstration (7 mins demo + 3 mins Q&A)." },
@@ -1058,7 +1060,7 @@ export const COMPETITIONS: Competition[] = [
       ],
     },
     rules: [
-      "Eligibility: Strictly open to Semester I and Semester V engineering students only. Inter-college teams and participants from other colleges are permitted.",
+      "Eligibility: Strictly open to Semester III and Semester V engineering students only. Inter-college teams and participants from other colleges are permitted.",
       "Hardware Setup: Teams must bring all project hardware, power supplies, connecting wires, and test equipment.",
       "Live Demonstration: The mini project model must be fully functional and demonstrated live before the jury panel.",
       "Team Composition: Teams may comprise 1 to 4 members. Every registered member must be present in formal attire.",
@@ -1073,7 +1075,7 @@ export const COMPETITIONS: Competition[] = [
     formatNote: "Single-round live prototype exhibition with 10-minute jury review (7 min demo + 3 min Q&A).",
     highlights: [
       "Dedicated arena in 3rd Floor Room No. 305",
-      "Strict Semester I and Semester V eligibility tier",
+      "Strict Semester III and Semester V eligibility tier",
       "Comprehensive 100-point hardware rubric",
     ],
     iconName: "Cpu",
@@ -1087,7 +1089,7 @@ export const COMPETITIONS: Competition[] = [
     faqs: [
       {
         question: "Who is eligible to participate in the Mini Project Competition?",
-        answer: "Participation is open to students currently enrolled in Semester I or Semester V from any engineering college. Inter-college teams are welcome.",
+        answer: "Participation is open to students currently enrolled in Semester III or Semester V from any engineering college. Inter-college teams are welcome.",
       },
       {
         question: "What is the maximum team size?",
@@ -1257,7 +1259,7 @@ export const FAQS = [
   {
     category: "Eligibility",
     question: "Who can participate in YUGANTAR competitions?",
-    answer: "Eligibility varies by competition according to official academic rules: Project Competition & PPT Presentation are for VII Semester students; Bread Board & Mock Placement Drive are for V Semester students; Mini Project Competition is for Semester I and Semester V students; Ideathon, Poster, E-Gaming, and Open Mic are open to all semesters."
+    answer: "Eligibility varies by competition according to official academic rules: Project Competition & PPT Presentation are for VII Semester students; Bread Board & Mock Placement Drive are for V Semester students; Mini Project Competition is for Semester III and Semester V students; Ideathon, Poster, E-Gaming, and Open Mic are open to all semesters."
   },
   {
     category: "Registration Architecture",

@@ -400,7 +400,7 @@ const mockPlacement: RegistrationFormConfig = {
 // 9. MINI PROJECT COMPETITION
 // ---------------------------------------------------------------------------
 
-export const MINI_PROJECT_SEMESTER_OPTIONS = ['I', 'V'] as const;
+export const MINI_PROJECT_SEMESTER_OPTIONS = ['III', 'V'] as const;
 
 export const MINI_PROJECT_DOMAIN_OPTIONS = [
   'Embedded Systems / IoT',
@@ -418,7 +418,7 @@ const miniProjectCompetition: RegistrationFormConfig = {
   googleFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLScUlBGNuJhGt26oYhRCr6kIhGUdBNRIjV_GV3pE6JrRDcpHMg/viewform',
   formResponseUrl: 'https://docs.google.com/forms/d/e/1FAIpQLScUlBGNuJhGt26oYhRCr6kIhGUdBNRIjV_GV3pE6JrRDcpHMg/formResponse',
   acknowledgmentEntryId: '1885141004',
-  acknowledgmentLabel: 'I confirm that all team members are currently in Semester I or Semester V and that the project is self-developed.',
+  acknowledgmentLabel: 'I confirm that all team members are currently in Semester III or Semester V and that the project is self-developed.',
   fields: [
     // --- Leader Info ---
     {
@@ -473,8 +473,8 @@ const miniProjectCompetition: RegistrationFormConfig = {
       label: 'Team Leader Semester',
       type: 'select',
       required: true,
-      options: MINI_PROJECT_SEMESTER_OPTIONS,
-      helpText: 'Eligible semesters: Semester I and Semester V only.',
+      options: SEMESTER_OPTIONS,
+      helpText: 'Eligible semesters: Semester III and Semester V only.',
       group: 'Team Leader',
     },
     // --- Project Details ---
@@ -563,7 +563,7 @@ const miniProjectCompetition: RegistrationFormConfig = {
       label: 'Member 2 Semester',
       type: 'select',
       required: true,
-      options: MINI_PROJECT_SEMESTER_OPTIONS,
+      options: SEMESTER_OPTIONS,
       showWhen: { field: 'teamSize', values: ['2', '3', '4'] },
       group: 'Team Member 2',
     },
@@ -604,7 +604,7 @@ const miniProjectCompetition: RegistrationFormConfig = {
       label: 'Member 3 Semester',
       type: 'select',
       required: true,
-      options: MINI_PROJECT_SEMESTER_OPTIONS,
+      options: SEMESTER_OPTIONS,
       showWhen: { field: 'teamSize', values: ['3', '4'] },
       group: 'Team Member 3',
     },
@@ -645,7 +645,7 @@ const miniProjectCompetition: RegistrationFormConfig = {
       label: 'Member 4 Semester',
       type: 'select',
       required: true,
-      options: MINI_PROJECT_SEMESTER_OPTIONS,
+      options: SEMESTER_OPTIONS,
       showWhen: { field: 'teamSize', values: ['4'] },
       group: 'Team Member 4',
     },
