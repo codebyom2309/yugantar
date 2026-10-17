@@ -48,17 +48,17 @@ export const db = {
   /** Execute a query and return the result rows */
   async query<T = Record<string, unknown>>(
     sql: string,
-    params?: (string | number | null | Date)[],
+    params?: (string | number | null | Date | Buffer | boolean)[],
   ): Promise<T[]> {
     const pool = getPool();
-    const [rows] = await pool.execute(sql, params);
+    const [rows] = await pool.execute(sql, params as any);
     return rows as T[];
   },
 
   /** Execute a single insert/update and return the result */
-  async execute(sql: string, params?: (string | number | null | Date)[]) {
+  async execute(sql: string, params?: (string | number | null | Date | Buffer | boolean)[]) {
     const pool = getPool();
-    const [result] = await pool.execute<ResultSetHeader>(sql, params);
+    const [result] = await pool.execute<ResultSetHeader>(sql, params as any);
     return result;
   },
 };

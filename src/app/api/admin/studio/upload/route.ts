@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { uploadMediaFile } from '@/lib/storage';
+import { saveAssetFallback } from '@/lib/studioAssetResolver';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const role = (formData.get('role') as string) || 'studio_background';
+    const templateId = (formData.get('templateId') as string) || undefined;
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
@@ -49,12 +51,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const arrayBuffer = await file.arrayBuffer();
+    const fileBuffer = Buffer.from(arrayBuffer);
+
     // Try primary project storage handler (Filebase S3 / Cloudinary)
     try {
       const storageResult = await uploadMediaFile(file, {
         competitionSlug: 'studio',
         role,
         altText: file.name,
+      });
+
+      // Synchronously guarantee database-backed fallback (Requirement 5)
+      const assetKey = storageResult.publicId || storageResult.storagePath || storageResult.url;
+      await saveAssetFallback({
+        templateId,
+        assetKey,
+        buffer: fileBuffer,
+        mimeType: storageResult.mimeType,
       });
 
       return NextResponse.json({
@@ -65,20 +79,25 @@ export async function POST(request: NextRequest) {
         storageProvider: storageResult.storageProvider,
       });
     } catch (storageErr) {
-      console.warn('Remote storage upload failed, saving to public uploads directory:', storageErr);
+      console.warn('Remote storage upload failed, saving to local disk and DB fallback:', storageErr);
 
       // Local public fallback so administrators can test locally without cloud credentials
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
       const ext = path.extname(file.name) || (file.type === 'image/png' ? '.png' : '.webp');
       const filename = `studio-${Date.now()}-${randomUUID().slice(0, 8)}${ext}`;
       const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'studio');
 
       await mkdir(uploadDir, { recursive: true });
-      await writeFile(path.join(uploadDir, filename), buffer);
+      await writeFile(path.join(uploadDir, filename), fileBuffer);
 
       const localUrl = `/uploads/studio/${filename}`;
+
+      // Also persist to DB fallback
+      await saveAssetFallback({
+        templateId,
+        assetKey: localUrl,
+        buffer: fileBuffer,
+        mimeType: file.type,
+      });
 
       return NextResponse.json({
         success: true,

@@ -511,7 +511,7 @@ const miniProjectCompetition: RegistrationFormConfig = {
       entryId: '1539019677',
       label: 'Project Synopsis / Abstract Link',
       type: 'url',
-      required: true,
+      required: false,
       placeholder: 'https://drive.google.com/...',
       helpText: 'Share a viewable link to your project abstract or synopsis (Google Drive or cloud link).',
       group: 'Project Details',

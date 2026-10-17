@@ -121,6 +121,9 @@ export default function StudioDesignerPage() {
 
   // Selection & drag state
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [dragStartElements, setDragStartElements] = useState<{ id: string; x: number; y: number }[]>([]);
+  const [tokenDocFilter, setTokenDocFilter] = useState<'all' | 'pass' | 'cert'>('all');
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isResizing, setIsResizing] = useState(false);
@@ -204,10 +207,10 @@ export default function StudioDesignerPage() {
     ...baseSampleValues,
     ...(testLongName
       ? {
-          '{{participant.name}}': 'Dr. Christopher Montgomery-Vanderbilt Jr. III',
-          '{{team.name}}': 'Advanced Quantum Autonomous Robotics & Cybernetics Consortium',
-          '{{participant.college}}': 'International Institute of Advanced Computational Engineering & Applied Technology, Nagpur Campus',
-        }
+        '{{participant.name}}': 'Dr. Christopher Montgomery-Vanderbilt Jr. III',
+        '{{team.name}}': 'Advanced Quantum Autonomous Robotics & Cybernetics Consortium',
+        '{{participant.college}}': 'International Institute of Advanced Computational Engineering & Applied Technology, Nagpur Campus',
+      }
       : {}),
   };
 
@@ -223,6 +226,7 @@ export default function StudioDesignerPage() {
         if (data.template) {
           const loadedTpl: PassTemplate = data.template;
           setTemplate(loadedTpl);
+          setTokenDocFilter(loadedTpl.type.includes('cert') ? 'cert' : 'pass');
           const initialElements = loadedTpl.elements || [];
           setHistory([initialElements]);
           setHistoryIndex(0);
@@ -333,28 +337,30 @@ export default function StudioDesignerPage() {
         handleSave();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
         e.preventDefault();
-        if (selectedId) duplicateElement(selectedId);
+        duplicateSelected();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedId) {
+        if (selectedIds.length > 0 || selectedId) {
           e.preventDefault();
-          deleteElement(selectedId);
+          deleteSelected();
         }
       } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        if (selectedId) {
+        const targets = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+        if (targets.length > 0) {
           e.preventDefault();
           const step = e.shiftKey ? 10 : 1;
           const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
           const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-          nudgeElement(selectedId, dx, dy);
+          nudgeElements(targets, dx, dy);
         }
       } else if (e.key === 'Escape') {
         setSelectedId(null);
+        setSelectedIds([]);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, historyIndex, history]);
+  }, [selectedId, selectedIds, historyIndex, history]);
 
   // ---------------------------------------------------------------------------
   // 4. SAVE & AUTOSAVE (Phase 12)
@@ -411,13 +417,18 @@ export default function StudioDesignerPage() {
     setSelectedId(newElement.id);
   };
 
-  const updateSelectedElement = (updates: Partial<StudioElement>) => {
-    if (!template || !selectedId) return;
+  const updateElementById = (id: string, updates: Partial<StudioElement>) => {
+    if (!template) return;
     const elements = template.elements.map((el) =>
-      el.id === selectedId ? ({ ...el, ...updates } as StudioElement) : el
+      el.id === id ? ({ ...el, ...updates } as StudioElement) : el
     );
     setTemplate({ ...template, elements });
     pushHistory(elements);
+  };
+
+  const updateSelectedElement = (updates: Partial<StudioElement>) => {
+    if (!template || !selectedId) return;
+    updateElementById(selectedId, updates);
   };
 
   const deleteElement = (id: string) => {
@@ -426,6 +437,18 @@ export default function StudioDesignerPage() {
     setTemplate({ ...template, elements });
     pushHistory(elements);
     if (selectedId === id) setSelectedId(null);
+    setSelectedIds((prev) => prev.filter((i) => i !== id));
+  };
+
+  const deleteSelected = () => {
+    if (!template) return;
+    const targets = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (targets.length === 0) return;
+    const elements = template.elements.filter((el) => !targets.includes(el.id));
+    setTemplate({ ...template, elements });
+    pushHistory(elements);
+    setSelectedId(null);
+    setSelectedIds([]);
   };
 
   const duplicateElement = (id: string) => {
@@ -443,10 +466,48 @@ export default function StudioDesignerPage() {
     addElement(clone);
   };
 
+  const duplicateSelected = () => {
+    if (!template) return;
+    const targets = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (targets.length === 0) return;
+
+    const newClones: StudioElement[] = [];
+    const elements = [...template.elements];
+    targets.forEach((id) => {
+      const target = template.elements.find((el) => el.id === id);
+      if (target) {
+        const clone: StudioElement = {
+          ...target,
+          id: `el_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          name: target.name ? `${target.name} (Copy)` : undefined,
+          x: target.x + 16,
+          y: target.y + 16,
+          zIndex: (template.elements.length || 0) + newClones.length + 1,
+        };
+        newClones.push(clone);
+      }
+    });
+
+    const combined = [...elements, ...newClones];
+    setTemplate({ ...template, elements: combined });
+    pushHistory(combined);
+    setSelectedIds(newClones.map((c) => c.id));
+    if (newClones.length > 0) setSelectedId(newClones[0].id);
+  };
+
   const nudgeElement = (id: string, dx: number, dy: number) => {
     if (!template) return;
     const elements = template.elements.map((el) =>
       el.id === id ? { ...el, x: Math.max(0, el.x + dx), y: Math.max(0, el.y + dy) } : el
+    );
+    setTemplate({ ...template, elements });
+    pushHistory(elements);
+  };
+
+  const nudgeElements = (ids: string[], dx: number, dy: number) => {
+    if (!template) return;
+    const elements = template.elements.map((el) =>
+      ids.includes(el.id) ? { ...el, x: Math.max(0, el.x + dx), y: Math.max(0, el.y + dy) } : el
     );
     setTemplate({ ...template, elements });
     pushHistory(elements);
@@ -503,23 +564,28 @@ export default function StudioDesignerPage() {
 
   // Alignments
   const alignElement = (type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
-    if (!template || !selectedId) return;
-    const el = template.elements.find((e) => e.id === selectedId);
-    if (!el) return;
+    if (!template) return;
+    const targets = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (targets.length === 0) return;
 
-    let newX = el.x;
-    let newY = el.y;
     const canvasW = template.width_pt;
     const canvasH = template.height_pt;
 
-    if (type === 'left') newX = 30;
-    if (type === 'center') newX = (canvasW - el.width) / 2;
-    if (type === 'right') newX = canvasW - el.width - 30;
-    if (type === 'top') newY = 30;
-    if (type === 'middle') newY = (canvasH - el.height) / 2;
-    if (type === 'bottom') newY = canvasH - el.height - 30;
+    const elements = template.elements.map((el) => {
+      if (!targets.includes(el.id)) return el;
+      let newX = el.x;
+      let newY = el.y;
+      if (type === 'left') newX = 30;
+      if (type === 'center') newX = (canvasW - el.width) / 2;
+      if (type === 'right') newX = canvasW - el.width - 30;
+      if (type === 'top') newY = 30;
+      if (type === 'middle') newY = (canvasH - el.height) / 2;
+      if (type === 'bottom') newY = canvasH - el.height - 30;
+      return { ...el, x: Math.round(newX), y: Math.round(newY) };
+    });
 
-    updateSelectedElement({ x: Math.round(newX), y: Math.round(newY) });
+    setTemplate({ ...template, elements });
+    pushHistory(elements);
   };
 
   // ---------------------------------------------------------------------------
@@ -848,23 +914,48 @@ export default function StudioDesignerPage() {
   // ---------------------------------------------------------------------------
   const handleMouseDownElement = (e: React.MouseEvent, el: StudioElement) => {
     e.stopPropagation();
-    setSelectedId(el.id);
     setContextMenu(null);
+
+    let nextSelectedIds: string[];
+    if (e.shiftKey) {
+      if (selectedIds.includes(el.id)) {
+        nextSelectedIds = selectedIds.filter((id) => id !== el.id);
+      } else {
+        nextSelectedIds = [...selectedIds, el.id];
+      }
+    } else {
+      if (selectedIds.includes(el.id) && selectedIds.length > 1) {
+        nextSelectedIds = selectedIds;
+      } else {
+        nextSelectedIds = [el.id];
+      }
+    }
+    setSelectedIds(nextSelectedIds);
+    setSelectedId(nextSelectedIds[nextSelectedIds.length - 1] || null);
+
     if (el.isLocked) {
       return;
     }
 
     setIsDragging(true);
     setDragOffset({
-      x: e.clientX / zoom - el.x,
-      y: e.clientY / zoom - el.y,
+      x: e.clientX / zoom,
+      y: e.clientY / zoom,
     });
+    setDragStartElements(
+      template
+        ? template.elements
+            .filter((elem) => nextSelectedIds.includes(elem.id) && !elem.isLocked)
+            .map((elem) => ({ id: elem.id, x: elem.x, y: elem.y }))
+        : []
+    );
   };
 
   const handleContextMenuElement = (e: React.MouseEvent, el: StudioElement) => {
     e.preventDefault();
     e.stopPropagation();
     setSelectedId(el.id);
+    setSelectedIds([el.id]);
     setContextMenu({
       x: Math.min(window.innerWidth - 210, e.clientX),
       y: Math.min(window.innerHeight - 240, e.clientY),
@@ -876,8 +967,37 @@ export default function StudioDesignerPage() {
     if (!template || !selectedId) return;
 
     if (isDragging) {
-      let newX = e.clientX / zoom - dragOffset.x;
-      let newY = e.clientY / zoom - dragOffset.y;
+      const deltaX = e.clientX / zoom - dragOffset.x;
+      const deltaY = e.clientY / zoom - dragOffset.y;
+
+      if (dragStartElements.length > 1) {
+        setTemplate((prev) =>
+          prev
+            ? {
+                ...prev,
+                elements: prev.elements.map((el) => {
+                  const start = dragStartElements.find((s) => s.id === el.id);
+                  if (start) {
+                    return {
+                      ...el,
+                      x: Math.max(0, Math.min(Math.round(start.x + deltaX), prev.width_pt - 10)),
+                      y: Math.max(0, Math.min(Math.round(start.y + deltaY), prev.height_pt - 10)),
+                    };
+                  }
+                  return el;
+                }),
+              }
+            : prev
+        );
+        return;
+      }
+
+      const startEl = dragStartElements[0];
+      const startX = startEl ? startEl.x : (template.elements.find((el) => el.id === selectedId)?.x || 0);
+      const startY = startEl ? startEl.y : (template.elements.find((el) => el.id === selectedId)?.y || 0);
+
+      let newX = startX + deltaX;
+      let newY = startY + deltaY;
 
       const activeEl = template.elements.find((el) => el.id === selectedId);
       const elW = activeEl?.width || 50;
@@ -992,11 +1112,11 @@ export default function StudioDesignerPage() {
       setTemplate((prev) =>
         prev
           ? {
-              ...prev,
-              elements: prev.elements.map((el) =>
-                el.id === selectedId ? { ...el, x: clampedX, y: clampedY } : el
-              ),
-            }
+            ...prev,
+            elements: prev.elements.map((el) =>
+              el.id === selectedId ? { ...el, x: clampedX, y: clampedY } : el
+            ),
+          }
           : prev
       );
     } else if (isResizing && resizeHandle) {
@@ -1024,19 +1144,19 @@ export default function StudioDesignerPage() {
       setTemplate((prev) =>
         prev
           ? {
-              ...prev,
-              elements: prev.elements.map((el) =>
-                el.id === selectedId
-                  ? {
-                      ...el,
-                      x: Math.round(newX),
-                      y: Math.round(newY),
-                      width: Math.round(newWidth),
-                      height: Math.round(newHeight),
-                    }
-                  : el
-              ),
-            }
+            ...prev,
+            elements: prev.elements.map((el) =>
+              el.id === selectedId
+                ? {
+                  ...el,
+                  x: Math.round(newX),
+                  y: Math.round(newY),
+                  width: Math.round(newWidth),
+                  height: Math.round(newHeight),
+                }
+                : el
+            ),
+          }
           : prev
       );
     }
@@ -1181,9 +1301,8 @@ export default function StudioDesignerPage() {
 
           <button
             onClick={() => setIsLeftCollapsed(!isLeftCollapsed)}
-            className={`hidden md:flex p-1.5 rounded-lg border transition-colors cursor-pointer shrink-0 ${
-              isLeftCollapsed ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-            }`}
+            className={`hidden md:flex p-1.5 rounded-lg border transition-colors cursor-pointer shrink-0 ${isLeftCollapsed ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
             title={isLeftCollapsed ? 'Expand Tools Sidebar' : 'Collapse Tools Sidebar (Maximize Canvas)'}
           >
             <Columns className="w-4 h-4" />
@@ -1271,9 +1390,8 @@ export default function StudioDesignerPage() {
           {/* Grid & Snapping Toggles */}
           <button
             onClick={() => setShowGrid((g) => !g)}
-            className={`p-2 rounded-lg border transition-colors cursor-pointer ${
-              showGrid ? 'bg-blue-50 border-blue-200 text-blue-600 font-semibold' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-            }`}
+            className={`p-2 rounded-lg border transition-colors cursor-pointer ${showGrid ? 'bg-blue-50 border-blue-200 text-blue-600 font-semibold' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
             title="Toggle Grid (16pt)"
           >
             <Grid className="w-4 h-4" />
@@ -1281,9 +1399,8 @@ export default function StudioDesignerPage() {
 
           <button
             onClick={() => setSnapToCenter((s) => !s)}
-            className={`p-2 rounded-lg border transition-colors cursor-pointer ${
-              snapToCenter ? 'bg-blue-50 border-blue-200 text-blue-600 font-semibold' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-            }`}
+            className={`p-2 rounded-lg border transition-colors cursor-pointer ${snapToCenter ? 'bg-blue-50 border-blue-200 text-blue-600 font-semibold' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
             title="Toggle Center Alignment Guides & Snapping"
           >
             <Compass className="w-4 h-4" />
@@ -1292,9 +1409,8 @@ export default function StudioDesignerPage() {
           {/* Sample Data Toggle */}
           <button
             onClick={() => setPreviewSampleData((p) => !p)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
-              previewSampleData ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${previewSampleData ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
           >
             <Eye className="w-3.5 h-3.5" />
             {previewSampleData ? 'Sample Data' : 'Raw Tokens'}
@@ -1341,9 +1457,8 @@ export default function StudioDesignerPage() {
           {/* Properties Panel Toggle (Desktop) */}
           <button
             onClick={() => setIsRightCollapsed(!isRightCollapsed)}
-            className={`hidden lg:flex p-1.5 rounded-lg border transition-colors cursor-pointer shrink-0 ${
-              isRightCollapsed ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-            }`}
+            className={`hidden lg:flex p-1.5 rounded-lg border transition-colors cursor-pointer shrink-0 ${isRightCollapsed ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
             title={isRightCollapsed ? 'Expand Properties Inspector' : 'Collapse Properties Inspector (Maximize Canvas)'}
           >
             <Sliders className="w-4 h-4" />
@@ -1352,9 +1467,8 @@ export default function StudioDesignerPage() {
           {/* Properties Sheet Toggle (Mobile/Tablet) */}
           <button
             onClick={() => setShowMobilePropsModal(true)}
-            className={`lg:hidden inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
-              selectedId ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
+            className={`lg:hidden inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-xs ${selectedId ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
             title="Inspect Element Properties"
           >
             <Sliders className="w-3.5 h-3.5 text-blue-600" />
@@ -1371,11 +1485,10 @@ export default function StudioDesignerPage() {
           <button
             id="btn-open-checklist"
             onClick={handleOpenValidation}
-            className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
-              quickReport.isValid
-                ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                : 'bg-amber-50 border-amber-300 text-amber-700'
-            }`}
+            className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-xs ${quickReport.isValid
+              ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+              : 'bg-amber-50 border-amber-300 text-amber-700'
+              }`}
             title="Pre-publish Template Validation Checklist"
           >
             <CheckCircle2 className={`w-3.5 h-3.5 ${quickReport.isValid ? 'text-emerald-500' : 'text-amber-500'}`} />
@@ -1403,9 +1516,8 @@ export default function StudioDesignerPage() {
             id="btn-save-template"
             onClick={handleSave}
             disabled={isSaving}
-            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl text-xs font-semibold text-white transition-all shadow-xs cursor-pointer disabled:opacity-50 ${
-              isSaved ? 'bg-slate-800 hover:bg-slate-900' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 shadow-md'
-            }`}
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl text-xs font-semibold text-white transition-all shadow-xs cursor-pointer disabled:opacity-50 ${isSaved ? 'bg-slate-800 hover:bg-slate-900' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 shadow-md'
+              }`}
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save'}</span>
@@ -1436,11 +1548,10 @@ export default function StudioDesignerPage() {
                 id={`tab-btn-${tab.id}`}
                 onClick={() => setLeftTab(tab.id as any)}
                 title={tab.title}
-                className={`py-2 text-[10px] font-bold rounded flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                  leftTab === tab.id
-                    ? 'bg-white text-blue-600 shadow-xs border border-slate-200'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
-                }`}
+                className={`py-2 text-[10px] font-bold rounded flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${leftTab === tab.id
+                  ? 'bg-white text-blue-600 shadow-xs border border-slate-200'
+                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
+                  }`}
               >
                 <tab.icon className="w-3.5 h-3.5" />
                 <span className="truncate">{tab.label}</span>
@@ -1647,7 +1758,44 @@ export default function StudioDesignerPage() {
 
           {/* TAB 2: DATA FIELDS (Phase 4) */}
           {leftTab === 'fields' && (
-            <div className="flex-1 overflow-y-auto p-3 space-y-4">
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              {/* Document Context Filter */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-[10px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setTokenDocFilter('all')}
+                  className={`flex-1 py-1 rounded-lg text-center transition-all cursor-pointer ${
+                    tokenDocFilter === 'all'
+                      ? 'bg-white text-blue-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  All ({DATA_TOKEN_CATEGORIES.flatMap((c) => c.tokens).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTokenDocFilter('pass')}
+                  className={`flex-1 py-1 rounded-lg text-center transition-all cursor-pointer ${
+                    tokenDocFilter === 'pass'
+                      ? 'bg-white text-blue-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Pass Tokens
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTokenDocFilter('cert')}
+                  className={`flex-1 py-1 rounded-lg text-center transition-all cursor-pointer ${
+                    tokenDocFilter === 'cert'
+                      ? 'bg-white text-amber-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Cert Tokens
+                </button>
+              </div>
+
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
@@ -1660,7 +1808,15 @@ export default function StudioDesignerPage() {
               </div>
 
               <div className="space-y-4">
-                {DATA_TOKEN_CATEGORIES.map((category) => {
+                {DATA_TOKEN_CATEGORIES.filter((category) => {
+                  if (tokenDocFilter === 'pass') {
+                    return ['Registration', 'Participant', 'Academic Information', 'Team & Squad', 'Competition', 'Payment'].includes(category.category);
+                  }
+                  if (tokenDocFilter === 'cert') {
+                    return ['Certificate', 'Participant', 'Academic Information', 'Competition'].includes(category.category);
+                  }
+                  return true;
+                }).map((category) => {
                   const filteredTokens = category.tokens.filter(
                     (t) =>
                       t.name.toLowerCase().includes(tokenSearch.toLowerCase()) ||
@@ -1776,11 +1932,10 @@ export default function StudioDesignerPage() {
                             setTemplate({ ...template, background_fit: fit });
                             setIsSaved(false);
                           }}
-                          className={`py-1.5 rounded-lg border font-medium capitalize transition-colors cursor-pointer ${
-                            template.background_fit === fit
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                          }`}
+                          className={`py-1.5 rounded-lg border font-medium capitalize transition-colors cursor-pointer ${template.background_fit === fit
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                            }`}
                         >
                           {fit}
                         </button>
@@ -1827,9 +1982,19 @@ export default function StudioDesignerPage() {
                 [...template.elements].reverse().map((el) => (
                   <div
                     key={el.id}
-                    onClick={() => setSelectedId(el.id)}
+                    onClick={(e) => {
+                      if (e.shiftKey) {
+                        setSelectedIds((prev) =>
+                          prev.includes(el.id) ? prev.filter((i) => i !== el.id) : [...prev, el.id]
+                        );
+                        setSelectedId(el.id);
+                      } else {
+                        setSelectedId(el.id);
+                        setSelectedIds([el.id]);
+                      }
+                    }}
                     className={`p-2 rounded-xl border flex items-center justify-between text-xs transition-colors cursor-pointer ${
-                      selectedId === el.id
+                      selectedId === el.id || selectedIds.includes(el.id)
                         ? 'bg-blue-50 border-blue-400 text-blue-700 shadow-xs'
                         : 'bg-white border-slate-200 hover:border-slate-300 text-slate-800'
                     }`}
@@ -1844,8 +2009,8 @@ export default function StudioDesignerPage() {
                           (el.type === 'field'
                             ? (el as FieldElement).token
                             : el.type === 'text'
-                            ? (el as TextElement).content
-                            : el.type.toUpperCase())}
+                              ? (el as TextElement).content
+                              : el.type.toUpperCase())}
                       </span>
                     </div>
 
@@ -1853,7 +2018,7 @@ export default function StudioDesignerPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          updateSelectedElement({ isLocked: !el.isLocked });
+                          updateElementById(el.id, { isLocked: !el.isLocked });
                         }}
                         className="p-1 text-slate-400 hover:text-blue-600"
                         title={el.isLocked ? 'Unlock Element' : 'Lock Element'}
@@ -1863,7 +2028,7 @@ export default function StudioDesignerPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          updateSelectedElement({ isHidden: !el.isHidden });
+                          updateElementById(el.id, { isHidden: !el.isHidden });
                         }}
                         className="p-1 text-slate-400 hover:text-blue-600"
                         title={el.isHidden ? 'Unhide Element' : 'Hide Element'}
@@ -1954,11 +2119,10 @@ export default function StudioDesignerPage() {
                       <button
                         key={size}
                         onClick={() => handleSelectPaperPreset(size)}
-                        className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
-                          template.paper_size === size
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${template.paper_size === size
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
                       >
                         <div className="font-bold text-xs">{label}</div>
                         <div className="text-[9px] opacity-80">{preset.mm}</div>
@@ -1976,11 +2140,10 @@ export default function StudioDesignerPage() {
                     <button
                       key={ori}
                       onClick={() => handleToggleOrientation(ori)}
-                      className={`py-1.5 rounded-lg border font-semibold capitalize transition-colors cursor-pointer ${
-                        template.orientation === ori
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`py-1.5 rounded-lg border font-semibold capitalize transition-colors cursor-pointer ${template.orientation === ori
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       {ori}
                     </button>
@@ -1990,10 +2153,15 @@ export default function StudioDesignerPage() {
 
               {/* Dimensions Input */}
               <div className="space-y-2">
-                <span className="text-[11px] font-semibold text-slate-600">Custom Dimensions (pt)</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-600">Dimensions</span>
+                  <span className="text-[10px] text-blue-600 font-mono font-semibold">
+                    {(template.width_pt * 0.352778).toFixed(1)} × {(template.height_pt * 0.352778).toFixed(1)} mm
+                  </span>
+                </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Width</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Width (pt)</label>
                     <input
                       type="number"
                       value={Math.round(template.width_pt)}
@@ -2002,7 +2170,7 @@ export default function StudioDesignerPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">Height</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Height (pt)</label>
                     <input
                       type="number"
                       value={Math.round(template.height_pt)}
@@ -2058,6 +2226,7 @@ export default function StudioDesignerPage() {
           className="flex-1 bg-slate-200/70 overflow-auto p-4 sm:p-8 relative select-none flex"
           onClick={() => {
             setSelectedId(null);
+            setSelectedIds([]);
             setContextMenu(null);
           }}
         >
@@ -2068,6 +2237,7 @@ export default function StudioDesignerPage() {
               onClick={(e) => {
                 if (e.target === canvasRef.current) {
                   setSelectedId(null);
+                  setSelectedIds([]);
                   setContextMenu(null);
                 }
               }}
@@ -2124,7 +2294,7 @@ export default function StudioDesignerPage() {
               {/* Render Canvas Elements */}
               {template.elements.map((el) => {
                 if (el.isHidden) return null;
-                const isSelected = selectedId === el.id;
+                const isSelected = selectedId === el.id || selectedIds.includes(el.id);
 
                 const scaledX = el.x * zoom;
                 const scaledY = el.y * zoom;
@@ -2135,17 +2305,12 @@ export default function StudioDesignerPage() {
                   <div
                     key={el.id}
                     onMouseDown={(e) => handleMouseDownElement(e, el)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedId(el.id);
-                      setContextMenu(null);
-                    }}
+                    onClick={(e) => e.stopPropagation()}
                     onContextMenu={(e) => handleContextMenuElement(e, el)}
-                    className={`absolute group cursor-move ${
-                      isSelected
-                        ? 'ring-2 ring-blue-600 ring-offset-1 z-30 shadow-md'
-                        : 'hover:ring-1 hover:ring-blue-400'
-                    }`}
+                    className={`absolute group cursor-move ${isSelected
+                      ? 'ring-2 ring-blue-600 ring-offset-1 z-30 shadow-md'
+                      : 'hover:ring-1 hover:ring-blue-400'
+                      }`}
                     style={{
                       left: `${scaledX}px`,
                       top: `${scaledY}px`,
@@ -2186,8 +2351,8 @@ export default function StudioDesignerPage() {
                                 (el as ImageElement).fit === 'fill'
                                   ? 'fill'
                                   : (el as ImageElement).fit === 'cover'
-                                  ? 'cover'
-                                  : 'contain',
+                                    ? 'cover'
+                                    : 'contain',
                             }}
                           />
                         ) : (
@@ -2379,11 +2544,127 @@ export default function StudioDesignerPage() {
         {/* ------------------------------------------------------------------- */}
         <aside
           onClick={(e) => e.stopPropagation()}
-          className={`${
-            isRightCollapsed ? 'hidden' : 'hidden lg:flex'
-          } w-80 bg-white border-l border-slate-200 flex-col shrink-0 z-20 overflow-y-auto p-4 space-y-5 shadow-xs`}
+          className={`${isRightCollapsed ? 'hidden' : 'hidden lg:flex'
+            } w-80 bg-white border-l border-slate-200 flex-col shrink-0 z-20 overflow-y-auto p-4 space-y-5 shadow-xs`}
         >
-          {selectedElement ? (
+          {selectedIds.length > 1 ? (
+            <div className="space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                <div>
+                  <h3 className="font-bold text-xs uppercase tracking-wider text-slate-900">
+                    Group Selection
+                  </h3>
+                  <p className="text-[11px] text-blue-600 font-semibold">
+                    {selectedIds.length} elements selected
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={duplicateSelected}
+                    className="p-1.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+                    title="Duplicate Selected (Ctrl+D)"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={deleteSelected}
+                    className="p-1.5 rounded hover:bg-rose-50 text-rose-500 hover:text-rose-700 transition-colors cursor-pointer"
+                    title="Delete Selected (Del)"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Group Canvas Alignment */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  Align Group
+                </span>
+                <div className="grid grid-cols-6 gap-1 text-xs">
+                  <button
+                    onClick={() => alignElement('left')}
+                    className="p-2 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-center font-bold"
+                    title="Align Left"
+                  >
+                    L
+                  </button>
+                  <button
+                    onClick={() => alignElement('center')}
+                    className="p-2 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-center font-bold"
+                    title="Align Center Horizontal"
+                  >
+                    C
+                  </button>
+                  <button
+                    onClick={() => alignElement('right')}
+                    className="p-2 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-center font-bold"
+                    title="Align Right"
+                  >
+                    R
+                  </button>
+                  <button
+                    onClick={() => alignElement('top')}
+                    className="p-2 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-center font-bold"
+                    title="Align Top"
+                  >
+                    T
+                  </button>
+                  <button
+                    onClick={() => alignElement('middle')}
+                    className="p-2 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-center font-bold"
+                    title="Align Middle Vertical"
+                  >
+                    M
+                  </button>
+                  <button
+                    onClick={() => alignElement('bottom')}
+                    className="p-2 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-center font-bold"
+                    title="Align Bottom"
+                  >
+                    B
+                  </button>
+                </div>
+              </div>
+
+              {/* Shift Position */}
+              <div className="space-y-2 pt-2 border-t border-slate-200">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  Nudge Position
+                </span>
+                <div className="grid grid-cols-4 gap-1 text-xs">
+                  <button
+                    onClick={() => nudgeElements(selectedIds, -5, 0)}
+                    className="p-1.5 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 font-semibold text-slate-700 text-center"
+                  >
+                    ← 5pt
+                  </button>
+                  <button
+                    onClick={() => nudgeElements(selectedIds, 5, 0)}
+                    className="p-1.5 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 font-semibold text-slate-700 text-center"
+                  >
+                    → 5pt
+                  </button>
+                  <button
+                    onClick={() => nudgeElements(selectedIds, 0, -5)}
+                    className="p-1.5 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 font-semibold text-slate-700 text-center"
+                  >
+                    ↑ 5pt
+                  </button>
+                  <button
+                    onClick={() => nudgeElements(selectedIds, 0, 5)}
+                    className="p-1.5 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 font-semibold text-slate-700 text-center"
+                  >
+                    ↓ 5pt
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200 text-[11px] text-blue-800">
+                Shift-click on elements to add or remove them from the multi-selection. Drag any selected element to move all selected items together.
+              </div>
+            </div>
+          ) : selectedElement ? (
             <div className="space-y-5">
               {/* Header & Quick Action Buttons */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-200">
@@ -2582,14 +2863,149 @@ export default function StudioDesignerPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[10px] text-slate-500 mb-0.5">Font Size (pt)</label>
+                      <div className="flex justify-between items-center mb-0.5">
+                        <label className="text-[10px] text-slate-500">Font Size (pt)</label>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => updateSelectedElement({ fontSize: Math.max(6, ((selectedElement as TextElement).fontSize || 12) - 1) })}
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-700 font-bold text-xs"
+                          title="Decrease font size (-1)"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min="6"
+                          max="120"
+                          value={(selectedElement as TextElement).fontSize || 12}
+                          onChange={(e) => updateSelectedElement({ fontSize: parseFloat(e.target.value) || 8 })}
+                          className="w-full px-1.5 py-1 rounded bg-slate-50 border border-slate-200 text-xs font-mono text-center"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateSelectedElement({ fontSize: Math.min(120, ((selectedElement as TextElement).fontSize || 12) + 1) })}
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-700 font-bold text-xs"
+                          title="Increase font size (+1)"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Font Size Chips */}
+                  <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+                    {[8, 10, 12, 14, 18, 24, 32, 40].map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => updateSelectedElement({ fontSize: size })}
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-mono border transition-colors cursor-pointer ${
+                          (selectedElement as TextElement).fontSize === size
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Font Weight Toggle & Text Alignment */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">Font Weight</label>
+                      <div className="grid grid-cols-2 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => updateSelectedElement({ fontWeight: 'normal' })}
+                          className={`py-1 rounded text-xs transition-colors cursor-pointer ${
+                            (selectedElement as TextElement).fontWeight !== 'bold'
+                              ? 'bg-blue-600 text-white font-normal'
+                              : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          Regular
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateSelectedElement({ fontWeight: 'bold' })}
+                          className={`py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
+                            (selectedElement as TextElement).fontWeight === 'bold'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          Bold
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">Alignment</label>
+                      <div className="grid grid-cols-3 gap-1">
+                        {(['left', 'center', 'right'] as const).map((align) => (
+                          <button
+                            key={align}
+                            type="button"
+                            onClick={() => updateSelectedElement({ textAlign: align })}
+                            className={`p-1 rounded text-center text-xs font-semibold capitalize cursor-pointer ${(selectedElement as TextElement).textAlign === align
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-50 border border-slate-200 text-slate-700'
+                              }`}
+                          >
+                            {align[0].toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Line Height & Letter Spacing */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">Line Height</label>
                       <input
                         type="number"
-                        value={(selectedElement as TextElement).fontSize || 12}
-                        onChange={(e) => updateSelectedElement({ fontSize: parseFloat(e.target.value) || 8 })}
-                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono"
+                        step="0.05"
+                        min="0.8"
+                        max="3.0"
+                        value={(selectedElement as TextElement).lineHeight ?? 1.2}
+                        onChange={(e) => updateSelectedElement({ lineHeight: parseFloat(e.target.value) || 1.2 })}
+                        className="w-full px-2 py-1 rounded bg-slate-50 border border-slate-200 text-xs font-mono"
                       />
                     </div>
+                    <div>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">Letter Spacing (pt)</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="-2"
+                        max="20"
+                        value={(selectedElement as TextElement).letterSpacing ?? 0}
+                        onChange={(e) => updateSelectedElement({ letterSpacing: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-2 py-1 rounded bg-slate-50 border border-slate-200 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Element Opacity Slider */}
+                  <div>
+                    <div className="flex justify-between text-[10px] text-slate-500 mb-0.5">
+                      <span>Opacity</span>
+                      <span className="font-mono">{Math.round((selectedElement.opacity ?? 1) * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.05"
+                      max="1"
+                      step="0.05"
+                      value={selectedElement.opacity ?? 1}
+                      onChange={(e) => updateSelectedElement({ opacity: parseFloat(e.target.value) })}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
                   </div>
 
                   {/* Font Size Warning if < 7pt */}
@@ -2600,43 +3016,43 @@ export default function StudioDesignerPage() {
                     </div>
                   )}
 
-                  {/* Text Color & Alignment */}
-                  <div className="grid grid-cols-2 gap-2 items-center">
-                    <div>
-                      <label className="block text-[10px] text-slate-500 mb-0.5">Color</label>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="color"
-                          value={(selectedElement as TextElement).color || '#0F172A'}
-                          onChange={(e) => updateSelectedElement({ color: e.target.value })}
-                          className="w-7 h-7 rounded border-none cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={(selectedElement as TextElement).color || '#0F172A'}
-                          onChange={(e) => updateSelectedElement({ color: e.target.value })}
-                          className="w-full px-2 py-1 text-[11px] rounded font-mono bg-slate-50 border border-slate-200 uppercase"
-                        />
-                      </div>
+                  {/* Text Color & Palette */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] text-slate-500">Color</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="color"
+                        value={(selectedElement as TextElement).color || '#0F172A'}
+                        onChange={(e) => updateSelectedElement({ color: e.target.value })}
+                        className="w-7 h-7 rounded border-none cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={(selectedElement as TextElement).color || '#0F172A'}
+                        onChange={(e) => updateSelectedElement({ color: e.target.value })}
+                        className="w-full px-2 py-1 text-[11px] rounded font-mono bg-slate-50 border border-slate-200 uppercase"
+                      />
                     </div>
-
-                    <div>
-                      <label className="block text-[10px] text-slate-500 mb-0.5">Alignment</label>
-                      <div className="grid grid-cols-3 gap-1">
-                        {(['left', 'center', 'right'] as const).map((align) => (
-                          <button
-                            key={align}
-                            onClick={() => updateSelectedElement({ textAlign: align })}
-                            className={`p-1 rounded text-center text-xs font-semibold capitalize ${
-                              (selectedElement as TextElement).textAlign === align
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-slate-50 border border-slate-200 text-slate-700'
-                            }`}
-                          >
-                            {align[0].toUpperCase()}
-                          </button>
-                        ))}
-                      </div>
+                    {/* Quick Color Palette Chips */}
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      {[
+                        { color: '#0F172A', label: 'Dark Charcoal' },
+                        { color: '#FFFFFF', label: 'Pure White' },
+                        { color: '#1E3A8A', label: 'Navy Blue' },
+                        { color: '#D97706', label: 'Gold / Amber' },
+                        { color: '#059669', label: 'Emerald' },
+                        { color: '#DC2626', label: 'Crimson' },
+                        { color: '#475569', label: 'Slate Gray' },
+                      ].map((p) => (
+                        <button
+                          key={p.color}
+                          type="button"
+                          title={p.label}
+                          onClick={() => updateSelectedElement({ color: p.color })}
+                          className="w-5 h-5 rounded-full border border-slate-300 shadow-2xs hover:scale-110 transition-transform cursor-pointer"
+                          style={{ backgroundColor: p.color }}
+                        />
+                      ))}
                     </div>
                   </div>
 
@@ -2654,11 +3070,10 @@ export default function StudioDesignerPage() {
                         <button
                           key={mode.id}
                           onClick={() => updateSelectedElement({ textFitting: mode.id as TextFittingMode })}
-                          className={`py-1 rounded font-medium transition-colors ${
-                            (selectedElement as any).textFitting === mode.id || (!((selectedElement as any).textFitting) && mode.id === 'wrap')
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
-                          }`}
+                          className={`py-1 rounded font-medium transition-colors ${(selectedElement as any).textFitting === mode.id || (!((selectedElement as any).textFitting) && mode.id === 'wrap')
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+                            }`}
                         >
                           {mode.label}
                         </button>
@@ -2670,11 +3085,10 @@ export default function StudioDesignerPage() {
                   <div className="pt-2">
                     <button
                       onClick={() => setTestLongName((t) => !t)}
-                      className={`w-full py-1.5 px-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-                        testLongName
-                          ? 'bg-amber-100 border-amber-300 text-amber-900 font-semibold'
-                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                      }`}
+                      className={`w-full py-1.5 px-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${testLongName
+                        ? 'bg-amber-100 border-amber-300 text-amber-900 font-semibold'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
                     >
                       <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                       {testLongName ? 'Testing Long Name Active' : 'Test with Long Name'}
@@ -2846,11 +3260,10 @@ export default function StudioDesignerPage() {
                         <button
                           key={fit}
                           onClick={() => updateSelectedElement({ fit })}
-                          className={`py-1.5 rounded text-center text-xs font-semibold capitalize cursor-pointer ${
-                            ((selectedElement as ImageElement).fit || 'contain') === fit
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
-                          }`}
+                          className={`py-1.5 rounded text-center text-xs font-semibold capitalize cursor-pointer ${((selectedElement as ImageElement).fit || 'contain') === fit
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+                            }`}
                         >
                           {fit === 'fill' ? 'Stretch' : fit}
                         </button>
@@ -2961,9 +3374,8 @@ export default function StudioDesignerPage() {
               onClick={() => {
                 setMobileActiveSheet((prev) => (prev === item.id ? 'none' : (item.id as any)));
               }}
-              className={`py-2.5 flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors cursor-pointer min-h-[44px] ${
-                mobileActiveSheet === item.id ? 'text-blue-600 bg-blue-50/50' : 'text-slate-500 hover:text-slate-900'
-              }`}
+              className={`py-2.5 flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors cursor-pointer min-h-[44px] ${mobileActiveSheet === item.id ? 'text-blue-600 bg-blue-50/50' : 'text-slate-500 hover:text-slate-900'
+                }`}
             >
               <item.icon className="w-4 h-4" />
               <span>{item.label}</span>
@@ -3078,9 +3490,8 @@ export default function StudioDesignerPage() {
                         setSelectedId(el.id);
                         setMobileActiveSheet('properties');
                       }}
-                      className={`p-2.5 rounded-lg border flex items-center justify-between text-xs ${
-                        selectedId === el.id ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-slate-50'
-                      }`}
+                      className={`p-2.5 rounded-lg border flex items-center justify-between text-xs ${selectedId === el.id ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-slate-50'
+                        }`}
                     >
                       <span className="font-semibold truncate">
                         {el.name || (el.type === 'field' ? (el as FieldElement).token : el.type.toUpperCase())}
@@ -3170,9 +3581,8 @@ export default function StudioDesignerPage() {
                           setIsSaved(false);
                           setMobileActiveSheet('none');
                         }}
-                        className={`p-2 rounded border font-semibold ${
-                          template.paper_size === size ? 'bg-blue-600 text-white' : 'bg-slate-50'
-                        }`}
+                        className={`p-2 rounded border font-semibold ${template.paper_size === size ? 'bg-blue-600 text-white' : 'bg-slate-50'
+                          }`}
                       >
                         {size}
                       </button>
@@ -3209,11 +3619,10 @@ export default function StudioDesignerPage() {
             <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
               {/* Summary Status Banner */}
               <div
-                className={`p-3 rounded-xl border flex items-center gap-3 ${
-                  validationReport.canPublish
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                    : 'bg-rose-50 border-rose-200 text-rose-900'
-                }`}
+                className={`p-3 rounded-xl border flex items-center gap-3 ${validationReport.canPublish
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  : 'bg-rose-50 border-rose-200 text-rose-900'
+                  }`}
               >
                 {validationReport.canPublish ? (
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
@@ -3313,11 +3722,10 @@ export default function StudioDesignerPage() {
                       setPreviewMode(mode.id as any);
                       if (mode.id === 'pdf' && !pdfUrl) openPdfPreview();
                     }}
-                    className={`px-3 py-1 rounded transition-colors cursor-pointer ${
-                      previewMode === mode.id
-                        ? 'bg-blue-600 text-white font-semibold'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                    className={`px-3 py-1 rounded transition-colors cursor-pointer ${previewMode === mode.id
+                      ? 'bg-blue-600 text-white font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                      }`}
                   >
                     {mode.label}
                   </button>
@@ -3364,9 +3772,8 @@ export default function StudioDesignerPage() {
                     setPreviewMode(mode.id as any);
                     if (mode.id === 'pdf' && !pdfUrl) openPdfPreview();
                   }}
-                  className={`px-3 py-1 rounded shrink-0 ${
-                    previewMode === mode.id ? 'bg-blue-600 text-white font-semibold' : 'text-slate-600'
-                  }`}
+                  className={`px-3 py-1 rounded shrink-0 ${previewMode === mode.id ? 'bg-blue-600 text-white font-semibold' : 'text-slate-600'
+                    }`}
                 >
                   {mode.label}
                 </button>
@@ -3413,17 +3820,17 @@ export default function StudioDesignerPage() {
                     const pValues: Record<string, string> =
                       previewMode === 'team'
                         ? {
-                            ...sampleValues,
-                            '{{team.name}}': 'Autonomous Drone Knights',
-                            '{{team.membersList}}': 'Rohan Verma (Lead), Sneha Patil, Kunal Joshi',
-                          }
+                          ...sampleValues,
+                          '{{team.name}}': 'Autonomous Drone Knights',
+                          '{{team.membersList}}': 'Rohan Verma (Lead), Sneha Patil, Kunal Joshi',
+                        }
                         : previewMode === 'certificate'
-                        ? {
+                          ? {
                             ...sampleValues,
                             '{{participant.name}}': 'Aarav Deshmukh',
                             '{{certificate.rank}}': 'First Prize Winner with Distinction',
                           }
-                        : sampleValues;
+                          : sampleValues;
 
                     return (
                       <div
@@ -3481,8 +3888,8 @@ export default function StudioDesignerPage() {
                                     (el as ImageElement).fit === 'fill'
                                       ? 'fill'
                                       : (el as ImageElement).fit === 'cover'
-                                      ? 'cover'
-                                      : 'contain',
+                                        ? 'cover'
+                                        : 'contain',
                                 }}
                               />
                             ) : null}

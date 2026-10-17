@@ -21,7 +21,7 @@ export { formatDriveUrl, isDriveUrl } from './drive';
 /**
  * Filebase S3 client singleton
  */
-function getFilebaseClient(): S3Client {
+export function getFilebaseClient(): S3Client {
   return new S3Client({
     endpoint: process.env.FILEBASE_ENDPOINT || 'https://s3.filebase.io',
     region: process.env.FILEBASE_REGION || 'auto',

@@ -1,9 +1,18 @@
-import { PDFDocument, rgb, StandardFonts, PDFFont, PDFPage, degrees } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, PDFFont, degrees } from 'pdf-lib';
 import QRCode from 'qrcode';
 import sharp from 'sharp';
-import { PassTemplate, StudioElement, TextElement, FieldElement, QrElement, ShapeElement, ImageElement } from '@/types/studio';
+import {
+  PassTemplate,
+  StudioElement,
+  TextElement,
+  FieldElement,
+  QrElement,
+  ShapeElement,
+  ImageElement,
+} from '@/types/studio';
 import { resolveTokens, getSampleTokenValues } from '@/lib/studioTokens';
 import { getAbsoluteUrl } from '@/lib/site-url';
+import { resolveStudioAsset } from '@/lib/studioAssetResolver';
 
 // Hex color to pdf-lib RGB helper
 function hexToRgb(hex?: string | null) {
@@ -24,7 +33,7 @@ function hexToRgb(hex?: string | null) {
   return rgb(0.1, 0.1, 0.1);
 }
 
-// Unicode sanitizer for standard PDF-Lib fonts
+// Unicode sanitizer for standard PDF-Lib fonts (WinAnsiEncoding)
 function sanitizePdfText(str?: string | null): string {
   if (!str) return '';
   return String(str)
@@ -71,6 +80,22 @@ function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: numbe
   return result;
 }
 
+function getFontForElement(
+  fonts: Record<string, PDFFont>,
+  family?: string,
+  weight?: string
+): PDFFont {
+  const isBold = weight === 'bold' || (family && family.includes('Bold'));
+  const cleanFamily = (family || '').replace(/-Bold$/, '');
+  if (cleanFamily.includes('Times')) {
+    return isBold ? fonts['Times-Bold'] : fonts['Times-Roman'];
+  }
+  if (cleanFamily.includes('Courier')) {
+    return isBold ? fonts['Courier-Bold'] : fonts['Courier'];
+  }
+  return isBold ? fonts['Helvetica-Bold'] : fonts['Helvetica'];
+}
+
 export async function renderTemplateToPdfBuffer(
   template: PassTemplate,
   tokenDataMap?: Record<string, string>,
@@ -97,87 +122,79 @@ export async function renderTemplateToPdfBuffer(
 
   // 1. Draw Background Image if present
   if (template.background_url && template.background_url.trim()) {
+    const bgUrl = template.background_url.trim();
+    const asset = await resolveStudioAsset(bgUrl, template.id);
+
+    if (!asset || !asset.buffer || asset.buffer.length === 0) {
+      throw new Error(
+        `Failed to load background image (${bgUrl}) for template "${template.title}". Asset could not be retrieved from Filebase, database fallback, or local storage.`
+      );
+    }
+
     try {
-      let imageBuffer: Buffer | null = null;
-      const bgUrl = template.background_url.trim();
+      // Convert any image format (WebP, JPEG, PNG, TIFF, SVG) to standard PNG buffer via Sharp
+      const pngBuffer = await sharp(asset.buffer).png().toBuffer();
+      const embeddedBg = await pdfDoc.embedPng(pngBuffer);
 
-      if (bgUrl.startsWith('data:image/')) {
-        const base64Data = bgUrl.split(';base64,')[1];
-        if (base64Data) {
-          imageBuffer = Buffer.from(base64Data, 'base64');
-        }
-      } else if (bgUrl.startsWith('http://') || bgUrl.startsWith('https://')) {
-        const res = await fetch(bgUrl);
-        if (res.ok) {
-          const arrBuf = await res.arrayBuffer();
-          imageBuffer = Buffer.from(arrBuf);
-        }
-      }
+      const imgWidth = embeddedBg.width;
+      const imgHeight = embeddedBg.height;
+      const opacity =
+        template.background_opacity !== undefined ? Number(template.background_opacity) : 1;
 
-      if (imageBuffer) {
-        // Convert any format (WebP, TIFF, SVG) to standard PNG buffer via Sharp
-        const pngBuffer = await sharp(imageBuffer).png().toBuffer();
-        const embeddedBg = await pdfDoc.embedPng(pngBuffer);
+      let drawX = 0;
+      let drawY = 0;
+      let drawW = pageWidth;
+      let drawH = pageHeight;
 
-        const imgWidth = embeddedBg.width;
-        const imgHeight = embeddedBg.height;
-        const opacity = template.background_opacity !== undefined ? Number(template.background_opacity) : 1;
-
-        let drawX = 0;
-        let drawY = 0;
-        let drawW = pageWidth;
-        let drawH = pageHeight;
-
-        if (template.background_fit === 'stretch') {
+      if (template.background_fit === 'stretch') {
+        drawW = pageWidth;
+        drawH = pageHeight;
+        drawX = 0;
+        drawY = 0;
+      } else if (template.background_fit === 'contain') {
+        const pageRatio = pageWidth / pageHeight;
+        const imgRatio = imgWidth / imgHeight;
+        if (imgRatio > pageRatio) {
           drawW = pageWidth;
-          drawH = pageHeight;
+          drawH = pageWidth / imgRatio;
           drawX = 0;
-          drawY = 0;
-        } else if (template.background_fit === 'contain') {
-          const pageRatio = pageWidth / pageHeight;
-          const imgRatio = imgWidth / imgHeight;
-          if (imgRatio > pageRatio) {
-            drawW = pageWidth;
-            drawH = pageWidth / imgRatio;
-            drawX = 0;
-            drawY = (pageHeight - drawH) / 2;
-          } else {
-            drawH = pageHeight;
-            drawW = pageHeight * imgRatio;
-            drawX = (pageWidth - drawW) / 2;
-            drawY = 0;
-          }
+          drawY = (pageHeight - drawH) / 2;
         } else {
-          // 'cover' default
-          const pageRatio = pageWidth / pageHeight;
-          const imgRatio = imgWidth / imgHeight;
-          if (imgRatio > pageRatio) {
-            drawH = pageHeight;
-            drawW = pageHeight * imgRatio;
-            drawX = (pageWidth - drawW) / 2;
-            drawY = 0;
-          } else {
-            drawW = pageWidth;
-            drawH = pageWidth / imgRatio;
-            drawX = 0;
-            drawY = (pageHeight - drawH) / 2;
-          }
+          drawH = pageHeight;
+          drawW = pageHeight * imgRatio;
+          drawX = (pageWidth - drawW) / 2;
+          drawY = 0;
         }
-
-        page.drawImage(embeddedBg, {
-          x: drawX,
-          y: drawY,
-          width: drawW,
-          height: drawH,
-          opacity,
-        });
+      } else {
+        // 'cover' default
+        const pageRatio = pageWidth / pageHeight;
+        const imgRatio = imgWidth / imgHeight;
+        if (imgRatio > pageRatio) {
+          drawH = pageHeight;
+          drawW = pageHeight * imgRatio;
+          drawX = (pageWidth - drawW) / 2;
+          drawY = 0;
+        } else {
+          drawW = pageWidth;
+          drawH = pageWidth / imgRatio;
+          drawX = 0;
+          drawY = (pageHeight - drawH) / 2;
+        }
       }
-    } catch (bgErr) {
-      console.warn('Failed to load or embed background image in PDF:', bgErr);
+
+      page.drawImage(embeddedBg, {
+        x: drawX,
+        y: drawY,
+        width: drawW,
+        height: drawH,
+        opacity,
+      });
+    } catch (bgErr: any) {
+      throw new Error(`Failed to embed background image into PDF: ${bgErr.message}`);
     }
   }
 
-  // 2. Sort elements by zIndex
+  // 2. Sort elements strictly by zIndex
   const elements = Array.isArray(template.elements)
     ? [...template.elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
     : [];
@@ -241,8 +258,7 @@ export async function renderTemplateToPdfBuffer(
       case 'text':
       case 'field': {
         const textElem = element as TextElement | FieldElement;
-        const fontKey = textElem.fontFamily || (textElem.fontWeight === 'bold' ? 'Helvetica-Bold' : 'Helvetica');
-        const font = fonts[fontKey] || fonts['Helvetica'];
+        const font = getFontForElement(fonts, textElem.fontFamily, textElem.fontWeight);
         const baseFontSize = Number(textElem.fontSize) || 12;
         const textColor = hexToRgb(textElem.color) || rgb(0.1, 0.1, 0.1);
 
@@ -276,13 +292,15 @@ export async function renderTemplateToPdfBuffer(
           }
         }
 
-        const wrapped = fitting === 'wrap'
-          ? wrapText(cleanText, font, effectiveFontSize, elemW)
-          : cleanText.split('\n');
+        const wrapped =
+          fitting === 'wrap'
+            ? wrapText(cleanText, font, effectiveFontSize, elemW)
+            : cleanText.split('\n');
 
-        const finalLines = textElem.maxLines && textElem.maxLines > 0
-          ? wrapped.slice(0, textElem.maxLines)
-          : wrapped;
+        const finalLines =
+          textElem.maxLines && textElem.maxLines > 0
+            ? wrapped.slice(0, textElem.maxLines)
+            : wrapped;
 
         const lineHeight = effectiveFontSize * (textElem.lineHeight || 1.25);
         const totalTextHeight = finalLines.length * lineHeight;
@@ -306,7 +324,8 @@ export async function renderTemplateToPdfBuffer(
             lineX = elemX + Math.max(0, elemW - textWidth);
           }
 
-          const lineY = pdfY + elemH - verticalPad - (i + 1) * lineHeight + (lineHeight - effectiveFontSize);
+          const lineY =
+            pdfY + elemH - verticalPad - (i + 1) * lineHeight + (lineHeight - effectiveFontSize);
 
           try {
             page.drawText(line, {
@@ -327,8 +346,14 @@ export async function renderTemplateToPdfBuffer(
 
       case 'qr': {
         const qrElem = element as QrElement;
-        const passToken = verificationOverride?.passToken || tokenValues['{{registration.verifyToken}}'] || 'sample-pass-token';
-        const certToken = verificationOverride?.certToken || tokenValues['{{certificate.id}}'] || 'sample-cert-token';
+        const passToken =
+          verificationOverride?.passToken ||
+          tokenValues['{{registration.verifyToken}}'] ||
+          'sample-pass-token';
+        const certToken =
+          verificationOverride?.certToken ||
+          tokenValues['{{certificate.id}}'] ||
+          'sample-cert-token';
         let targetUrl = getAbsoluteUrl(`/verify/${passToken}`);
         if (qrElem.qrType === 'cert_verification') {
           targetUrl = getAbsoluteUrl(`/verify/${certToken}`);
@@ -382,20 +407,9 @@ export async function renderTemplateToPdfBuffer(
         const imgElem = element as ImageElement;
         if (imgElem.imageUrl) {
           try {
-            let imgBuf: Buffer | null = null;
-            if (imgElem.imageUrl.startsWith('data:image/')) {
-              const base64Data = imgElem.imageUrl.split(';base64,')[1];
-              if (base64Data) imgBuf = Buffer.from(base64Data, 'base64');
-            } else if (imgElem.imageUrl.startsWith('http')) {
-              const res = await fetch(imgElem.imageUrl);
-              if (res.ok) {
-                const arr = await res.arrayBuffer();
-                imgBuf = Buffer.from(arr);
-              }
-            }
-
-            if (imgBuf) {
-              const pngBuf = await sharp(imgBuf).png().toBuffer();
+            const asset = await resolveStudioAsset(imgElem.imageUrl, template.id);
+            if (asset && asset.buffer) {
+              const pngBuf = await sharp(asset.buffer).png().toBuffer();
               const embedded = await pdfDoc.embedPng(pngBuf);
               page.drawImage(embedded, {
                 x: elemX,
@@ -405,6 +419,8 @@ export async function renderTemplateToPdfBuffer(
                 opacity: elemOpacity,
                 rotate: element.rotation ? degrees(element.rotation) : undefined,
               });
+            } else {
+              console.warn(`Could not resolve image element URL: ${imgElem.imageUrl}`);
             }
           } catch (imgErr) {
             console.warn('Error embedding element image in PDF:', imgErr);
