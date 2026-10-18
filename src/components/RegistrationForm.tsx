@@ -40,6 +40,10 @@ import { getAbsoluteUrl } from '@/lib/site-url';
 // Types & Constants
 // ---------------------------------------------------------------------------
 
+// Official static UPI QR Code image path (served directly from public/ without remote storage or async delay)
+const OFFICIAL_STATIC_UPI_QR_URL = '/images/payment/yugantar-official-upi-qr.jpg';
+const OFFICIAL_UPI_ID = 'poojakonge2727@oksbi';
+
 type SubmissionState =
   | 'idle'
   | 'submitting'
@@ -710,7 +714,9 @@ export default function RegistrationForm({
   const [autoDownloadStatus, setAutoDownloadStatus] = useState<
     'idle' | 'downloading' | 'completed' | 'blocked'
   >('idle');
-  const [dynamicQrUrl, setDynamicQrUrl] = useState<string | null>(null);
+  const [qrImageError, setQrImageError] = useState(false);
+  const configuredUpiId = (competition?.upiId || '').trim();
+  const isRecipientMatched = !configuredUpiId || configuredUpiId.toLowerCase() === OFFICIAL_UPI_ID.toLowerCase();
   const [useLeaderDetails, setUseLeaderDetails] = useState<Record<number, boolean>>({});
   const submitLockRef = useRef(false);
   const autoDownloadTriggeredRef = useRef(false);
@@ -900,28 +906,6 @@ export default function RegistrationForm({
       setAutoDownloadStatus('blocked');
     }
   }, []);
-
-  // Generate dynamic UPI QR Code if in generate mode or if uploaded QR is absent,
-  // strictly gated by feeValidation to prevent misleading QR generation
-  useEffect(() => {
-    if (isPaid && feeValidation.isValid && competition?.upiId && upiPaymentUri) {
-      const isGenerateMode = competition.qrMode === 'generate' || !competition.qrCodeUrl;
-      if (isGenerateMode) {
-        QRCode.toDataURL(upiPaymentUri, {
-          width: 600,
-          margin: 2,
-          color: {
-            dark: '#10264A',
-            light: '#FFFFFF',
-          },
-        })
-          .then((url) => setDynamicQrUrl(url))
-          .catch((err) => console.error('Failed to generate dynamic UPI QR code:', err));
-      }
-    } else {
-      setDynamicQrUrl(null);
-    }
-  }, [isPaid, feeValidation.isValid, competition?.upiId, competition?.qrMode, competition?.qrCodeUrl, upiPaymentUri]);
 
   // Handle toggling "Use team leader's details" for member 2, 3, 4
   const handleToggleLeaderDetails = (memberIdx: number, checked: boolean) => {
@@ -1113,6 +1097,16 @@ export default function RegistrationForm({
 
     return resultSteps;
   }, [config, isPaid, competition]);
+
+  // Support direct step navigation (e.g. ?step=payment for QA audit and deep-linking)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stepParam = new URLSearchParams(window.location.search).get('step');
+      if (stepParam === 'payment' || stepParam === 'review') {
+        setCurrentStepIndex(steps.length - 1);
+      }
+    }
+  }, [steps.length]);
 
   const currentStep = steps[currentStepIndex] || steps[0];
 
@@ -1898,7 +1892,7 @@ export default function RegistrationForm({
                         2
                       </span>
                       <h3 className="text-sm font-bold text-[#172B49] uppercase tracking-wider">
-                        Step 2: Scan Dynamic UPI QR Code
+                        Step 2: Scan Official UPI QR Code
                       </h3>
                     </div>
 
@@ -1911,14 +1905,26 @@ export default function RegistrationForm({
                           </span>
                           <p>{feeValidation.errorMessage || 'Fee configuration incomplete. Contact coordinators.'}</p>
                         </div>
-                      ) : (competition?.qrCodeUrl || dynamicQrUrl) ? (
+                      ) : !isRecipientMatched ? (
+                        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-left text-xs text-amber-900 space-y-2 w-full lg:w-[310px] max-w-[320px] mx-auto">
+                          <span className="font-bold flex items-center gap-1.5 text-amber-800">
+                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                            Payment Recipient Notice
+                          </span>
+                          <p className="text-[11px] text-amber-800 leading-relaxed">
+                            This competition is configured for payment to <strong>{competition?.upiId}</strong> ({competition?.payeeName || 'Official Coordinator'}).
+                            Please use the official UPI ID below to pay directly via your UPI app.
+                          </p>
+                        </div>
+                      ) : !qrImageError ? (
                         <div className="p-3.5 sm:p-4 bg-white rounded-2xl border border-[#DCE5F2] shrink-0 text-center shadow-xs w-full lg:w-[310px] max-w-[320px] mx-auto flex flex-col items-center justify-center">
-                          <div className="bg-white p-2 rounded-xl border border-[#EDF2F7] shadow-2xs flex items-center justify-center w-full">
+                          <div className="bg-white p-2 rounded-xl border border-[#EDF2F7] shadow-2xs flex items-center justify-center w-full overflow-hidden">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={competition?.qrMode === 'upload' && competition.qrCodeUrl ? competition.qrCodeUrl : (dynamicQrUrl || competition?.qrCodeUrl)}
-                              alt="Payment QR Code"
-                              className="w-[260px] h-[260px] min-[390px]:w-[270px] min-[390px]:h-[270px] sm:w-[280px] sm:h-[280px] max-w-full aspect-square object-contain mx-auto rounded-lg"
+                              src={OFFICIAL_STATIC_UPI_QR_URL}
+                              alt="Official YUGANTAR 2026 UPI Payment QR Code"
+                              className="w-[260px] h-auto min-[390px]:w-[270px] sm:w-[280px] max-w-full object-contain mx-auto rounded-lg"
+                              onError={() => setQrImageError(true)}
                             />
                           </div>
                           <div className="mt-3 pt-2.5 border-t border-[#E2E8F0] w-full text-center space-y-1">
@@ -1931,14 +1937,17 @@ export default function RegistrationForm({
                               </span>
                             </div>
                             <span className="text-[10px] font-mono text-[#536781] block">
-                              {discountEligibility.eligible ? 'Concession Applied UPI QR' : (competition?.qrMode === 'upload' ? 'Official Department QR' : 'Dynamic UPI QR')}
+                              Official UPI QR
                             </span>
                           </div>
                         </div>
                       ) : (
-                        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-left text-xs text-amber-800 space-y-1">
-                          <span className="font-bold block">Admin Configuration Notice</span>
-                          <span>Payment QR code is being generated or configured by coordinators. You may use the official UPI ID below to complete your fee.</span>
+                        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-left text-xs text-red-900 space-y-1.5 w-full lg:w-[310px] max-w-[320px] mx-auto">
+                          <span className="font-bold flex items-center gap-1.5 text-red-800">
+                            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                            Payment QR Unavailable
+                          </span>
+                          <p>The official payment QR image could not be displayed. Please use the official UPI ID below to complete your payment.</p>
                         </div>
                       )}
 
