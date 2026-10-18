@@ -716,22 +716,18 @@ export default function RegistrationForm({
     'idle' | 'downloading' | 'completed' | 'blocked'
   >('idle');
   const [qrImageError, setQrImageError] = useState(false);
-  const configuredUpiId = (competition?.upiId || '').trim();
-  const isRecipientMatched = !configuredUpiId || configuredUpiId.toLowerCase() === OFFICIAL_UPI_ID.toLowerCase();
   const [useLeaderDetails, setUseLeaderDetails] = useState<Record<number, boolean>>({});
   const submitLockRef = useRef(false);
   const autoDownloadTriggeredRef = useRef(false);
 
   // Robust, reliable UPI ID copy handler with fallback for restrictive mobile browsers
   const handleCopyUpiId = useCallback(async () => {
-    const cleanId = (competition?.upiId || OFFICIAL_UPI_ID).trim();
-    if (!cleanId) return;
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(cleanId);
+        await navigator.clipboard.writeText(OFFICIAL_UPI_ID);
       } else if (typeof document !== 'undefined') {
         const textArea = document.createElement('textarea');
-        textArea.value = cleanId;
+        textArea.value = OFFICIAL_UPI_ID;
         textArea.style.position = 'fixed';
         textArea.style.left = '-9999px';
         textArea.style.top = '0';
@@ -780,10 +776,10 @@ export default function RegistrationForm({
     return validateCompetitionFee(
       isPaid,
       competition?.registrationFee,
-      competition?.upiId,
+      OFFICIAL_UPI_ID,
       values.teamSize || defaultTeamSize
     );
-  }, [isPaid, competition?.registrationFee, competition?.upiId, values.teamSize, defaultTeamSize]);
+  }, [isPaid, competition?.registrationFee, values.teamSize, defaultTeamSize]);
 
   // Load festival department discount rule
   const [discountRule, setDiscountRule] = useState<{
@@ -862,17 +858,15 @@ export default function RegistrationForm({
 
   // Compute canonical UPI URI using standard URLSearchParams generator
   const upiPaymentUri = useMemo(() => {
-    if (!isPaid || !feeValidation.isValid || !competition?.upiId) return '';
-    const cleanUpiId = competition.upiId.trim();
-    const payee = (competition.payeeName || 'TELE-ERA YUGANTAR 2026').trim();
-    const feeAmount = competition.isFeeFixed !== false ? discountEligibility.finalFee : undefined;
+    if (!isPaid || !feeValidation.isValid) return '';
+    const feeAmount = competition?.isFeeFixed !== false ? discountEligibility.finalFee : undefined;
     return buildUpiPaymentUri({
-      upiId: cleanUpiId,
-      payeeName: payee,
+      upiId: OFFICIAL_UPI_ID,
+      payeeName: OFFICIAL_PAYEE_NAME,
       amount: feeAmount,
       transactionNote: `${config.competitionName} Registration`,
     });
-  }, [isPaid, feeValidation, discountEligibility.finalFee, competition?.upiId, competition?.payeeName, competition?.isFeeFixed, config.competitionName]);
+  }, [isPaid, feeValidation, discountEligibility.finalFee, competition?.isFeeFixed, config.competitionName]);
 
   // Robust, single-click pass downloader with automatic Blob download & object URL revocation
   const handleDownloadPass = useCallback(async (regId: string, token?: string) => {
@@ -1906,17 +1900,6 @@ export default function RegistrationForm({
                           </span>
                           <p>{feeValidation.errorMessage || 'Fee configuration incomplete. Contact coordinators.'}</p>
                         </div>
-                      ) : !isRecipientMatched ? (
-                        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-left text-xs text-amber-900 space-y-2 w-full lg:w-[310px] max-w-[320px] mx-auto">
-                          <span className="font-bold flex items-center gap-1.5 text-amber-800">
-                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                            Payment Recipient Notice
-                          </span>
-                          <p className="text-[11px] text-amber-800 leading-relaxed">
-                            This competition is configured for payment to <strong>{competition?.upiId}</strong> ({competition?.payeeName || 'Official Coordinator'}).
-                            Please use the official UPI ID below to pay directly via your UPI app.
-                          </p>
-                        </div>
                       ) : !qrImageError ? (
                         <div className="p-3.5 sm:p-4 bg-white rounded-2xl border border-[#DCE5F2] shrink-0 text-center shadow-xs w-full lg:w-[310px] max-w-[320px] mx-auto flex flex-col items-center justify-center">
                           <div className="bg-white p-2 rounded-xl border border-[#EDF2F7] shadow-2xs flex items-center justify-center w-full overflow-hidden">
@@ -1958,7 +1941,7 @@ export default function RegistrationForm({
                             Official Payee Name
                           </span>
                           <span className="text-sm font-bold text-[#10264A]">
-                            {competition?.payeeName || OFFICIAL_PAYEE_NAME}
+                            {OFFICIAL_PAYEE_NAME}
                           </span>
                         </div>
 
@@ -1973,7 +1956,7 @@ export default function RegistrationForm({
                           </div>
                           <div className="flex items-center justify-between gap-2">
                             <code className="text-xs sm:text-sm font-mono font-bold text-[#10264A] select-all break-all bg-white px-2.5 py-1.5 rounded-lg border border-[#E2E8F0] flex-1">
-                              {competition?.upiId || OFFICIAL_UPI_ID}
+                              {OFFICIAL_UPI_ID}
                             </code>
                             <button
                               type="button"
@@ -2014,7 +1997,7 @@ export default function RegistrationForm({
                             <div className="flex items-start gap-1.5">
                               <span className="text-[#3978F6] font-bold shrink-0">•</span>
                               <span>
-                                <strong>Verify recipient:</strong> Confirm that the recipient name matches <strong>{competition?.payeeName || OFFICIAL_PAYEE_NAME}</strong> before confirming payment.
+                                <strong>Verify recipient:</strong> Confirm that the recipient name matches <strong>{OFFICIAL_PAYEE_NAME}</strong> before confirming payment.
                               </span>
                             </div>
                             <div className="flex items-start gap-1.5">

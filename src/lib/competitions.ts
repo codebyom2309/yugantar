@@ -480,11 +480,12 @@ export const getPublicCompetitions = cache(async (): Promise<DbCompetition[]> =>
   return getCachedPublicCompetitions();
 });
 
-const getCachedPublicCompetitionBySlug = unstable_cache(
-  async (slug: string) => fetchPublicCompetitionBySlugRaw(slug),
-  ['public-competition-by-slug'],
-  { revalidate: 60, tags: ['competitions'] }
-);
+const getCachedPublicCompetitionBySlug = (slug: string) =>
+  unstable_cache(
+    async () => fetchPublicCompetitionBySlugRaw(slug),
+    ['public-competition-by-slug', slug],
+    { revalidate: 60, tags: ['competitions', `competition-${slug}`] }
+  )();
 
 export const getPublicCompetitionBySlug = cache(async (slug: string): Promise<DbCompetition | null> => {
   return getCachedPublicCompetitionBySlug(slug);
@@ -640,9 +641,9 @@ function mapDbRowToCompetition(r: Record<string, unknown>): DbCompetition {
     isPaid: r.is_paid !== undefined && r.is_paid !== null ? Boolean(r.is_paid) : Boolean(COMPETITIONS.find((c) => c.slug === r.slug)?.isPaid),
     registrationFee: r.registration_fee ? String(r.registration_fee) : (COMPETITIONS.find((c) => c.slug === r.slug)?.registrationFee || 'Free'),
     qrMode: (r.qr_mode as 'upload' | 'generate') || COMPETITIONS.find((c) => c.slug === r.slug)?.qrMode || (r.qr_code_url ? 'upload' : 'generate'),
-    payeeName: r.payee_name ? String(r.payee_name) : (COMPETITIONS.find((c) => c.slug === r.slug)?.payeeName || 'Pooja Konge'),
+    payeeName: r.payee_name && String(r.payee_name).trim() !== '' && !String(r.payee_name).includes('TELE-ERA') ? String(r.payee_name) : 'Pooja Konge',
     qrCodeUrl: r.qr_code_url ? String(r.qr_code_url) : COMPETITIONS.find((c) => c.slug === r.slug)?.qrCodeUrl,
-    upiId: r.upi_id ? String(r.upi_id) : (COMPETITIONS.find((c) => c.slug === r.slug)?.upiId || 'poojakonge2727@oksbi'),
+    upiId: r.upi_id && String(r.upi_id).trim() !== '' && String(r.upi_id).trim() !== 'teleera@oksbi' ? String(r.upi_id) : 'poojakonge2727@oksbi',
     paymentUrl: r.payment_url ? String(r.payment_url) : undefined,
     paymentInstructions: r.payment_instructions ? String(r.payment_instructions) : undefined,
     requireUtr: r.require_utr !== undefined && r.require_utr !== null ? Boolean(r.require_utr) : Boolean(COMPETITIONS.find((c) => c.slug === r.slug)?.requireUtr),

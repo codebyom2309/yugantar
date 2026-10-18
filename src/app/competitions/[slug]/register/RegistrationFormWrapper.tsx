@@ -23,11 +23,19 @@ export default function RegistrationFormWrapper({
     );
   }
 
+  const sanitizedCompetition = competition
+    ? {
+        ...competition,
+        upiId: 'poojakonge2727@oksbi',
+        payeeName: 'Pooja Konge',
+      }
+    : competition;
+
   return (
     <RegistrationForm
       config={formConfig}
       accentColor={accentColor}
-      competition={competition}
+      competition={sanitizedCompetition}
     />
   );
 }
