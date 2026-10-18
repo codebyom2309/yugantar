@@ -43,6 +43,7 @@ import { getAbsoluteUrl } from '@/lib/site-url';
 // Official static UPI QR Code image path (served directly from public/ without remote storage or async delay)
 const OFFICIAL_STATIC_UPI_QR_URL = '/images/payment/yugantar-official-upi-qr.jpg';
 const OFFICIAL_UPI_ID = 'poojakonge2727@oksbi';
+const OFFICIAL_PAYEE_NAME = 'Pooja Konge';
 
 type SubmissionState =
   | 'idle'
@@ -723,8 +724,8 @@ export default function RegistrationForm({
 
   // Robust, reliable UPI ID copy handler with fallback for restrictive mobile browsers
   const handleCopyUpiId = useCallback(async () => {
-    if (!competition?.upiId) return;
-    const cleanId = competition.upiId.trim();
+    const cleanId = (competition?.upiId || OFFICIAL_UPI_ID).trim();
+    if (!cleanId) return;
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(cleanId);
@@ -1952,65 +1953,53 @@ export default function RegistrationForm({
                       )}
 
                       <div className="space-y-3.5 flex-1 w-full text-left">
-                        {competition?.payeeName && (
-                          <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2]">
-                            <span className="text-[10px] font-mono uppercase text-[#7E93AC] tracking-wider block">
-                              Official Payee Name
-                            </span>
-                            <span className="text-sm font-bold text-[#10264A]">
-                              {competition.payeeName}
-                            </span>
-                          </div>
-                        )}
+                        <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2]">
+                          <span className="text-[10px] font-mono uppercase text-[#7E93AC] tracking-wider block">
+                            Official Payee Name
+                          </span>
+                          <span className="text-sm font-bold text-[#10264A]">
+                            {competition?.payeeName || OFFICIAL_PAYEE_NAME}
+                          </span>
+                        </div>
 
-                        {competition?.upiId ? (
-                          <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-mono uppercase text-[#7E93AC] tracking-wider block">
-                                Official UPI ID
-                              </span>
-                              <span className="text-[10px] font-mono text-[#536781]">
-                                Tap copy to pay manually
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between gap-2">
-                              <code className="text-xs sm:text-sm font-mono font-bold text-[#10264A] select-all break-all bg-white px-2.5 py-1.5 rounded-lg border border-[#E2E8F0] flex-1">
-                                {competition.upiId}
-                              </code>
-                              <button
-                                type="button"
-                                onClick={handleCopyUpiId}
-                                className="shrink-0 min-h-[38px] px-3.5 rounded-lg bg-white border border-[#DCE5F2] hover:bg-[#E9F2FF] hover:border-[#B8D5F8] text-[#10264A] text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                aria-label="Copy UPI ID"
-                              >
-                                {copiedUpiId ? (
-                                  <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                    <span className="text-emerald-700">Copied!</span>
-                                  </>
-                                ) : copyUpiFailed ? (
-                                  <>
-                                    <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-                                    <span className="text-amber-700">Failed</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="w-3.5 h-3.5 text-[#3978F6]" />
-                                    <span>Copy UPI ID</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 space-y-1">
-                            <span className="font-bold flex items-center gap-1.5">
-                              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                              Configuration Error
+                        <div className="p-3.5 rounded-xl bg-[#F8FAFD] border border-[#DCE5F2] space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono uppercase text-[#7E93AC] tracking-wider block">
+                              Official UPI ID
                             </span>
-                            <span>UPI ID is not configured for this competition arena. Please contact the coordinators.</span>
+                            <span className="text-[10px] font-mono text-[#536781]">
+                              Tap copy to pay manually
+                            </span>
                           </div>
-                        )}
+                          <div className="flex items-center justify-between gap-2">
+                            <code className="text-xs sm:text-sm font-mono font-bold text-[#10264A] select-all break-all bg-white px-2.5 py-1.5 rounded-lg border border-[#E2E8F0] flex-1">
+                              {competition?.upiId || OFFICIAL_UPI_ID}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={handleCopyUpiId}
+                              className="shrink-0 min-h-[38px] px-3.5 rounded-lg bg-white border border-[#DCE5F2] hover:bg-[#E9F2FF] hover:border-[#B8D5F8] text-[#10264A] text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                              aria-label="Copy UPI ID"
+                            >
+                              {copiedUpiId ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span className="text-emerald-700">Copied!</span>
+                                </>
+                              ) : copyUpiFailed ? (
+                                <>
+                                  <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                                  <span className="text-amber-700">Failed</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5 text-[#3978F6]" />
+                                  <span>Copy UPI ID</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
 
                         {/* Manual Payment Instructions Card */}
                         <div className="p-3.5 sm:p-4 rounded-xl bg-[#F0F6FE] border border-[#C8DCF8] text-xs text-[#10264A] space-y-2">
@@ -2025,7 +2014,7 @@ export default function RegistrationForm({
                             <div className="flex items-start gap-1.5">
                               <span className="text-[#3978F6] font-bold shrink-0">•</span>
                               <span>
-                                <strong>Verify recipient:</strong> Confirm that the recipient name matches <strong>{competition?.payeeName || 'the official organizer'}</strong> before confirming payment.
+                                <strong>Verify recipient:</strong> Confirm that the recipient name matches <strong>{competition?.payeeName || OFFICIAL_PAYEE_NAME}</strong> before confirming payment.
                               </span>
                             </div>
                             <div className="flex items-start gap-1.5">

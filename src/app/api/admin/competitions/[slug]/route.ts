@@ -118,7 +118,7 @@ export async function PUT(request: NextRequest, context: ContextProps) {
       const upiId = String(body.upiId).trim();
       if (!/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId)) {
         return NextResponse.json(
-          { error: 'Invalid UPI ID format. Expected standard handle like username@bank (e.g. teleera@oksbi).' },
+          { error: 'Invalid UPI ID format. Expected standard handle like username@bank (e.g. poojakonge2727@oksbi).' },
           { status: 400 }
         );
       }

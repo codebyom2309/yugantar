@@ -1422,7 +1422,7 @@ export default function CompetitionEditorPage({
                                     type="text"
                                     value={form.upiId}
                                     onChange={(e) => updateFormField('upiId', e.target.value)}
-                                    placeholder="e.g. teleera@oksbi or studentforum@icici"
+                                    placeholder="e.g. poojakonge2727@oksbi or studentforum@icici"
                                     className={`w-full px-3 py-2 text-xs font-mono rounded-xl admin-glass-panel text-slate-900 dark:text-white ${
                                       form.upiId && !isValidUpiId(form.upiId.trim())
                                         ? 'border-red-400 focus:border-red-500'
@@ -1431,7 +1431,7 @@ export default function CompetitionEditorPage({
                                   />
                                   {form.upiId && !isValidUpiId(form.upiId.trim()) && (
                                     <p className="text-[11px] text-red-500 font-medium pt-0.5">
-                                      ⚠️ Invalid UPI ID format. Expected standard handle like username@bank (e.g. teleera@oksbi).
+                                      ⚠️ Invalid UPI ID format. Expected standard handle like username@bank (e.g. poojakonge2727@oksbi).
                                     </p>
                                   )}
                                 </div>
@@ -1577,8 +1577,8 @@ export default function CompetitionEditorPage({
                                     )}
                                   </div>
                                   <div className="space-y-1.5 flex-1 w-full text-xs">
-                                    <div className="font-bold text-[#172B49] dark:text-white">{form.payeeName || 'TELE-ERA YUGANTAR 2026'}</div>
-                                    <code className="text-[11px] font-mono text-[#3978F6] block">{form.upiId || 'teleera@oksbi'}</code>
+                                    <div className="font-bold text-[#172B49] dark:text-white">{form.payeeName || 'Pooja Konge'}</div>
+                                    <code className="text-[11px] font-mono text-[#3978F6] block">{form.upiId || 'poojakonge2727@oksbi'}</code>
                                     <div className="text-[10px] text-[#60728A] dark:text-zinc-400">
                                       Mode: {form.isFeeFixed !== false ? `Fixed (₹${extractNumericFee(form.registrationFee) || '0.00'})` : 'Editable Amount'}
                                     </div>

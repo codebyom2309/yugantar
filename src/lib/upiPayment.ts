@@ -24,7 +24,7 @@ export interface CompetitionFeeValidation {
 
 /**
  * Validates whether a given string is a valid UPI VPA (Virtual Payment Address).
- * Standard format: username@bankhandle (e.g. teleera@oksbi, student@okhdfcbank, admin@icici).
+ * Standard format: username@bankhandle (e.g. poojakonge2727@oksbi, student@okhdfcbank, admin@icici).
  */
 export function isValidUpiId(upiId: string | null | undefined): boolean {
   if (!upiId) return false;
